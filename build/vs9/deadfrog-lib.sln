@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shovellib", "shovellib.vcproj", "{06366000-CEA4-4C81-A29F-49E2DF277A93}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "deadfrog-lib", "deadfrog-lib.vcproj", "{06366000-CEA4-4C81-A29F-49E2DF277A93}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hello_world", "hello_world\hello_world.vcproj", "{39B6D6D1-1AA3-42F7-BA92-F13ECC61CD0A}"
 	ProjectSection(ProjectDependencies) = postProject
