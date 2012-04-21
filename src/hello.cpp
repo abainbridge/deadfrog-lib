@@ -1,4 +1,3 @@
-#include <math.h>
 #include <windows.h>
 
 #include "lib/gfx/text_renderer.h"
@@ -7,7 +6,7 @@
 
 int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 {
-	WindowData *win = CreateWin(100, 100, 800, 800, true, "test");
+	WindowData *win = CreateWin(100, 100, 800, 600, true, "Hello World!");
     TextRenderer *font = CreateTextRenderer("Courier", 18, true);
 
     while (!win->windowClosed)
