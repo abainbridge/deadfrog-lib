@@ -1,4 +1,4 @@
-from bainlib import *
+from deadfroglib import *
 import Image
 
 im = Image.open("small.png")
