@@ -17,43 +17,43 @@ struct InputManagerPrivate;
 
 struct InputManager
 {
-    InputManagerPrivate *m_priv;
+    InputManagerPrivate *priv;
 
-    bool		m_windowHasFocus;
+    bool		windowHasFocus;
 
-    bool		m_lmb;					// Mouse button states now. These can change in the 
-	bool		m_mmb;					// middle of the frame.
-    bool		m_rmb;
+    bool		lmb;				// Mouse button states now. These can change in the 
+	bool		mmb;				// middle of the frame.
+    bool		rmb;
 
-	bool		m_lmbDoubleClicked;
-	bool		m_lmbRepeated;			// Becomes true for the duration of one advance once per LMB_REPEAT_PERIOD
+	bool		lmbDoubleClicked;
+	bool		lmbRepeated;		// Becomes true for the duration of one advance once per LMB_REPEAT_PERIOD
 
-    bool		m_lmbClicked;			// Mouse went from up to down this frame
-	bool		m_mmbClicked;			// These can be modified by the application, to prevent
-    bool		m_rmbClicked;			// mouse clicks occurring when you don't want them to
-										// See m_rawLmbClicked etc for none frigged data
+    bool		lmbClicked;			// Mouse went from up to down this frame
+	bool		mmbClicked;			// These can be modified by the application, to prevent
+    bool		rmbClicked;			// mouse clicks occurring when you don't want them to
+									// See m_rawLmbClicked etc for none frigged data
 
-    bool		m_lmbUnClicked;			// Mouse went from down to up this frame
-	bool		m_mmbUnClicked;
-    bool		m_rmbUnClicked;
+    bool		lmbUnClicked;		// Mouse went from down to up this frame
+	bool		mmbUnClicked;
+    bool		rmbUnClicked;
 
-    int			m_mouseX;				// Mouse pos now. Can changes through the course of the frame
-    int			m_mouseY;
-    int			m_mouseZ;
+    int			mouseX;				// Mouse pos now. Can changes through the course of the frame
+    int			mouseY;
+    int			mouseZ;
 
-    int			m_mouseVelX;
-    int			m_mouseVelY;
-    int			m_mouseVelZ;
+    int			mouseVelX;
+    int			mouseVelY;
+    int			mouseVelZ;
 
-	char		m_keysTyped[MAX_KEYS_TYPED_PER_FRAME];
-	int			m_numKeysTyped;
+	char		keysTyped[MAX_KEYS_TYPED_PER_FRAME];
+	int			numKeysTyped;
 
-	int			m_numKeyUps;
-	int			m_numKeyDowns;
+	int			numKeyUps;
+	int			numKeyDowns;
 
-    signed char g_keys[KEY_MAX];		// Is the key currently pressed
-    signed char g_keyDowns[KEY_MAX];	// Was the key pressed this frame (includes key repeats)
-    signed char g_keyUps[KEY_MAX];	    // Was the key released this frame
+    signed char keys[KEY_MAX];		// Is the key currently pressed
+    signed char keyDowns[KEY_MAX];	// Was the key pressed this frame (includes key repeats)
+    signed char keyUps[KEY_MAX];	// Was the key released this frame
 };
 
 

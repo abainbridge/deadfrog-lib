@@ -167,5 +167,6 @@ DrawTextCentre = makenot("DrawTextCentre",
 CreateGraph3d = makenot("CreateGraph3d", None, c_void_p)
 Graph3dAddPoint = makevoid("Graph3dAddPoint", [c_void_p, c_float, c_float, c_float, c_uint])
 Graph3dRender = makevoid("Graph3dRender", 
-                         [c_void_p, c_void_p, c_float, c_float, c_float, c_float, c_uint, c_float])
+                         [c_void_p, c_void_p, c_float, c_float, c_float, c_float, c_uint, 
+                          c_float, c_float])
    

@@ -7,7 +7,7 @@
 int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 {
 	WindowData *win = CreateWin(100, 100, 800, 600, true, "Hello World!");
-    TextRenderer *font = CreateTextRenderer("Courier", 18, true);
+    TextRenderer *font = CreateTextRenderer("Courier", 18);
 
     while (!win->windowClosed)
     {
