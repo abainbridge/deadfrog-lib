@@ -17,10 +17,17 @@ struct Vector3
 };
 
 
+struct Point
+{
+    Vector3 src;        // Original co-ords passed to AddPoint
+    Vector3 dst;        // Co-ords after transforms
+    RGBAColour col;
+};
+
+
 struct Graph3d
 {
-    Vector3 *points;
-    Vector3 *transformedPoints;
+    Point *points;
     int numPoints;
     int maxPoints;
     Vector3 maxPoint;   // Holds the highest x, y and z values seen in all the points
@@ -36,8 +43,7 @@ DLL_API Graph3d *CreateGraph3d()
     Graph3d *g = new Graph3d;
     memset(g, 0, sizeof(Graph3d));
 
-    g->points = new Vector3 [16];
-    g->transformedPoints = new Vector3 [16];
+    g->points = new Point [16];
     g->numPoints = 0;
     g->maxPoints = 16;
 
@@ -55,24 +61,22 @@ DLL_API Graph3d *CreateGraph3d()
 }
 
 
-DLL_API void Graph3dAddPoint(Graph3d *g, float x, float y, float z)
+DLL_API void Graph3dAddPoint(Graph3d *g, float x, float y, float z, RGBAColour col)
 {
     if (g->numPoints == g->maxPoints)
     {
-        Vector3 *newPoints = new Vector3 [g->maxPoints * 2];
-        memcpy(newPoints, g->points, sizeof(Vector3) * g->maxPoints);
+        Point *newPoints = new Point [g->maxPoints * 2];
+        memcpy(newPoints, g->points, sizeof(Point) * g->maxPoints);
         g->maxPoints *= 2;
         delete [] g->points;
         g->points = newPoints;
-
-        delete [] g->transformedPoints;
-        g->transformedPoints = new Vector3 [g->maxPoints];
     }
 
-    Vector3 *p = &g->points[g->numPoints];
-    p->x = x;
-    p->y = y;
-    p->z = z;
+    Point *p = &g->points[g->numPoints];
+    p->src.x = x;
+    p->src.y = y;
+    p->src.z = z;
+    p->col = col;
     g->numPoints++;
 
     g->maxPoint.x = __max(x, g->maxPoint.x);
@@ -95,8 +99,8 @@ static void RotateZ(Graph3d *g, float radians)
     // Transform points of data set
     for (int i = 0; i < g->numPoints; i++)
     {
-        Vector3 *p = &g->points[i];
-        Vector3 *q = &g->transformedPoints[i];
+        Vector3 *p = &g->points[i].src;
+        Vector3 *q = &g->points[i].dst;
         
         q->x = p->x * a + p->z * b;
         q->y = p->y;
@@ -160,12 +164,8 @@ DLL_API void Graph3dRender(Graph3d *graph, BitmapRGBA *bmp, float cx, float cy,
 
     for (int i = 0; i < graph->numPoints; i++)
     {
-//         float z = graph->points[i].z + dist;
-//         float x = (graph->points[i].x / z) * zoom + cx;
-//         float y = (graph->points[i].y / z) * zoom + cy;
-        Vector2 p = ProjectPoint(graph->transformedPoints[i], cx, cy, dist, zoom);
-        PutPixelClipped(bmp, p.x, p.y, col);
-//        DfPutPixel(bmp, p.x, p.y, col);
+        Vector2 p = ProjectPoint(graph->points[i].dst, cx, cy, dist, zoom);
+        PutPixelClipped(bmp, p.x, p.y, graph->points[i].col);
     }
 
     for (int i = 0; i < 12; i++)

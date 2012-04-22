@@ -49,7 +49,7 @@ double CalcMillionCharsPerSec(BitmapRGBA *bmp, TextRenderer *font)
 int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 {
 	WindowData *win = CreateWin(100, 100, 1024, 768, true, "Benchmark");
-    TextRenderer *font = CreateTextRenderer("Courier", 8, true);
+    TextRenderer *font = CreateTextRenderer("Courier", 8);
     BitmapRGBA *backBmp = CreateBitmapRGBA(800, 600);
 
     InitialiseHighResTime();

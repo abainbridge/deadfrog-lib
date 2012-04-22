@@ -13,12 +13,12 @@ struct TextRenderer
 {
 	Glyph       *glyphs[256];
 	bool		fixedWidth;
-	int			avgCharWidth;
+	int			maxCharWidth;
 	int			charHeight;	// in pixels
 };
 
 
-DLL_API TextRenderer *CreateTextRenderer(char const *_fontname, int size, bool fixedPitch);
+DLL_API TextRenderer *CreateTextRenderer(char const *_fontname, int size);
 
 DLL_API int DrawTextSimple		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, int maxChars = 9999);	// Returns text length in pixels
 DLL_API int DrawTextLeft		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like simple but with variable args

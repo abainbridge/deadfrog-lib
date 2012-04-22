@@ -17,13 +17,13 @@ static float frand(float _max)
 int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 {
 	WindowData *win = CreateWin(100, 100, 800, 800, true, "test");
-    TextRenderer *font = CreateTextRenderer("SmallBold6", 8, true);
+    TextRenderer *font = CreateTextRenderer("SmallBold6", 8);
     Graph3d *graph3d = CreateGraph3d();
 
     for (int i = 0; i < 170000; i++)
         Graph3dAddPoint(graph3d, frand(100.0f) - 50.0f, 
                                  frand(100.0f) - 50.0f, 
-                                 frand(100.0f) - 50.0f);
+                                 frand(100.0f) - 50.0f, rand() * rand());
 
     int screenW = GetWidth(win);
     int screenH = GetHeight(win);

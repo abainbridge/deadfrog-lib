@@ -39,20 +39,21 @@ public:
 // Public Functions
 // ****************************************************************************
 
-TextRenderer *CreateTextRenderer(char const *fontName, int size, bool fixedPitch)
+TextRenderer *CreateTextRenderer(char const *fontName, int size)
 {
     TextRenderer *tr = new TextRenderer;
 
     // Create a memory bitmap for GDI to render the font into
-	HDC memDC = CreateDC("DISPLAY", NULL, NULL, NULL);
-	HBITMAP memBmp = CreateCompatibleBitmap(memDC, size * 2, size * 2);
+	HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
+    HDC memDC = CreateCompatibleDC(winDC);
+    HBITMAP memBmp = CreateCompatibleBitmap(memDC, size * 2, size * 2);
 	HBITMAP winBmp = (HBITMAP)SelectObject(memDC, memBmp);
 
 	int scaledSize = -MulDiv(size, GetDeviceCaps(memDC, LOGPIXELSY), 72);
 
  	HFONT fontHandle = CreateFont(scaledSize, 0, 0, 0, FW_NORMAL, false, false, false, 
  							  ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-							  DEFAULT_QUALITY, fixedPitch?FIXED_PITCH:VARIABLE_PITCH,
+							  NONANTIALIASED_QUALITY, DEFAULT_PITCH,
  							  fontName);
 	ReleaseAssert(fontHandle != NULL, "Couldn't find Windows font '%s'", fontName);
 
@@ -61,12 +62,11 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, bool fixedPitch
 	TEXTMETRIC textMetrics;
 	GetTextMetrics(memDC, &textMetrics);
 	tr->charHeight = textMetrics.tmHeight;
-	tr->avgCharWidth = textMetrics.tmAveCharWidth;
+	tr->maxCharWidth = textMetrics.tmAveCharWidth;
 	if (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth)
 		tr->fixedWidth = true;
 	else
 		tr->fixedWidth = false;
-	DebugAssert(fixedPitch == tr->fixedWidth);
 
 	// Ask GDI about the name of the font
 	char nameOfFontWeGot[256];
@@ -77,16 +77,16 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, bool fixedPitch
 		fontName, nameOfFontWeGot);
 
 	// Determine the size of the font
-	tr->avgCharWidth = 0;
+	tr->maxCharWidth = 0;
 	tr->charHeight = 0;
 	for (int i = 0; i < 256; i++)
 	{
 		char buf[] = {i};
 		SIZE size;
 		GetTextExtentPoint32(memDC, buf, 1, &size);
-		if (size.cx > tr->avgCharWidth)
-			tr->avgCharWidth = size.cx;
-		if (size.cy > tr->avgCharWidth)
+		if (size.cx > tr->maxCharWidth)
+			tr->maxCharWidth = size.cx;
+		if (size.cy > tr->maxCharWidth)
 			tr->charHeight = size.cy;
 	}
 
@@ -97,14 +97,14 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, bool fixedPitch
     //   etc
     //   -1 means end of row of pixels
     //   -2 means end of glyph
-	rleBufType *rleBuf = new rleBufType [tr->charHeight * tr->avgCharWidth];	// temp working space
+	rleBufType *rleBuf = new rleBufType [tr->charHeight * tr->maxCharWidth];	// temp working space
 	for (int i = 0; i < 256; i++)
 	{
 		// Clear a space in the GDI bitmap where we will draw the character
 		SetTextColor(memDC, RGB(255,255,255));
 		RECT rect;
 		rect.left = 0;
-		rect.right = tr->avgCharWidth;
+		rect.right = tr->maxCharWidth;
 		rect.top = 0;
 		rect.bottom = tr->charHeight;
 		SetBkColor(memDC, 0);
@@ -114,14 +114,14 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, bool fixedPitch
 		char buf[] = {i};
 		TextOut(memDC, 0, 0, buf, 1);
 
-		// Read back what GDI put in the bitmap and construct a run-length encoding
-		memset(rleBuf, 0, tr->charHeight * tr->avgCharWidth);
+        // Read back what GDI put in the bitmap and construct a run-length encoding
+		memset(rleBuf, 0, tr->charHeight * tr->maxCharWidth);
 		rleBufType *pixel = rleBuf;
 		for (int y = 0; y < tr->charHeight; y++)
 		{
 			int blankCount = 1;
 			bool lineEmpty = true;
-			for (int x = 0; x < tr->avgCharWidth; x++)
+			for (int x = 0; x < tr->maxCharWidth; x++)
 			{
 				int c = GetPixel(memDC, x, y);
 				if (c)
@@ -141,8 +141,15 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, bool fixedPitch
 			pixel++;
 		}
 
-		// Create the glyph to store the RLE
-		Glyph *glyph = new Glyph(tr->avgCharWidth, tr->charHeight);
+        SIZE size;
+        GetTextExtentPoint32(memDC, buf, 1, &size);
+        if (size.cx > tr->maxCharWidth)
+            tr->maxCharWidth = size.cx;
+        if (size.cy > tr->maxCharWidth)
+            tr->charHeight = size.cy;
+
+        // Create the glyph to store the RLE
+		Glyph *glyph = new Glyph(size.cx, tr->charHeight);
 		tr->glyphs[i] = glyph;
 
 		// Optimise the RLE by removing blank lines at the start of the glyph
@@ -179,7 +186,8 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, bool fixedPitch
 	delete [] rleBuf;
 
 	// Release the GDI resources
-	DeleteDC(memDC);
+    DeleteDC(winDC);
+    DeleteDC(memDC);
 	DeleteObject(fontHandle);
 	DeleteObject(memBmp);
 	DeleteObject(winBmp);
@@ -198,7 +206,7 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
 
     while (*text != '\0')
     {
-        if (x + tr->avgCharWidth > (int)bmp->width)
+        if (x + tr->maxCharWidth > (int)bmp->width)
             break;
 
         Glyph *glyph = tr->glyphs[(unsigned char)*text];
@@ -227,7 +235,7 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
             rleBuf++;
         }
 
-        x += tr->avgCharWidth;
+        x += glyph->m_width;
         text++;
     }
 
@@ -274,10 +282,14 @@ int GetTextWidth(TextRenderer *tr, char const *text, int len)
 	len = min((int)strlen(text), len);
 	if (tr->fixedWidth)
 	{
-		return len * tr->avgCharWidth;
+		return len * tr->maxCharWidth;
 	}
 	else
 	{
-		return 0;
+        int width = 0;
+        for (; len; len--)
+            width += tr->glyphs[text[len]]->m_width;
+
+		return width;
 	}
 }
