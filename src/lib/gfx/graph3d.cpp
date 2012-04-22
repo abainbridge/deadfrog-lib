@@ -89,22 +89,26 @@ DLL_API void Graph3dAddPoint(Graph3d *g, float x, float y, float z, RGBAColour c
 }
 
 
-static void RotateZ(Graph3d *g, float radians)
+static void Rotate(Graph3d *g, float rotX, float rotZ)
 {
-    float a = cosf(radians);
-    float b = -sinf(radians);
-    float c = -b;
-    float d = cosf(radians);
+    float cx = cosf(rotX);
+    float sx = sinf(rotX);
+    float cz = cosf(rotZ);
+    float sz = sinf(rotZ);
 
     // Transform points of data set
     for (int i = 0; i < g->numPoints; i++)
     {
         Vector3 *p = &g->points[i].src;
         Vector3 *q = &g->points[i].dst;
-        
-        q->x = p->x * a + p->z * b;
-        q->y = p->y;
-        q->z = p->x * c + p->z * d;
+
+        // Rotate around z axis
+        q->x = p->x * cz + p->z * sz;
+        q->z = p->x * sz - p->z * cz;
+
+        // Rotate around x axis
+        q->y = p->y * cx + q->z * sx;
+        q->z = q->z * cx - p->y * sx;
     }
 
     // Form bounding box
@@ -139,9 +143,15 @@ static void RotateZ(Graph3d *g, float radians)
     for (int i = 0; i < 8; i++)
     {
         Vector3 *p = &g->verts[i];
-        float x = p->x * a + p->z * b;
-        p->z = p->x * c + p->z * d;
+
+        float x = p->x * cz + p->z * sz;
+        p->z =    p->x * sz - p->z * cz;
         p->x = x;
+
+        // Rotate around x axis
+        float y = p->y;
+        p->y = p->y * cx + p->z * sx;
+        p->z = p->z * cx - y * sx;
     }
 }
 
@@ -158,9 +168,9 @@ static inline Vector2 ProjectPoint(Vector3 a, float cx, float cy, float dist, fl
 
 DLL_API void Graph3dRender(Graph3d *graph, BitmapRGBA *bmp, float cx, float cy, 
                            float dist, float zoom, RGBAColour col,
-                           float rotZ)
+                           float rotX, float rotZ)
 {
-    RotateZ(graph, rotZ);
+    Rotate(graph, rotX, rotZ);
 
     for (int i = 0; i < graph->numPoints; i++)
     {

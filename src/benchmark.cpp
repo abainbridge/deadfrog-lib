@@ -81,7 +81,7 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
     DrawTextLeft(font, g_colourWhite, win->bmp, 10, textY,
         "Press ESC to quit");
 
-    while (!win->windowClosed && !win->inputManager->g_keyDowns[KEY_ESC])
+    while (!win->windowClosed && !win->inputManager->keyDowns[KEY_ESC])
     {
         AdvanceWin(win);
     }

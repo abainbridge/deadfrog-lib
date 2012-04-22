@@ -29,6 +29,7 @@ font = CreateTextRenderer("Fixedsys", 8, True)
  
 dist = 430.0
 zoom = 1200.0
+rotX = 0.0
 rotZ = 0.0
 
 while not win.contents.windowClosed and input.keys[KEY_ESC] == 0:
@@ -37,11 +38,12 @@ while not win.contents.windowClosed and input.keys[KEY_ESC] == 0:
     ClearBitmap(bmp, WHITE)
 
     if input.lmb:
+        rotX -= float(input.mouseVelY) * 0.01
         rotZ += float(input.mouseVelX) * 0.01
 
     zoom *= 1.0 + (input.mouseVelZ * 0.05)
 
-    Graph3dRender(graph3d, bmp, screenw / 2, screenh / 2, dist, zoom, BLACK, rotZ)
+    Graph3dRender(graph3d, bmp, screenw / 2, screenh / 2, dist, zoom, BLACK, rotX, rotZ)
 
     DrawTextSimple(font, BLACK, bmp, screenw - 100, 5, str(win.contents.fps))
     

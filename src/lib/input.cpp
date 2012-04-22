@@ -43,47 +43,47 @@ struct InputManagerPrivate
 InputManager *CreateInputManager()
 {
     InputManager *im = new InputManager;
-    im->m_priv = new InputManagerPrivate;
+    im->priv = new InputManagerPrivate;
 
-    im->m_priv->m_lmbPrivate = false;
-    im->m_priv->m_lmbOld = false;
-    im->m_priv->m_mmbOld = false;
-    im->m_priv->m_rmbOld = false;
-	im->m_priv->m_lastClickWasNC = false;
-	im->m_priv->m_lastClickTime = 0.0;
-	im->m_priv->m_lmbRepeatsSoFar = 0;
-	im->m_priv->m_rawLmbClicked = false;
-    im->m_priv->m_mouseOldX = 0;
-    im->m_priv->m_mouseOldY = 0;
-    im->m_priv->m_mouseOldZ = 0;
-	im->m_priv->m_newNumKeysTyped = 0;
-	im->m_priv->m_mouseCallback = NULL;
+    im->priv->m_lmbPrivate = false;
+    im->priv->m_lmbOld = false;
+    im->priv->m_mmbOld = false;
+    im->priv->m_rmbOld = false;
+	im->priv->m_lastClickWasNC = false;
+	im->priv->m_lastClickTime = 0.0;
+	im->priv->m_lmbRepeatsSoFar = 0;
+	im->priv->m_rawLmbClicked = false;
+    im->priv->m_mouseOldX = 0;
+    im->priv->m_mouseOldY = 0;
+    im->priv->m_mouseOldZ = 0;
+	im->priv->m_newNumKeysTyped = 0;
+	im->priv->m_mouseCallback = NULL;
 
-    im->m_windowHasFocus = true;
-    im->m_lmb = false;
-    im->m_mmb = false;
-    im->m_rmb = false;
-	im->m_lmbDoubleClicked = false;
-    im->m_lmbClicked = false;
-    im->m_mmbClicked = false;
-    im->m_rmbClicked = false;
-    im->m_lmbUnClicked = false;
-    im->m_mmbUnClicked = false;
-    im->m_rmbUnClicked = false;
-    im->m_mouseX = 0;
-    im->m_mouseY = 0;
-    im->m_mouseZ = 0;
-    im->m_mouseVelX = 0;
-    im->m_mouseVelY = 0;
-    im->m_mouseVelZ = 0;
-	im->m_numKeysTyped = 0;
+    im->windowHasFocus = true;
+    im->lmb = false;
+    im->mmb = false;
+    im->rmb = false;
+	im->lmbDoubleClicked = false;
+    im->lmbClicked = false;
+    im->mmbClicked = false;
+    im->rmbClicked = false;
+    im->lmbUnClicked = false;
+    im->mmbUnClicked = false;
+    im->rmbUnClicked = false;
+    im->mouseX = 0;
+    im->mouseY = 0;
+    im->mouseZ = 0;
+    im->mouseVelX = 0;
+    im->mouseVelY = 0;
+    im->mouseVelZ = 0;
+	im->numKeysTyped = 0;
 
-    memset(im->g_keys, 0, KEY_MAX);
-	memset(im->g_keyDowns, 0, KEY_MAX);
-	memset(im->g_keyUps, 0, KEY_MAX);
+    memset(im->keys, 0, KEY_MAX);
+	memset(im->keyDowns, 0, KEY_MAX);
+	memset(im->keyUps, 0, KEY_MAX);
 	
-    memset(im->m_priv->m_keyNewDowns, 0, KEY_MAX);
-	memset(im->m_priv->m_keyNewUps, 0, KEY_MAX);
+    memset(im->priv->m_keyNewDowns, 0, KEY_MAX);
+	memset(im->priv->m_keyNewUps, 0, KEY_MAX);
 
     return im;
 }
@@ -96,56 +96,56 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
 	{
 		case WM_SETFOCUS:
 		case WM_NCACTIVATE:
-			im->m_windowHasFocus = true;
+			im->windowHasFocus = true;
 			// Clear keyboard state when we regain focus
-			memset(im->m_priv->m_keyNewDowns, 0, KEY_MAX);
-			memset(im->m_priv->m_keyNewUps, 0, KEY_MAX);
-			memset(im->g_keys, 0, KEY_MAX);
+			memset(im->priv->m_keyNewDowns, 0, KEY_MAX);
+			memset(im->priv->m_keyNewUps, 0, KEY_MAX);
+			memset(im->keys, 0, KEY_MAX);
 			return -1;
 		case WM_KILLFOCUS:
-			im->m_windowHasFocus = false;
-            im->m_mouseX = -1;
-            im->m_mouseY = -1;
+			im->windowHasFocus = false;
+            im->mouseX = -1;
+            im->mouseY = -1;
 			break;
 
         case WM_SYSCHAR:
             break;
 
 		case WM_CHAR:
-			if (im->m_numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
-				!im->g_keys[KEY_CONTROL] &&
-				!im->g_keys[KEY_ALT] &&
+			if (im->numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
+				!im->keys[KEY_CONTROL] &&
+				!im->keys[KEY_ALT] &&
 				wParam != KEY_ESC)
 			{
 				ReleaseAssert(wParam < KEY_MAX,
 					"Keypress value out of range (WM_CHAR: wParam = %d)", wParam);
-				im->m_priv->m_newKeysTyped[im->m_priv->m_newNumKeysTyped] = wParam;
-				im->m_priv->m_newNumKeysTyped++;
+				im->priv->m_newKeysTyped[im->priv->m_newNumKeysTyped] = wParam;
+				im->priv->m_newNumKeysTyped++;
 			}
 			break;
 
 		case WM_LBUTTONDOWN:
-			im->m_priv->m_lmbPrivate = true;
+			im->priv->m_lmbPrivate = true;
 //			g_windowManager->CaptureMouse();
 			break;
 		case WM_LBUTTONUP:
-			im->m_priv->m_lmbPrivate = false;
+			im->priv->m_lmbPrivate = false;
 //			g_windowManager->UncaptureMouse();
 			break;
 		case WM_MBUTTONDOWN:
-			im->m_mmb = true;
+			im->mmb = true;
 //			g_windowManager->CaptureMouse();
 			break;
 		case WM_MBUTTONUP:
-			im->m_mmb = false;
+			im->mmb = false;
 //			g_windowManager->UncaptureMouse();
 			break;
 		case WM_RBUTTONDOWN:
-			im->m_rmb = true;
+			im->rmb = true;
 //			g_windowManager->CaptureMouse();
 			break;
 		case WM_RBUTTONUP:
-			im->m_rmb = false;
+			im->rmb = false;
 //			g_windowManager->UncaptureMouse();
 			break;
 
@@ -155,18 +155,18 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
 		   never sends us the button up event. I've chosen the second option and fix some of
 		   the brokenness by generating a fake up event one frame after the down event. */
 		case WM_NCLBUTTONDOWN:
-			im->m_priv->m_lmbPrivate = true;
-			im->m_priv->m_lastClickWasNC = true;
+			im->priv->m_lmbPrivate = true;
+			im->priv->m_lastClickWasNC = true;
 			return -1;
 			break;
 		case WM_NCMBUTTONDOWN:
-			im->m_mmb = true;
-			im->m_priv->m_lastClickWasNC = true;
+			im->mmb = true;
+			im->priv->m_lastClickWasNC = true;
 			return -1;
 			break;
 		case WM_NCRBUTTONDOWN:
-			im->m_rmb = true;
-			im->m_priv->m_lastClickWasNC = true;
+			im->rmb = true;
+			im->priv->m_lastClickWasNC = true;
 			return -1;
 			break;
 
@@ -174,25 +174,25 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
 //		case WM_MOUSEWHEEL:
 		{
 			int move = (short)HIWORD(wParam) / 120;
-			im->m_mouseZ += move;
+			im->mouseZ += move;
 			break;
 		}
 
 		case WM_NCMOUSEMOVE:
-			im->m_mouseX = -1;
-			im->m_mouseY = -1;
+			im->mouseX = -1;
+			im->mouseY = -1;
 			break;
 
 		case WM_MOUSEMOVE:
 		{
 			short newPosX = lParam & 0xFFFF;
 			short newPosY = short(lParam >> 16);
-			im->m_mouseX = newPosX;
-			im->m_mouseY = newPosY;
+			im->mouseX = newPosX;
+			im->mouseY = newPosY;
 
-			if (im->m_priv->m_mouseCallback)
+			if (im->priv->m_mouseCallback)
 			{
-				im->m_priv->m_mouseCallback(newPosX, newPosY);
+				im->priv->m_mouseCallback(newPosX, newPosY);
 			}
 			break;
 		}
@@ -206,8 +206,8 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
             if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
                 break;
 
-            im->g_keys[wParam] = 0;
-			im->m_priv->m_keyNewUps[wParam] = 1;
+            im->keys[wParam] = 0;
+			im->priv->m_keyNewUps[wParam] = 1;
 			break;
 
 		case WM_SYSKEYDOWN:
@@ -215,8 +215,8 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
 			ReleaseAssert(wParam < KEY_MAX,
 				"Keypress value out of range (WM_SYSKEYDOWN: wParam = %d)", wParam);
 			//int flags = (short)HIWORD(lParam);
-			im->g_keys[wParam] = 1;
-			im->m_priv->m_keyNewDowns[wParam] = 1;
+			im->keys[wParam] = 1;
+			im->priv->m_keyNewDowns[wParam] = 1;
 			break;
 		}
 
@@ -227,8 +227,8 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
 			// normal KEYUP event for the release of the ALT. Very strange.
 			ReleaseAssert(wParam < KEY_MAX,
 				"Keypress value out of range (WM_KEYUP: wParam = %d)", wParam);
-			im->g_keys[wParam] = 0;
-			im->m_priv->m_keyNewUps[wParam] = 1;
+			im->keys[wParam] = 0;
+			im->priv->m_keyNewUps[wParam] = 1;
 			break;
 		}
 
@@ -238,8 +238,8 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
 				"Keypress value out of range (WM_KEYDOWN: wParam = %d)", wParam);
 			if (wParam == KEY_DEL)
 			{
-				im->m_priv->m_newKeysTyped[im->m_numKeysTyped] = 127;
-				im->m_priv->m_newNumKeysTyped++;
+				im->priv->m_newKeysTyped[im->numKeysTyped] = 127;
+				im->priv->m_newNumKeysTyped++;
 			}
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
             {
@@ -248,8 +248,8 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
                 // will be an event for the alt part too.
                 break;
             }
-			im->m_priv->m_keyNewDowns[wParam] = 1;
-			im->g_keys[wParam] = 1;
+			im->priv->m_keyNewDowns[wParam] = 1;
+			im->keys[wParam] = 1;
 			break;
 		}
 
@@ -263,80 +263,80 @@ int EventHandler(InputManager *im, unsigned int message, unsigned int wParam, in
 
 void InputManagerAdvance(InputManager *im)
 {
-	memcpy(im->g_keyDowns, im->m_priv->m_keyNewDowns, KEY_MAX);
-	memcpy(im->g_keyUps, im->m_priv->m_keyNewUps, KEY_MAX);
-	memset(im->m_priv->m_keyNewDowns, 0, KEY_MAX);
-	memset(im->m_priv->m_keyNewUps, 0, KEY_MAX);
+	memcpy(im->keyDowns, im->priv->m_keyNewDowns, KEY_MAX);
+	memcpy(im->keyUps, im->priv->m_keyNewUps, KEY_MAX);
+	memset(im->priv->m_keyNewDowns, 0, KEY_MAX);
+	memset(im->priv->m_keyNewUps, 0, KEY_MAX);
 
-	im->m_numKeysTyped = im->m_priv->m_newNumKeysTyped;
-	memcpy(im->m_keysTyped, im->m_priv->m_newKeysTyped, im->m_priv->m_newNumKeysTyped);
-	im->m_priv->m_newNumKeysTyped = 0;
+	im->numKeysTyped = im->priv->m_newNumKeysTyped;
+	memcpy(im->keysTyped, im->priv->m_newKeysTyped, im->priv->m_newNumKeysTyped);
+	im->priv->m_newNumKeysTyped = 0;
 
 
 	// Count the number of key ups and downs this frame
-	im->m_numKeyDowns = 0;
-	im->m_numKeyUps = 0;
+	im->numKeyDowns = 0;
+	im->numKeyUps = 0;
 	for (int i = 0; i < KEY_MAX; ++i)
 	{
-		if (im->g_keyUps[i]) im->m_numKeyUps++;
-		if (im->g_keyDowns[i]) im->m_numKeyDowns++;
+		if (im->keyUps[i]) im->numKeyUps++;
+		if (im->keyDowns[i]) im->numKeyDowns++;
 	}
 
-    im->m_lmb = im->m_priv->m_lmbPrivate;
-	im->m_lmbClicked = im->m_lmb == true && im->m_priv->m_lmbOld == false;
-	im->m_mmbClicked = im->m_mmb == true && im->m_priv->m_mmbOld == false;
-	im->m_rmbClicked = im->m_rmb == true && im->m_priv->m_rmbOld == false;
-	im->m_priv->m_rawLmbClicked = im->m_lmbClicked;
-	im->m_lmbUnClicked = im->m_lmb == false && im->m_priv->m_lmbOld == true;
-	im->m_mmbUnClicked = im->m_mmb == false && im->m_priv->m_mmbOld == true;
-	im->m_rmbUnClicked = im->m_rmb == false && im->m_priv->m_rmbOld == true;
-	im->m_priv->m_lmbOld = im->m_lmb;
-	im->m_priv->m_mmbOld = im->m_mmb;
-	im->m_priv->m_rmbOld = im->m_rmb;
+    im->lmb = im->priv->m_lmbPrivate;
+	im->lmbClicked = im->lmb == true && im->priv->m_lmbOld == false;
+	im->mmbClicked = im->mmb == true && im->priv->m_mmbOld == false;
+	im->rmbClicked = im->rmb == true && im->priv->m_rmbOld == false;
+	im->priv->m_rawLmbClicked = im->lmbClicked;
+	im->lmbUnClicked = im->lmb == false && im->priv->m_lmbOld == true;
+	im->mmbUnClicked = im->mmb == false && im->priv->m_mmbOld == true;
+	im->rmbUnClicked = im->rmb == false && im->priv->m_rmbOld == true;
+	im->priv->m_lmbOld = im->lmb;
+	im->priv->m_mmbOld = im->mmb;
+	im->priv->m_rmbOld = im->rmb;
 
-	im->m_lmbDoubleClicked = false;
-	if (im->m_lmbClicked)
+	im->lmbDoubleClicked = false;
+	if (im->lmbClicked)
 	{
  		double timeNow = GetHighResTime();
-		double delta = timeNow - im->m_priv->m_lastClickTime;
+		double delta = timeNow - im->priv->m_lastClickTime;
 		if (delta < 0.25)
 		{
-			im->m_lmbDoubleClicked = true;
-			im->m_lmbClicked = false;
+			im->lmbDoubleClicked = true;
+			im->lmbClicked = false;
 		}
-		im->m_priv->m_lastClickTime = timeNow;
-		im->m_priv->m_lmbRepeatsSoFar = 0;
+		im->priv->m_lastClickTime = timeNow;
+		im->priv->m_lmbRepeatsSoFar = 0;
 	}
 
 	// Generate repeats when the lmb is held
-	im->m_lmbRepeated = false;
-	if (im->m_lmb)
+	im->lmbRepeated = false;
+	if (im->lmb)
 	{
-		float timeSinceClick = (GetHighResTime() - im->m_priv->m_lastClickTime);
+		float timeSinceClick = (GetHighResTime() - im->priv->m_lastClickTime);
 		int maxPossibleRepeats = (int)(timeSinceClick / LMB_REPEAT_PERIOD);
-		if (maxPossibleRepeats > 3 && maxPossibleRepeats > im->m_priv->m_lmbRepeatsSoFar)
+		if (maxPossibleRepeats > 3 && maxPossibleRepeats > im->priv->m_lmbRepeatsSoFar)
 		{
-			im->m_priv->m_lmbRepeatsSoFar = maxPossibleRepeats;
-			im->m_lmbRepeated = true;
+			im->priv->m_lmbRepeatsSoFar = maxPossibleRepeats;
+			im->lmbRepeated = true;
 		}
 	}
 
 	// Generate fake mouse up event(s) to compensate for the fact that Windows won't send
 	// them if the last mouse down event was in the client area.
-	if (im->m_priv->m_lastClickWasNC)
+	if (im->priv->m_lastClickWasNC)
 	{
-		im->m_priv->m_lastClickWasNC = false;
-		im->m_priv->m_lmbPrivate = false;
-		im->m_mmb = false;
-		im->m_rmb = false;
+		im->priv->m_lastClickWasNC = false;
+		im->priv->m_lmbPrivate = false;
+		im->mmb = false;
+		im->rmb = false;
 	}
 
-	im->m_mouseVelX = im->m_mouseX - im->m_priv->m_mouseOldX;
-	im->m_mouseVelY = im->m_mouseY - im->m_priv->m_mouseOldY;
-	im->m_mouseVelZ = im->m_mouseZ - im->m_priv->m_mouseOldZ;
-	im->m_priv->m_mouseOldX = im->m_mouseX;
-	im->m_priv->m_mouseOldY = im->m_mouseY;
-	im->m_priv->m_mouseOldZ = im->m_mouseZ;
+	im->mouseVelX = im->mouseX - im->priv->m_mouseOldX;
+	im->mouseVelY = im->mouseY - im->priv->m_mouseOldY;
+	im->mouseVelZ = im->mouseZ - im->priv->m_mouseOldZ;
+	im->priv->m_mouseOldX = im->mouseX;
+	im->priv->m_mouseOldY = im->mouseY;
+	im->priv->m_mouseOldZ = im->mouseZ;
 
     MSG msg;
     while ( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) ) 
@@ -350,7 +350,7 @@ void InputManagerAdvance(InputManager *im)
 
 bool GetRawLmbClicked(InputManager *im) 
 { 
-    return im->m_priv->m_rawLmbClicked; 
+    return im->priv->m_rawLmbClicked; 
 }
 
 
@@ -465,12 +465,12 @@ int GetKeyId(char const *name)
 
 bool UntypeKey(InputManager *im, char key)
 {
-	for (int i = 0; i < im->m_numKeysTyped; ++i)
+	for (int i = 0; i < im->numKeysTyped; ++i)
 	{
-		if (im->m_keysTyped[i] == key)
+		if (im->keysTyped[i] == key)
 		{
-			im->m_keysTyped[i] = im->m_keysTyped[im->m_numKeysTyped - 1];
-			im->m_numKeysTyped--;
+			im->keysTyped[i] = im->keysTyped[im->numKeysTyped - 1];
+			im->numKeysTyped--;
 			return true;
 		}
 	}
@@ -481,5 +481,5 @@ bool UntypeKey(InputManager *im, char key)
 
 void RegisterMouseUpdateCallback(InputManager *im, MouseUpdateCallback *func) 
 { 
-    im->m_priv->m_mouseCallback = func; 
+    im->priv->m_mouseCallback = func; 
 }
