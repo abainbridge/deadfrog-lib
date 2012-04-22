@@ -1,18 +1,24 @@
 from deadfroglib import *
 import Image
 
-im = Image.open("small.png")
+# set up the colors
+BLACK = 0xff000000
+WHITE = 0xffffffff
+
+im = Image.open("img_1377.bmp")
 graph3d = CreateGraph3d()
 for y in range(im.size[1]):
     for x in range(im.size[0]):
-        p = im.getpixel((x, y))
-        (r, g, b) = p
+        (r, g, b) = im.getpixel((x, y))
+        
         ya = 0.299*r + 0.587*g + 0.114*b
         cb = 128 - 0.168736*r - 0.331264*g + 0.5*b
         cr = 128 + 0.5*r - 0.418688*g - 0.081312*b
-        Graph3dAddPoint(graph3d, ya-128, cr-128, cb-128)
-Graph3dAddPoint(graph3d, -128, -128, -128)
-Graph3dAddPoint(graph3d, 128, 128, 128)
+        
+        col = (r << 16) + (g << 8) + b
+        Graph3dAddPoint(graph3d, ya-128, cr-128, cb-128, col)
+Graph3dAddPoint(graph3d, -128, -128, -128, WHITE)
+Graph3dAddPoint(graph3d, 128, 128, 128, WHITE)
 
 # set up the window
 screenw = 1000
@@ -21,10 +27,6 @@ win = CreateWin(500, 50, screenw, screenh, True, '3d plot')
 input = win.contents.inputManager.contents
 font = CreateTextRenderer("Fixedsys", 8, True)
  
-# set up the colors
-BLACK = 0xff000000
-WHITE = 0xffffffff
-
 dist = 430.0
 zoom = 1200.0
 rotZ = 0.0
