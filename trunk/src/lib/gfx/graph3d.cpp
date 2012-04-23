@@ -25,16 +25,20 @@ struct Point
 };
 
 
+#define NUM_DEPTH_BINS 16
 struct Graph3d
 {
-    Point *points;
+    Point *points;      // First 8 points hold the corners of the cube
     int numPoints;
     int maxPoints;
+    
+    float minZ;
+    float maxZ;
+    int *depthBins[NUM_DEPTH_BINS];  // Indices into points, grouped by depth
+    int *depthBinsBuf;
+
     Vector3 maxPoint;   // Holds the highest x, y and z values seen in all the points
     Vector3 minPoint;
-
-    Vector3 verts[8];
-    int lines[24];
 };
 
 
@@ -47,15 +51,7 @@ DLL_API Graph3d *CreateGraph3d()
     g->numPoints = 0;
     g->maxPoints = 16;
 
-    Vector3 verts[] = {{-128,-128,-128}, {128,-128,-128}, {-128,128,-128}, 
-                       {128,128,-128}, {-128,-128,128}, {128,-128,128}, 
-                       {-128,128,128}, {128,128,128}};
-    int lines[] = {0,1, 1,3, 3,2, 2,0,
-                   4,5, 5,7, 7,6, 6,4, 
-                   0,4, 1,5, 2,6, 3,7};
-
-    memcpy(g->verts, verts, sizeof(g->verts));
-    memcpy(g->lines, lines, sizeof(g->lines));
+    g->depthBinsBuf = new int [16];
 
     return g;
 }
@@ -70,6 +66,9 @@ DLL_API void Graph3dAddPoint(Graph3d *g, float x, float y, float z, RGBAColour c
         g->maxPoints *= 2;
         delete [] g->points;
         g->points = newPoints;
+
+        delete [] g->depthBinsBuf;
+        g->depthBinsBuf = new int [g->maxPoints];
     }
 
     Point *p = &g->points[g->numPoints];
@@ -91,6 +90,34 @@ DLL_API void Graph3dAddPoint(Graph3d *g, float x, float y, float z, RGBAColour c
 
 static void Rotate(Graph3d *g, float rotX, float rotZ)
 {
+    // Form bounding box
+    g->points[0].src.x = g->minPoint.x;
+    g->points[1].src.x = g->maxPoint.x;
+    g->points[2].src.x = g->minPoint.x;
+    g->points[3].src.x = g->maxPoint.x;
+    g->points[4].src.x = g->minPoint.x;
+    g->points[5].src.x = g->maxPoint.x;
+    g->points[6].src.x = g->minPoint.x;
+    g->points[7].src.x = g->maxPoint.x;
+
+    g->points[0].src.y = g->minPoint.y;
+    g->points[1].src.y = g->minPoint.y;
+    g->points[2].src.y = g->maxPoint.y;
+    g->points[3].src.y = g->maxPoint.y;
+    g->points[4].src.y = g->minPoint.y;
+    g->points[5].src.y = g->minPoint.y;
+    g->points[6].src.y = g->maxPoint.y;
+    g->points[7].src.y = g->maxPoint.y;
+
+    g->points[0].src.z = g->minPoint.z;
+    g->points[1].src.z = g->minPoint.z;
+    g->points[2].src.z = g->minPoint.z;
+    g->points[3].src.z = g->minPoint.z;
+    g->points[4].src.z = g->maxPoint.z;
+    g->points[5].src.z = g->maxPoint.z;
+    g->points[6].src.z = g->maxPoint.z;
+    g->points[7].src.z = g->maxPoint.z;
+
     float cx = cosf(rotX);
     float sx = sinf(rotX);
     float cz = cosf(rotZ);
@@ -110,48 +137,43 @@ static void Rotate(Graph3d *g, float rotX, float rotZ)
         q->y = p->y * cx + q->z * sx;
         q->z = q->z * cx - p->y * sx;
     }
+}
 
-    // Form bounding box
-    g->verts[0].x = g->minPoint.x;
-    g->verts[1].x = g->maxPoint.x;
-    g->verts[2].x = g->minPoint.x;
-    g->verts[3].x = g->maxPoint.x;
-    g->verts[4].x = g->minPoint.x;
-    g->verts[5].x = g->maxPoint.x;
-    g->verts[6].x = g->minPoint.x;
-    g->verts[7].x = g->maxPoint.x;
 
-    g->verts[0].y = g->minPoint.y;
-    g->verts[1].y = g->minPoint.y;
-    g->verts[2].y = g->maxPoint.y;
-    g->verts[3].y = g->maxPoint.y;
-    g->verts[4].y = g->minPoint.y;
-    g->verts[5].y = g->minPoint.y;
-    g->verts[6].y = g->maxPoint.y;
-    g->verts[7].y = g->maxPoint.y;
-
-    g->verts[0].z = g->minPoint.z;
-    g->verts[1].z = g->minPoint.z;
-    g->verts[2].z = g->minPoint.z;
-    g->verts[3].z = g->minPoint.z;
-    g->verts[4].z = g->maxPoint.z;
-    g->verts[5].z = g->maxPoint.z;
-    g->verts[6].z = g->maxPoint.z;
-    g->verts[7].z = g->maxPoint.z;
-
-    // Transform points of bounding box
-    for (int i = 0; i < 8; i++)
+static void DepthSort(Graph3d *graph)
+{
+    // Find the nearest and furthest point
+    for (int i = 8; i < graph->numPoints; i++)
     {
-        Vector3 *p = &g->verts[i];
+        graph->minZ = __min(graph->minZ, graph->points[i].dst.z);
+        graph->maxZ = __max(graph->maxZ, graph->points[i].dst.z);
+    }
 
-        float x = p->x * cz + p->z * sz;
-        p->z =    p->x * sz - p->z * cz;
-        p->x = x;
+    float depthFactor = 15.0f / (graph->maxZ - graph->minZ);
 
-        // Rotate around x axis
-        float y = p->y;
-        p->y = p->y * cx + p->z * sx;
-        p->z = p->z * cx - y * sx;
+    // Count the number of points in each depth bin
+    int binCounts[NUM_DEPTH_BINS] = { 0 };      // Number of points in each bin
+    for (int i = 8; i < graph->numPoints; i++)
+    {
+        int binIdx = NUM_DEPTH_BINS - int((graph->points[i].dst.z - graph->minZ) * depthFactor) - 1;
+        binCounts[binIdx]++;
+    }
+
+    // Setup the depth bins to point to the correct amount of space in depthBinBuf
+    int pointCount = 8;
+    for (int i = 0; i < NUM_DEPTH_BINS; i++)
+    {
+        graph->depthBins[i] = &graph->depthBinsBuf[pointCount];
+        pointCount += binCounts[i];
+    }
+
+    // Put the points in the appropriate bin
+    memset(binCounts, 0, sizeof(binCounts));
+    for (int i = 8; i < graph->numPoints; i++)
+    {
+        int binIdx = NUM_DEPTH_BINS - int((graph->points[i].dst.z - graph->minZ) * depthFactor) - 1;
+        graph->depthBins[binIdx][binCounts[binIdx]] = i;
+        binCounts[binIdx]++;
     }
 }
 
@@ -171,19 +193,31 @@ DLL_API void Graph3dRender(Graph3d *graph, BitmapRGBA *bmp, float cx, float cy,
                            float rotX, float rotZ)
 {
     Rotate(graph, rotX, rotZ);
+    DepthSort(graph);
 
-    for (int i = 0; i < graph->numPoints; i++)
+    // Draw the points
+    for (int i = 8; i < graph->numPoints; i++)
     {
-        Vector2 p = ProjectPoint(graph->points[i].dst, cx, cy, dist, zoom);
-        PutPixelClipped(bmp, p.x, p.y, graph->points[i].col);
+        int idx = graph->depthBinsBuf[i];
+        Vector2 p = ProjectPoint(graph->points[idx].dst, cx, cy, dist, zoom);
+        PutPixelClipped(bmp, p.x, p.y, graph->points[idx].col);
+        i++;
+        idx = graph->depthBinsBuf[i];
+        p = ProjectPoint(graph->points[idx].dst, cx, cy, dist, zoom);
+        PutPixelClipped(bmp, p.x, p.y, graph->points[idx].col);
     }
 
+    int boundingLines[] = {0,1, 1,3, 3,2, 2,0,
+                           4,5, 5,7, 7,6, 6,4, 
+                           0,4, 1,5, 2,6, 3,7};
+
+    // Draw the bounding cube
     for (int i = 0; i < 12; i++)
     {
-        int idx1 = graph->lines[i*2];
-        int idx2 = graph->lines[i*2+1];
-        Vector2 a = ProjectPoint(graph->verts[idx1], cx, cy, dist, zoom);
-        Vector2 b = ProjectPoint(graph->verts[idx2], cx, cy, dist, zoom);
+        int idx1 = boundingLines[i*2];
+        int idx2 = boundingLines[i*2+1];
+        Vector2 a = ProjectPoint(graph->points[idx1].dst, cx, cy, dist, zoom);
+        Vector2 b = ProjectPoint(graph->points[idx2].dst, cx, cy, dist, zoom);
         DrawLine(bmp, a.x, a.y, b.x, b.y, col);
     }
 }
