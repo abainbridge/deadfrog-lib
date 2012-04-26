@@ -25,7 +25,14 @@ struct Point
 };
 
 
-#define NUM_DEPTH_BINS 16
+struct SortedPoint
+{
+    Vector3 pos;
+    RGBAColour col;
+};
+
+
+#define NUM_DEPTH_BINS 64
 struct Graph3d
 {
     Point *points;      // First 8 points hold the corners of the cube
@@ -34,8 +41,7 @@ struct Graph3d
     
     float minZ;
     float maxZ;
-    int *depthBins[NUM_DEPTH_BINS];  // Indices into points, grouped by depth
-    int *depthBinsBuf;
+    SortedPoint *sortedPoints;  // Only approximately sorted - good enough, fast and simple
 
     Vector3 maxPoint;   // Holds the highest x, y and z values seen in all the points
     Vector3 minPoint;
@@ -51,7 +57,7 @@ DLL_API Graph3d *CreateGraph3d()
     g->numPoints = 0;
     g->maxPoints = 16;
 
-    g->depthBinsBuf = new int [16];
+    g->sortedPoints = new SortedPoint [16];
 
     return g;
 }
@@ -67,8 +73,8 @@ DLL_API void Graph3dAddPoint(Graph3d *g, float x, float y, float z, RGBAColour c
         delete [] g->points;
         g->points = newPoints;
 
-        delete [] g->depthBinsBuf;
-        g->depthBinsBuf = new int [g->maxPoints];
+        delete [] g->sortedPoints;
+        g->sortedPoints = new SortedPoint [g->maxPoints];
     }
 
     Point *p = &g->points[g->numPoints];
@@ -91,32 +97,21 @@ DLL_API void Graph3dAddPoint(Graph3d *g, float x, float y, float z, RGBAColour c
 static void Rotate(Graph3d *g, float rotX, float rotZ)
 {
     // Form bounding box
-    g->points[0].src.x = g->minPoint.x;
-    g->points[1].src.x = g->maxPoint.x;
-    g->points[2].src.x = g->minPoint.x;
-    g->points[3].src.x = g->maxPoint.x;
-    g->points[4].src.x = g->minPoint.x;
-    g->points[5].src.x = g->maxPoint.x;
-    g->points[6].src.x = g->minPoint.x;
-    g->points[7].src.x = g->maxPoint.x;
+    for (int i = 0; i < 8; i++)
+    {
+        g->points[i].src.x = g->minPoint.x;
+        g->points[i].src.y = g->minPoint.y;
+        g->points[i].src.z = g->minPoint.z;
 
-    g->points[0].src.y = g->minPoint.y;
-    g->points[1].src.y = g->minPoint.y;
-    g->points[2].src.y = g->maxPoint.y;
-    g->points[3].src.y = g->maxPoint.y;
-    g->points[4].src.y = g->minPoint.y;
-    g->points[5].src.y = g->minPoint.y;
-    g->points[6].src.y = g->maxPoint.y;
-    g->points[7].src.y = g->maxPoint.y;
+        if (i & 1)
+            g->points[i].src.x = g->maxPoint.x;
 
-    g->points[0].src.z = g->minPoint.z;
-    g->points[1].src.z = g->minPoint.z;
-    g->points[2].src.z = g->minPoint.z;
-    g->points[3].src.z = g->minPoint.z;
-    g->points[4].src.z = g->maxPoint.z;
-    g->points[5].src.z = g->maxPoint.z;
-    g->points[6].src.z = g->maxPoint.z;
-    g->points[7].src.z = g->maxPoint.z;
+        if (i & 2)
+            g->points[i].src.y = g->maxPoint.y;
+
+        if (i & 4)
+            g->points[i].src.z = g->maxPoint.z;
+    }
 
     float cx = cosf(rotX);
     float sx = sinf(rotX);
@@ -161,9 +156,10 @@ static void DepthSort(Graph3d *graph)
 
     // Setup the depth bins to point to the correct amount of space in depthBinBuf
     int pointCount = 8;
+    SortedPoint *depthBins[NUM_DEPTH_BINS];  // Indices into points, grouped by depth
     for (int i = 0; i < NUM_DEPTH_BINS; i++)
     {
-        graph->depthBins[i] = &graph->depthBinsBuf[pointCount];
+        depthBins[i] = &graph->sortedPoints[pointCount];
         pointCount += binCounts[i];
     }
 
@@ -171,8 +167,16 @@ static void DepthSort(Graph3d *graph)
     memset(binCounts, 0, sizeof(binCounts));
     for (int i = 8; i < graph->numPoints; i++)
     {
+        // Find which bin this point belongs in
         int binIdx = NUM_DEPTH_BINS - int((graph->points[i].dst.z - graph->minZ) * depthFactor) - 1;
-        graph->depthBins[binIdx][binCounts[binIdx]] = i;
+        
+        // Copy the view space coords from the unsorted array of points into the 
+        // pseudo-sorted array.
+        SortedPoint *thisBin = depthBins[binIdx];
+        int idxIntoBin = binCounts[binIdx];
+        memcpy(&thisBin[idxIntoBin].pos, &graph->points[i].dst, sizeof(Vector3));
+        thisBin[idxIntoBin].col = graph->points[i].col;
+        
         binCounts[binIdx]++;
     }
 }
@@ -198,13 +202,8 @@ DLL_API void Graph3dRender(Graph3d *graph, BitmapRGBA *bmp, float cx, float cy,
     // Draw the points
     for (int i = 8; i < graph->numPoints; i++)
     {
-        int idx = graph->depthBinsBuf[i];
-        Vector2 p = ProjectPoint(graph->points[idx].dst, cx, cy, dist, zoom);
-        PutPixelClipped(bmp, p.x, p.y, graph->points[idx].col);
-        i++;
-        idx = graph->depthBinsBuf[i];
-        p = ProjectPoint(graph->points[idx].dst, cx, cy, dist, zoom);
-        PutPixelClipped(bmp, p.x, p.y, graph->points[idx].col);
+        Vector2 p = ProjectPoint(graph->sortedPoints[i].pos, cx, cy, dist, zoom);
+        PutPixelClipped(bmp, p.x, p.y, graph->sortedPoints[i].col);
     }
 
     int boundingLines[] = {0,1, 1,3, 3,2, 2,0,
