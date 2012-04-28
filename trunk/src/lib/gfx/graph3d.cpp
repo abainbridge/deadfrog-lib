@@ -203,7 +203,7 @@ DLL_API void Graph3dRender(Graph3d *graph, BitmapRGBA *bmp, float cx, float cy,
     for (int i = 8; i < graph->numPoints; i++)
     {
         Vector2 p = ProjectPoint(graph->sortedPoints[i].pos, cx, cy, dist, zoom);
-        PutPixelClipped(bmp, p.x, p.y, graph->sortedPoints[i].col);
+        Plot(bmp, p.x, p.y, graph->sortedPoints[i].col);
     }
 
     int boundingLines[] = {0,1, 1,3, 3,2, 2,0,
