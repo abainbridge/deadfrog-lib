@@ -21,14 +21,16 @@ DLL_API void        DeleteBitmapRGBA(BitmapRGBA *bmp);
 
 DLL_API void        ClearBitmap     (BitmapRGBA *bmp, RGBAColour c);
 
-DLL_API void        DfPutPixel      (BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c);
-DLL_API void        PutPixelClipped (BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c);
+DLL_API void        PlotUnclipped   (BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c);
+DLL_API void        Plot            (BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c);
 
-DLL_API RGBAColour  DfGetPixel      (BitmapRGBA *bmp, unsigned x, unsigned y);
-DLL_API RGBAColour  GetPixelClipped (BitmapRGBA *bmp, unsigned x, unsigned y);
+DLL_API RGBAColour  GetPlotUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y);
+DLL_API RGBAColour  GetPlot         (BitmapRGBA *bmp, unsigned x, unsigned y);
 
 DLL_API void        HLine           (BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c);
+DLL_API void        HLineUnclipped  (BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c);
 DLL_API void        VLine           (BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c);
+DLL_API void        VLineUnclipped  (BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c);
 DLL_API void        DrawLine        (BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour c);
 
 DLL_API void        RectFill        (BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c);
@@ -47,7 +49,7 @@ DLL_API void        QuickBlit       (BitmapRGBA *destBmp, int x, int y, BitmapRG
 
 
 
-inline void DfPutPixel(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
+inline void PlotUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
 {
     // if (CompA(colour) == 255)
 	bmp->lines[y][x] = c;

@@ -20,7 +20,7 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
     TextRenderer *font = CreateTextRenderer("Courier", 8);
     Graph3d *graph3d = CreateGraph3d();
 
-    for (int i = 0; i < 170000; i++)
+    for (int i = 0; i < 270000; i++)
         Graph3dAddPoint(graph3d, frand(100.0f) - 50.0f, 
                                  frand(100.0f) - 50.0f, 
                                  frand(100.0f) - 50.0f, rand() * rand());
@@ -46,7 +46,10 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
             rotZ += float(win->inputManager->mouseVelX) * 0.01f;
         }
 
+        double startTime = GetHighResTime();
         Graph3dRender(graph3d, bmp, 400, 400, 200, 800, g_colourWhite, rotX, rotZ);
+        double endTime = GetHighResTime();
+        DrawTextLeft(font, g_colourWhite, bmp, 0, 20, "%.1f ms", (endTime - startTime) * 1000.0);
 
         DrawTextLeft(font, g_colourWhite, bmp, 0, screenH - 15, "Hold left mouse to rotate");
     }
