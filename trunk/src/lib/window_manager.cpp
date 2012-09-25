@@ -87,7 +87,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     if (message == WM_SYSKEYDOWN && wParam == 115)
         SendMessage(hWnd, WM_CLOSE, 0, 0);
 
-	switch (message)
+    switch (message)
+    {
+    case WM_LBUTTONDOWN:
+    case WM_MBUTTONDOWN:
+    case WM_RBUTTONDOWN:
+        SetCapture(hWnd);
+        break;
+    case WM_LBUTTONUP:
+    case WM_MBUTTONUP:
+    case WM_RBUTTONUP:
+        ReleaseCapture();
+        break;
+    }
+
+    switch (message)
 	{
         case WM_PAINT:
             return DefWindowProc(hWnd, message, wParam, lParam);
@@ -118,7 +132,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 // 			break;
 // 		}
 
-		case WM_CLOSE:
+        case WM_CLOSE:
             if (win)
 			    win->windowClosed = true;
 			return 0;
