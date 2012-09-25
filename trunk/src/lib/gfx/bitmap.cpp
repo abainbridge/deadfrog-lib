@@ -100,7 +100,7 @@ void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 void VLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
     for (unsigned i = 0; i < len; i++)
-        bmp->lines[y][x + i] = c;
+        bmp->lines[y + i][x] = c;
 }
 
 
@@ -159,59 +159,111 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
     }
 
     // Clip first end of line
-    if ((unsigned)x1 > bmp->width || (unsigned)y1 > bmp->height ||
-        (unsigned)x2 > bmp->width || (unsigned)y2 > bmp->height)
+    if ((unsigned)x1 >= bmp->width || (unsigned)y1 >= bmp->height ||
+        (unsigned)x2 >= bmp->width || (unsigned)y2 >= bmp->height)
     {
-        double slope = (double)yDelta / (double)xDelta;
+        // Parametric line equation can be written as:
+        //   x = rx + t * ux
+        //   y = ry + t * uy
+        // Where (x,y) is a point on the line. (rx,ry) is another 
+        // point on the line. (ux, uy) is a vector along the line.
+        // We can use (xDelta, yDelta) for (ux, uy).
+        // t is a real number that ranges from 0 to 1 for our line segment.
+        //  - t = 0 gives us (x1, y1)
+        //  - t = 1 gives us (x2, y2)
+        // Now clipping our line against the bitmap edges can be done by
+        // seeing if any of the edges limits 't' to a range smaller than
+        // 0 to 1.
 
-        // Clip first end against left and right of bitmap
-        if (x1 < 0)
+        double tMin = 0.0;
+        double tMax = 1.0;
+        double t;
+
+        // Find t when the line intersects the top of the bitmap.
+        // If y = 0 then 0 = ry + t * yDelta
+        // or t = -ry / yDelta
+        t = -double(y1) / double(yDelta);
+        if (t > 1.0)
+            return;
+        if (t > tMin)
+            tMin = t;
+
+        // Find t when the line intersects the bottom of the bitmap.
+        // If y = height then height = ry + t * yDelta
+        // or t = (height - ry) / yDelta;
+        t = double(int(bmp->height) - 1 - y1) / double(yDelta);
+        if (t < 0.0)
+            return;
+        if (t < tMax)
+            tMax = t;
+
+        // Find t when the line intersects the left edge of the bitmap.
+        // If x = 0 then 0 = rx + t * xDelta
+        // Solving for t gives -rx = t * xDelta, or t = -rx / xDelta
+        t = -double(x1) / double(xDelta);
+        if (xDelta > 0)
         {
-            y1 -= x1 * slope + 0.5;
-            x1 = 0;
+            if (t > tMin)
+                tMin = t;
         }
-        else if ((unsigned)x1 > bmp->width)
+        else
         {
-            y1 += ((int)bmp->width - (x1 + 1)) * slope + 0.5;
-            x1 = bmp->width - 1;
+            if (t < tMax)
+                tMax = t;
         }
 
-        // Clip first end against top and bottom of bitmap
-        if (y1 < 0)
+        // Find t when the line intersects the right edge of the bitmap.
+        // If x = width then width = rx + t * xDelta.
+        // Solving for t gives width - rx = t * xDelta
+        // or t = (width - rx) / xDelta
+        t = double(int(bmp->width) - 1 - x1) / double(xDelta);
+        if (xDelta > 0)
         {
-            x1 += (y1 / slope) + 0.5;
-            y1 = 0;
+            if (t < tMax)
+                tMax = t;
         }
-        else if ((unsigned)y1 > bmp->height)
+        else
         {
-            return; // The entire line is off the bmp
-        }
-
-        // Clip second end against left and right of bitmap
-        if (x2 < 0)
-        {
-            y2 -= x2 * slope + 0.5;
-            x2 = 0;
-        }
-        else if ((unsigned)x2 > bmp->width)
-        {
-            y2 += ((int)bmp->width - (x2 + 1)) * slope + 0.5;
-            x2 = bmp->width - 1;
+            if (t > tMin)
+                tMin = t;
         }
 
-        // Clip second end against top and bottom of bitmap
-        if (y2 < 0)
-        {
-            return; // The entire line is off the bmp
-        }
-        else if ((unsigned)y2 > bmp->height)
-        {
-            x2 += (y2 / slope) + 0.5;
-            y2 = bmp->height - 1;
-        }
+        if (tMin > tMax)
+            return;
+
+        // Now recalc (x1,y1) and (x2,y2)
+        int nx1 = x1 + xDelta * tMin;
+        int ny1 = y1 + yDelta * tMin;
+        int nx2 = x1 + xDelta * tMax;
+        int ny2 = y1 + yDelta * tMax;
+
+        DebugAssert(nx1 >= 0);
+        DebugAssert(nx1 < bmp->width);
+        DebugAssert(ny1 >= 0);
+        DebugAssert(ny1 < bmp->height);
+        DebugAssert(nx2 >= 0);
+        DebugAssert(nx2 < bmp->width);
+        DebugAssert(ny1 >= 0);
+        DebugAssert(ny1 < bmp->height);
+
+        x1 = nx1;
+        x2 = nx2;
+        y1 = ny1;
+        y2 = ny2;
 
         xDelta = x2 - x1;
         yDelta = y2 - y1;
+
+        // Special case horizontal and vertical lines
+        if (xDelta == 0)
+            return VLineUnclipped(bmp, x1, y1, yDelta, colour);
+        if (yDelta == 0)
+        {
+            if (xDelta > 0)
+                return HLineUnclipped(bmp, x1, y1, xDelta, colour);
+            else
+                return HLineUnclipped(bmp, x2, y1, -xDelta, colour);
+        }
     }
 
     int xAdvance = 1;
@@ -320,7 +372,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
             errorTerm += xDelta;
 
         // Draw vertical run
-        int lineInc = xAdvance * bmp->width;
+        int lineInc = bmp->width;
         for (; initialPixelCount; initialPixelCount--)
         {
             *pixel = colour;
