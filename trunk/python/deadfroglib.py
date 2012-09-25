@@ -144,7 +144,7 @@ BlitBitmap = makevoid("BlitBitmap", [POINTER(WindowData), c_void_p, c_int, c_int
 
 CreateBitmapRGBA = makenot("CreateBitmapRGBA", [c_uint, c_uint], c_void_p)
 ClearBitmap = makevoid("ClearBitmap", [c_void_p, c_uint])
-PutPixel = makevoid("PutPixelClipped", [c_void_p, c_uint, c_uint, c_uint])
+Plot = makevoid("Plot", [c_void_p, c_uint, c_uint, c_uint])
 DrawLine = makevoid("DrawLine", [c_void_p, c_int, c_int, c_int, c_int, c_uint])
 RectFill = makevoid("RectFill", [c_void_p, c_int, c_int, c_uint, c_uint, c_uint])
 
