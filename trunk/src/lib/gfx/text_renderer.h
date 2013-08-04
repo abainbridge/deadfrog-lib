@@ -9,13 +9,13 @@ struct BitmapRGBA;
 class Glyph;
 
 
-struct TextRenderer
+typedef struct
 {
 	Glyph       *glyphs[256];
 	bool		fixedWidth;
 	int			maxCharWidth;
 	int			charHeight;	// in pixels
-};
+} TextRenderer;
 
 
 DLL_API TextRenderer *CreateTextRenderer(char const *_fontname, int size);

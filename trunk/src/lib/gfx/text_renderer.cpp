@@ -1,3 +1,10 @@
+#include "text_renderer.h"
+
+#include "lib/gfx/bitmap.h"
+#include "lib/gfx/rgba_colour.h"
+#include "lib/common.h"
+#include "lib/window_manager.h"
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -5,13 +12,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "lib/gfx/bitmap.h"
-#include "lib/gfx/rgba_colour.h"
-#include "lib/debug_utils.h"
-#include "lib/window_manager.h"
-
-#include "text_renderer.h"
 
 
 // ****************************************************************************
@@ -63,10 +63,7 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
 	GetTextMetrics(memDC, &textMetrics);
 	tr->charHeight = textMetrics.tmHeight;
 	tr->maxCharWidth = textMetrics.tmAveCharWidth;
-	if (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth)
-		tr->fixedWidth = true;
-	else
-		tr->fixedWidth = false;
+	tr->fixedWidth = (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth);
 
 	// Ask GDI about the name of the font
 	char nameOfFontWeGot[256];

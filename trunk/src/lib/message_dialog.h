@@ -1,5 +1,5 @@
-#ifndef INCLUDED_MESSAGE_BOX_H
-#define INCLUDED_MESSAGE_BOX_H
+#ifndef INCLUDED_MESSAGE_DIALOG_H
+#define INCLUDED_MESSAGE_DIALOG_H
 
 
 enum MessageDialogType

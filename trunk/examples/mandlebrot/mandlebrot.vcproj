@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="deadfrog-lib"
-	ProjectGUID="{06366000-CEA4-4C81-A29F-49E2DF277A93}"
-	RootNamespace="deadfrog-lib"
+	Name="mandlebrot"
+	ProjectGUID="{97A5F3B0-3C9A-4B5D-BE9B-1348C59CE167}"
+	RootNamespace="mandlebrot"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -20,8 +20,8 @@
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
-			CharacterSet="0"
+			ConfigurationType="1"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -41,15 +41,13 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../src"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;DLL_EXPORTS"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
-				DisableSpecificWarnings="4244;4996"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -87,15 +85,14 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy $(OutDir)\$(ProjectName).dll ..\..\python"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
-			CharacterSet="0"
+			ConfigurationType="1"
+			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -117,24 +114,13 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="1"
-				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../src"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;DLL_EXPORTS"
-				StringPooling="true"
-				ExceptionHandling="0"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
 				RuntimeLibrary="2"
-				StructMemberAlignment="0"
-				BufferSecurityCheck="false"
 				EnableFunctionLevelLinking="true"
-				EnableEnhancedInstructionSet="2"
-				FloatingPointModel="2"
-				RuntimeTypeInfo="false"
-				OpenMP="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4244;4996"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -147,14 +133,13 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="deadfrog-lib.lib"
 				LinkIncremental="1"
-				GenerateManifest="false"
+				AdditionalLibraryDirectories="../../build/vs9/$(ConfigurationName)"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
-				OptimizeForWindows98="0"
-				RandomizedBaseAddress="2"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -177,79 +162,14 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy $(OutDir)\$(ProjectName).dll ..\..\python"
 			/>
 		</Configuration>
 	</Configurations>
 	<References>
 	</References>
 	<Files>
-		<Filter
-			Name="gfx"
-			>
-			<File
-				RelativePath="..\..\src\lib\gfx\bitmap.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\bitmap.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\rgba_colour.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\rgba_colour.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\text_renderer.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\text_renderer.h"
-				>
-			</File>
-		</Filter>
 		<File
-			RelativePath="..\..\src\lib\common.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\common.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\hi_res_time.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\hi_res_time.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\input.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\input.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\message_dialog.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\message_dialog.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\window_manager.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\lib\window_manager.h"
+			RelativePath=".\mand.cpp"
 			>
 		</File>
 	</Files>

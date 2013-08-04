@@ -4,32 +4,23 @@
 
 #include "lib/common.h"
 
-typedef unsigned RGBAColour;
-
-DLL_API inline unsigned MakeCol(unsigned r, unsigned g, unsigned b, unsigned a)
+typedef union
 {
-	unsigned c;
-	unsigned char *comps = (unsigned char *)&c;
-	comps[0] = a;
-	comps[1] = b;
-	comps[2] = g;
-	comps[3] = r;
+    unsigned c;
+    struct { unsigned char b, g, r, a; };
+} RGBAColour;
+
+
+DLL_API inline RGBAColour Colour(unsigned r, unsigned g, unsigned b)
+{
+	RGBAColour c;
+	c.a = 255;
+	c.b = b;
+	c.g = g;
+	c.r = r;
 	return c;
 }
 
-
-#define CompR(c) (((unsigned char *)c)[3])
-#define CompG(c) (((unsigned char *)c)[1])
-#define CompB(c) (((unsigned char *)c)[2])
-#define CompA(c) (((unsigned char *)c)[0])
-
-// void ConvertToHsv();
-// void ConvertToRgb();
-// 
-// void SignedAddWithSaturate(int r, int g, int b);
-// void BlendTowards(RGBAColour const &other, float fraction);
-// 
-// unsigned char GetLuminance(); // Returns a value between 0 and 255
 
 DLL_API extern RGBAColour g_colourBlack;
 DLL_API extern RGBAColour g_colourWhite;

@@ -1,15 +1,13 @@
 #include "window_manager.h"
 
-#include <limits.h>
-#include <windows.h>
-#include <shellapi.h>
-#include <stdlib.h>	// For exit()
-
-#include "lib/gfx/bitmap.h"
-#include "lib/gfx/text_renderer.h"
 #include "lib/hi_res_time.h"
 #include "lib/input.h"
-#include "lib/message_dialog.h"
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#include <shellapi.h>
+#include <stdlib.h>
 
 
 struct WindowDataPrivate
@@ -18,57 +16,12 @@ struct WindowDataPrivate
     int					m_borderWidth;
     int					m_titleHeight;
     HINSTANCE			m_hInstance;
-
     unsigned int	    m_framesThisSecond;
     double			    m_endOfSecond;
 };
 
 
-
-// ****************************************************************************
-//  Window manager
-// ****************************************************************************
-
-#define MAX_WINDOWS 100
-WindowData *g_windows[MAX_WINDOWS] = { NULL };
-
-
-WindowData *GetWindowData(HWND hwnd)
-{
-    for (int i = 0; i < MAX_WINDOWS; i++)
-    {
-        if (g_windows[i] && g_windows[i]->_private->m_hWnd == hwnd)
-            return g_windows[i];
-    }
-
-    return NULL;
-}
-
-
-void AddWindowData(WindowData *w)
-{
-    for (int i = 0; i < MAX_WINDOWS; i++)
-    {
-        if (!g_windows[i])
-        {
-            g_windows[i] = w;
-            break;
-        }
-    }
-}
-
-
-void RemoveWindowData(WindowData *w)
-{
-    for (int i = 0; i < MAX_WINDOWS; i++)
-    {
-        if (g_windows[i] == w)
-        {
-            g_windows[i] = NULL;
-            break;
-        }
-    }
-}
+WindowData *g_window = NULL;
 
 
 // ****************************************************************************
@@ -79,10 +32,9 @@ void RemoveWindowData(WindowData *w)
 #define WINDOWED_WINDOW_STYLE (FULLSCREEN_WINDOW_STYLE | (WS_CAPTION | WS_BORDER))
 //#define WINDOWED_WINDOW_STYLE (FULLSCREEN_WINDOW_STYLE | (WS_CAPTION | WS_BORDER | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX))
 
-#include "debug_utils.h"
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    WindowData *win = GetWindowData(hWnd);
+    WindowData *win = g_window;
 
     if (message == WM_SYSKEYDOWN && wParam == 115)
         SendMessage(hWnd, WM_CLOSE, 0, 0);
@@ -107,41 +59,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             return DefWindowProc(hWnd, message, wParam, lParam);
             break;
 
-// 		case WM_NCCALCSIZE:
-// 		{
-// 			if (wParam == 0)
-// 			{
-// 				// This branch is taken on startup
-// 				RECT *rect = (RECT *)lParam;
-// 				*s_width = rect->right - rect->left;
-// 				*s_height = rect->bottom - rect->top;
-// 			}
-// 			else
-// 			{
-// 				// This branch is taken otherwise
-// 				NCCALCSIZE_PARAMS *csp = (NCCALCSIZE_PARAMS*)lParam;
-// 				*s_width = csp->lppos->cx;
-// 				*s_height = csp->lppos->cy;
-// 			}
-// 			*s_width -= 2 * g_windowManager->GetBorderWidth();
-// 			*s_height -= 2 * g_windowManager->GetBorderWidth();
-// 			*s_height -= g_windowManager->GetTitleHeight();
-//             if ((int)(*s_height) < 0)
-//                 *s_height = 0;
-// 			return DefWindowProc( hWnd, message, wParam, lParam );
-// 			break;
-// 		}
-
         case WM_CLOSE:
             if (win)
 			    win->windowClosed = true;
 			return 0;
 
 		default:
-			if (!win || EventHandler(win->inputManager, message, wParam, lParam) == -1)
-			{
+			if (!win || EventHandler(message, wParam, lParam) == -1)
 				return DefWindowProc(hWnd, message, wParam, lParam);
-			}
 	}
 
 	return 0;
@@ -158,18 +83,18 @@ static int clamp(int val, int min, int max)
 }
 
 
-WindowData *CreateWin(int x, int y, int width, int height, bool _windowed, char const *winName)
+bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *winName)
 {
-	WindowData *wd = new WindowData;
+	if (g_window)
+        return false;
+    WindowData *wd = g_window = new WindowData;
 	memset(wd, 0, sizeof(WindowData));
     
     wd->_private = new WindowDataPrivate;
     memset(wd->_private, 0, sizeof(WindowDataPrivate));
 
-    wd->inputManager = CreateInputManager();
-
-    static int const minWidth = 320;
-    static int const minHeight = 240;
+    static int const minWidth = 160;
+    static int const minHeight = 120;
 	width = clamp(width, minWidth, 3000);
 	height = clamp(height, minHeight, 2300);
 	wd->width = width;
@@ -184,12 +109,12 @@ WindowData *CreateWin(int x, int y, int width, int height, bool _windowed, char 
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = wd->_private->m_hInstance;
-	wc.hIcon = LoadIcon( NULL, IDI_APPLICATION );
-	wc.hCursor = LoadCursor( NULL, IDC_ARROW );
-	wc.hbrBackground = (HBRUSH)GetStockObject( BLACK_BRUSH );
+	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 	wc.lpszMenuName = NULL;
 	wc.lpszClassName = winName;
-	RegisterClass( &wc );
+	RegisterClass(&wc);
 
 	unsigned int windowStyle = FULLSCREEN_WINDOW_STYLE;
 	if (_windowed)
@@ -222,120 +147,86 @@ WindowData *CreateWin(int x, int y, int width, int height, bool _windowed, char 
 		devmode.dmPelsHeight = height;
 		devmode.dmDisplayFrequency = 60;
 		devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
-		ChangeDisplaySettings(&devmode, CDS_FULLSCREEN);
+		ReleaseAssert(ChangeDisplaySettings(&devmode, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL,
+            "Couldn't change screen resolution to %i x %i", width, height);
+        
 		x = 0;
 		y = 0;
 		wd->_private->m_borderWidth = 1;
 		wd->_private->m_titleHeight = 0;
 	}
 
-    wd->bmp = CreateBitmapRGBA(width, height);
+    wd->backBuffer = CreateBitmapRGBA(width, height);
 
 	// Create main window
-	wd->_private->m_hWnd = CreateWindow( 
-		wc.lpszClassName, wc.lpszClassName, 
-		windowStyle,
-		x, y, width, height,
-		NULL, NULL, 0/*g_hInstance*/, NULL );
-
-// 	// Set the window's title bar icon
-// 	HANDLE hIcon = LoadImageA(g_hInstance, "#101", IMAGE_ICON, 16, 16, 0);
-//     if (hIcon)
-//     {
-//         SendMessage(m_hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-//         SendMessage(m_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-//     }
-// 	hIcon = LoadImageA(g_hInstance, "#101", IMAGE_ICON, 32, 32, 0);
-//     if (hIcon)
-//     {
-//         SendMessage(m_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-// 	}
-
-    AddWindowData(wd);
+	wd->_private->m_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName, 
+		windowStyle, x, y, width, height,
+		NULL, NULL, 0/*g_hInstance*/, NULL);
 
     wd->_private->m_endOfSecond = GetHighResTime() + 1.0;
 
-	return wd;
+    CreateInputManager();
+	return true;
 }
 
 
-BitmapRGBA *AdvanceWin(WindowData *w)
+// This function copies a BitmapRGBA to the window, so you can actually see it.
+// SetBIBitsToDevice seems to be the fastest way to achieve this on most hardware.
+static void BlitBitmapToWindow(WindowData *wd, BitmapRGBA *bmp, int x, int y)
+{
+    BITMAPINFO binfo;
+    binfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    binfo.bmiHeader.biWidth = bmp->width;
+    binfo.bmiHeader.biHeight = -(int)bmp->height;
+    binfo.bmiHeader.biPlanes = 1;
+    binfo.bmiHeader.biBitCount = 32;
+    binfo.bmiHeader.biCompression = BI_RGB;
+    binfo.bmiHeader.biSizeImage = bmp->height * bmp->width * 4;
+    binfo.bmiHeader.biXPelsPerMeter = 0;
+    binfo.bmiHeader.biYPelsPerMeter = 0;
+    binfo.bmiHeader.biClrUsed = 0;
+    binfo.bmiHeader.biClrImportant = 0;
+
+    HDC dc = GetDC(wd->_private->m_hWnd);
+
+    SetDIBitsToDevice(dc,
+        x, y, bmp->width, bmp->height,
+        0, 0, 0, bmp->height,
+        bmp->pixels, &binfo, DIB_RGB_COLORS
+    );
+
+    ReleaseDC(wd->_private->m_hWnd, dc);
+}
+
+
+void AdvanceWin()
 {
     // *** Input Manager ***
     
-    InputManagerAdvance(w->inputManager);
+    InputManagerAdvance();
 
     
     // *** FPS Meter ***
     
-    w->_private->m_framesThisSecond++;
+    g_window->_private->m_framesThisSecond++;
 
     double currentTime = GetHighResTime();
-    if (currentTime > w->_private->m_endOfSecond)
+    if (currentTime > g_window->_private->m_endOfSecond)
     {
-        if (currentTime > w->_private->m_endOfSecond + 2.0)
-        {
-            w->_private->m_endOfSecond = currentTime + 1.0;
-        }
+        // If program has been paused by a debugger, skip the seconds we missed
+        if (currentTime > g_window->_private->m_endOfSecond + 2.0)
+            g_window->_private->m_endOfSecond = currentTime + 1.0;
         else
-        {
-            w->_private->m_endOfSecond += 1.0;
-        }
-        w->fps = w->_private->m_framesThisSecond;
-        w->_private->m_framesThisSecond = 0;
+            g_window->_private->m_endOfSecond += 1.0;
+        g_window->fps = g_window->_private->m_framesThisSecond;
+        g_window->_private->m_framesThisSecond = 0;
     }
-    else if (w->_private->m_endOfSecond > currentTime + 2.0)
+    else if (g_window->_private->m_endOfSecond > currentTime + 2.0)
     {
-        w->_private->m_endOfSecond = currentTime + 1.0;
+        g_window->_private->m_endOfSecond = currentTime + 1.0;
     }
 
-    BlitBitmap(w, w->bmp, 0, 0);
-    SleepEx(10, true);
-
-    return w->bmp;
-}
-
-
-unsigned int GetWidth(WindowData *w)
-{
-	return w->width;
-}
-
-
-unsigned int GetHeight(WindowData *w)
-{
-	return w->height;
-}
-
-
-void BlitBitmap(WindowData *wd, BitmapRGBA *bmp, int x, int y)
-{
-	BITMAPINFO binfo;
-	binfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	binfo.bmiHeader.biWidth = bmp->width;
-	binfo.bmiHeader.biHeight = -(int)bmp->height;
-	binfo.bmiHeader.biPlanes = 1;
-	binfo.bmiHeader.biBitCount = 32;
-	binfo.bmiHeader.biCompression = BI_RGB;
-	binfo.bmiHeader.biSizeImage = bmp->height * bmp->width * 4;
-	binfo.bmiHeader.biXPelsPerMeter = 0;
-	binfo.bmiHeader.biYPelsPerMeter = 0;
-	binfo.bmiHeader.biClrUsed = 0;
-	binfo.bmiHeader.biClrImportant = 0;
-
-	HDC dc = GetDC(wd->_private->m_hWnd);
-
-	SetDIBitsToDevice(dc,
-		x, y,
-		bmp->width, bmp->height,
-		0, 0,
-		0, bmp->height,
-		bmp->pixels,
-		&binfo,
-		DIB_RGB_COLORS
-		);
-
-	ReleaseDC(wd->_private->m_hWnd, dc);
+    BlitBitmapToWindow(g_window, g_window->backBuffer, 0, 0);
 }
 
 
@@ -348,10 +239,4 @@ void ShowMouse()
 void HideMouse()
 {
 	ShowCursor(false);
-}
-
-
-void SetWindowTitle(WindowData *wd, char const *title)
-{
-	SetWindowText(wd->_private->m_hWnd, title);
 }
