@@ -6,37 +6,34 @@
 #include "lib/common.h"
 #include "lib/input.h"
 
-struct BitmapRGBA;
-struct InputManager;
 struct WindowDataPrivate;
 
-struct WindowData
+typedef struct
 {
     WindowDataPrivate   *_private;
     
-    BitmapRGBA          *bmp;
-    unsigned int		width;
-    unsigned int		height;
+    BitmapRGBA          *backBuffer;
+    int		            width;
+    int		            height;
 
-    InputManager        *inputManager;
     bool                windowClosed;
 
     unsigned int	    fps;
-};
+} WindowData;
 
 
-DLL_API WindowData *    CreateWin(int x, int y, int _width, int _height, bool _windowed, char const *winName);
-DLL_API BitmapRGBA *    AdvanceWin(WindowData *w); // Returns the window's bitmap for you to draw on
+DLL_API extern WindowData *g_window;
 
-DLL_API unsigned int    GetWidth(WindowData *w);
-DLL_API unsigned int    GetHeight(WindowData *w);
+// Creates a Window (even fullscreen is really just a big window) and a bitmap the size of the window
+// to use as the back buffer of a double buffer. Also initializes the InputManager to get key and mouse
+// input from the window.
+DLL_API bool            CreateWin(int x, int y, int _width, int _height, bool _windowed, char const *winName);
 
-DLL_API void            BlitBitmap(WindowData *w, BitmapRGBA *bmp, int x, int y);
+// Blit back buffer to screen, poll for user input and update FPS counter.
+DLL_API void            AdvanceWin();
 
-DLL_API void            ShowMouse(WindowData *w);
-DLL_API void            HideMouse(WindowData *w);
-
-DLL_API void            SetWindowTitle(WindowData *w, char const *title);
+DLL_API void            ShowMouse();
+DLL_API void            HideMouse();
 
 
 #endif

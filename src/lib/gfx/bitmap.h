@@ -2,7 +2,6 @@
 #define INCLUDED_BITMAP_H
 
 
-#include <memory.h>
 #include "lib/gfx/rgba_colour.h"
 #include "lib/common.h"
 
@@ -21,11 +20,11 @@ DLL_API void        DeleteBitmapRGBA(BitmapRGBA *bmp);
 
 DLL_API void        ClearBitmap     (BitmapRGBA *bmp, RGBAColour c);
 
-DLL_API void        PlotUnclipped   (BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c);
-DLL_API void        Plot            (BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c);
+DLL_API void        PutPixUnclipped (BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c);
+DLL_API void        PutPix          (BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c);
 
-DLL_API RGBAColour  GetPlotUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y);
-DLL_API RGBAColour  GetPlot         (BitmapRGBA *bmp, unsigned x, unsigned y);
+DLL_API RGBAColour  GetPixUnclipped (BitmapRGBA *bmp, unsigned x, unsigned y);
+DLL_API RGBAColour  GetPix          (BitmapRGBA *bmp, unsigned x, unsigned y);
 
 DLL_API void        HLine           (BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c);
 DLL_API void        HLineUnclipped  (BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c);
@@ -36,25 +35,17 @@ DLL_API void        DrawLine        (BitmapRGBA *bmp, int x1, int y1, int x2, in
 DLL_API void        RectFill        (BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c);
 DLL_API void        RectOutline     (BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c);
 
-DLL_API void        QuickBlit       (BitmapRGBA *destBmp, int x, int y, BitmapRGBA *srcBmp);
+// Copies the source bitmap to the destination bitmap, skipping pixels whose source alpha values are 0
+DLL_API void        MaskedBlit      (BitmapRGBA *destBmp, int x, int y, BitmapRGBA *srcBmp);
 
-// RGBAColour GetInterpolatedPixel(float x, float y);
-// 
-// void StretchBlit(unsigned srcX,  unsigned srcY,  unsigned srcW,  unsigned srcH, BitmapRGBA *_srcBmp, 
-//		    		unsigned destX, unsigned destY, unsigned destW, unsigned destH);
-
+// Copies the source bitmap to the destination bitmap, including pixels whose source alpha values are 0
+DLL_API void        QuickBlit       (BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp);
 
 
 
-
-
-
-inline void PlotUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
+inline void PutPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
 {
-    // if (CompA(colour) == 255)
 	bmp->lines[y][x] = c;
-	// else
-	// 	lines[y][x].BlendTowards(colour, 255.0f / (float)colour.a);
 }
 
 

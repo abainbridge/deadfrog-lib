@@ -8,15 +8,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hello_world", "hello_world\
 		{06366000-CEA4-4C81-A29F-49E2DF277A93} = {06366000-CEA4-4C81-A29F-49E2DF277A93}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "graph3d", "graph3d\graph3d.vcproj", "{3DA0F7CA-AD12-4B8D-8025-A6DE66DFA682}"
-	ProjectSection(ProjectDependencies) = postProject
-		{06366000-CEA4-4C81-A29F-49E2DF277A93} = {06366000-CEA4-4C81-A29F-49E2DF277A93}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "benchmark", "benchmark\benchmark.vcproj", "{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{06366000-CEA4-4C81-A29F-49E2DF277A93} = {06366000-CEA4-4C81-A29F-49E2DF277A93}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mandlebrot", "..\..\examples\mandlebrot\mandlebrot.vcproj", "{97A5F3B0-3C9A-4B5D-BE9B-1348C59CE167}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,14 +29,14 @@ Global
 		{39B6D6D1-1AA3-42F7-BA92-F13ECC61CD0A}.Debug|Win32.Build.0 = Debug|Win32
 		{39B6D6D1-1AA3-42F7-BA92-F13ECC61CD0A}.Release|Win32.ActiveCfg = Release|Win32
 		{39B6D6D1-1AA3-42F7-BA92-F13ECC61CD0A}.Release|Win32.Build.0 = Release|Win32
-		{3DA0F7CA-AD12-4B8D-8025-A6DE66DFA682}.Debug|Win32.ActiveCfg = Debug|Win32
-		{3DA0F7CA-AD12-4B8D-8025-A6DE66DFA682}.Debug|Win32.Build.0 = Debug|Win32
-		{3DA0F7CA-AD12-4B8D-8025-A6DE66DFA682}.Release|Win32.ActiveCfg = Release|Win32
-		{3DA0F7CA-AD12-4B8D-8025-A6DE66DFA682}.Release|Win32.Build.0 = Release|Win32
 		{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}.Debug|Win32.ActiveCfg = Debug|Win32
 		{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}.Debug|Win32.Build.0 = Debug|Win32
 		{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}.Release|Win32.ActiveCfg = Release|Win32
 		{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}.Release|Win32.Build.0 = Release|Win32
+		{97A5F3B0-3C9A-4B5D-BE9B-1348C59CE167}.Debug|Win32.ActiveCfg = Debug|Win32
+		{97A5F3B0-3C9A-4B5D-BE9B-1348C59CE167}.Debug|Win32.Build.0 = Debug|Win32
+		{97A5F3B0-3C9A-4B5D-BE9B-1348C59CE167}.Release|Win32.ActiveCfg = Release|Win32
+		{97A5F3B0-3C9A-4B5D-BE9B-1348C59CE167}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

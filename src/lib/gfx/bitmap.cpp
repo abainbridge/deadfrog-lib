@@ -1,8 +1,10 @@
-#include <math.h>
-#include <stdlib.h>
 #include "lib/gfx/bitmap.h"
+
 #include "lib/gfx/rgba_colour.h"
-#include "lib/debug_utils.h"
+#include "lib/common.h"
+
+#include <memory.h>
+#include <stdlib.h>
 
 
 BitmapRGBA *CreateBitmapRGBA(unsigned width, unsigned height)
@@ -39,13 +41,13 @@ void ClearBitmap(BitmapRGBA *bmp, RGBAColour colour)
 }
 
 
-RGBAColour GetPlotUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y)
+RGBAColour GetPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y)
 {
 	return bmp->lines[y][x];
 }
 
 
-void Plot(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour colour)
+void PutPix(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour colour)
 {
 	if (x >= bmp->width || y >= bmp->height)
 		return;
@@ -54,7 +56,7 @@ void Plot(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour colour)
 }
 
 
-RGBAColour GetPlot(BitmapRGBA *bmp, unsigned x, unsigned y)
+RGBAColour GetPix(BitmapRGBA *bmp, unsigned x, unsigned y)
 {
 	if (x >= bmp->width || y >= bmp->height)
 		return g_colourBlack;
@@ -74,7 +76,7 @@ void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
     // Clip against top and bottom of bmp
-    if (unsigned(y) > bmp->height)
+    if (unsigned(y) >= bmp->height)
         return;
 
     // Clip against left
@@ -238,13 +240,13 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
         int ny2 = y1 + yDelta * tMax;
 
         DebugAssert(nx1 >= 0);
-        DebugAssert(nx1 < bmp->width);
+        DebugAssert(nx1 < (int)bmp->width);
         DebugAssert(ny1 >= 0);
-        DebugAssert(ny1 < bmp->height);
+        DebugAssert(ny1 < (int)bmp->height);
         DebugAssert(nx2 >= 0);
-        DebugAssert(nx2 < bmp->width);
+        DebugAssert(nx2 < (int)bmp->width);
         DebugAssert(ny1 >= 0);
-        DebugAssert(ny1 < bmp->height);
+        DebugAssert(ny1 < (int)bmp->height);
 
         x1 = nx1;
         x2 = nx2;
@@ -277,7 +279,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
     if (xDelta == yDelta)
     {
         for (int i = 0; i < xDelta; i++)
-            PlotUnclipped(bmp, x1 + i * xAdvance, y1 + i, colour);
+            PutPixUnclipped(bmp, x1 + i * xAdvance, y1 + i, colour);
         return;
     }
 
@@ -444,7 +446,7 @@ void RectOutline(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColo
 }
 
 
-void QuickBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
+void MaskedBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
 {
 	if (x > destBmp->width || y > destBmp->height)
 		return;
@@ -464,8 +466,31 @@ void QuickBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
 		RGBAColour *destLine = destBmp->lines[y + sy] + x;
 		for (unsigned i = 0; i < w; i++)
 		{
-			if (CompA(srcLine[i]) > 0)
+			if (srcLine[i].a > 0)
 				destLine[i] = srcLine[i];
 		}
 	}
+}
+
+
+void QuickBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
+{
+    if (x > destBmp->width || y > destBmp->height)
+        return;
+
+    // Reduce the amount of the src bitmap to copy, if it would go 
+    // beyond the edges of the dest bitmap
+    unsigned w = srcBmp->width;
+    if (x + w > destBmp->width)
+        w = destBmp->width - x;
+    unsigned h = srcBmp->height;
+    if (y + h > destBmp->height)
+        h = destBmp->height - y;
+
+    for (unsigned sy = 0; sy < h; sy++)
+    {
+        RGBAColour *srcLine = srcBmp->lines[sy];
+        RGBAColour *destLine = destBmp->lines[y + sy] + x;
+        memcpy(destLine, srcLine, w * sizeof(RGBAColour));
+    }
 }

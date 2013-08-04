@@ -9,13 +9,10 @@
 #define MAX_KEYS_TYPED_PER_FRAME	128
 
 
-typedef void MouseUpdateCallback(int x, int y);
-
-
 struct InputManagerPrivate;
 
 
-struct InputManager
+typedef struct
 {
     InputManagerPrivate *priv;
 
@@ -26,12 +23,10 @@ struct InputManager
     bool		rmb;
 
 	bool		lmbDoubleClicked;
-	bool		lmbRepeated;		// Becomes true for the duration of one advance once per LMB_REPEAT_PERIOD
 
     bool		lmbClicked;			// Mouse went from up to down this frame
-	bool		mmbClicked;			// These can be modified by the application, to prevent
-    bool		rmbClicked;			// mouse clicks occurring when you don't want them to
-									// See m_rawLmbClicked etc for none frigged data
+	bool		mmbClicked;			
+    bool		rmbClicked;			
 
     bool		lmbUnClicked;		// Mouse went from down to up this frame
 	bool		mmbUnClicked;
@@ -48,26 +43,20 @@ struct InputManager
 	char		keysTyped[MAX_KEYS_TYPED_PER_FRAME];
 	int			numKeysTyped;
 
-	int			numKeyUps;
-	int			numKeyDowns;
-
     signed char keys[KEY_MAX];		// Is the key currently pressed
     signed char keyDowns[KEY_MAX];	// Was the key pressed this frame (includes key repeats)
-    signed char keyUps[KEY_MAX];	// Was the key released this frame
-};
+} InputManager;
 
 
-InputManager	*CreateInputManager();
-    
-void	        InputManagerAdvance(InputManager *im);
-int 	        EventHandler(InputManager *im, unsigned int _eventId, unsigned int wParam, int lParam, bool _isAReplayedEvent = false);
+DLL_API void    CreateInputManager();
+void	        InputManagerAdvance();
+int 	        EventHandler(unsigned int _eventId, unsigned int wParam, int lParam, bool _isAReplayedEvent = false);
 
-bool	        GetRawLmbClicked(InputManager *im);
 char const *    GetKeyName(int i);
 int		        GetKeyId(char const *name);
-bool	        UntypeKey(InputManager *im, char key);	// Removes the specified key from the m_keysTypes array. Returns false if key was not present
 
-void	        RegisterMouseUpdateCallback(InputManager *im, MouseUpdateCallback *func);
+DLL_API extern InputManager g_inputManager;
+
 
 
 #define KEY_A                 65

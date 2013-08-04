@@ -3,6 +3,7 @@
 
 #include "lib/gfx/text_renderer.h"
 #include "lib/hi_res_time.h"
+#include "lib/input.h"
 #include "lib/window_manager.h"
 
 
@@ -11,7 +12,7 @@ double CalcBillionPixelsPerSec(BitmapRGBA *bmp)
     unsigned iterations = 1000 * 1000 * 100;
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; i++)
-        PlotUnclipped(bmp, 10, 10, g_colourWhite);
+        PutPixUnclipped(bmp, 10, 10, g_colourWhite);
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
     double numPixels = (double)iterations;
@@ -72,7 +73,6 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
     TextRenderer *font = CreateTextRenderer("Courier", 8);
     BitmapRGBA *backBmp = CreateBitmapRGBA(800, 600);
 
-    InitialiseHighResTime();
     ClearBitmap(win->bmp, g_colourBlack);
     int textY = 10;
     double score;
@@ -108,7 +108,7 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
     DrawTextLeft(font, g_colourWhite, win->bmp, 10, textY,
         "Press ESC to quit");
 
-    while (!win->windowClosed && !win->inputManager->keyDowns[KEY_ESC])
+    while (!win->windowClosed && !g_inputManager->keyDowns[KEY_ESC])
     {
         AdvanceWin(win);
     }
