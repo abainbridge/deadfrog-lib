@@ -1,7 +1,7 @@
 #include "text_renderer.h"
 
-#include "lib/gfx/bitmap.h"
-#include "lib/gfx/rgba_colour.h"
+#include "lib/bitmap.h"
+#include "lib/rgba_colour.h"
 #include "lib/common.h"
 #include "lib/window_manager.h"
 

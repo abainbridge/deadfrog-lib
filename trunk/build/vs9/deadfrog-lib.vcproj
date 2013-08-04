@@ -184,34 +184,14 @@
 	<References>
 	</References>
 	<Files>
-		<Filter
-			Name="gfx"
+		<File
+			RelativePath="..\..\src\lib\bitmap.cpp"
 			>
-			<File
-				RelativePath="..\..\src\lib\gfx\bitmap.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\bitmap.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\rgba_colour.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\rgba_colour.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\text_renderer.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\gfx\text_renderer.h"
-				>
-			</File>
-		</Filter>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\bitmap.h"
+			>
+		</File>
 		<File
 			RelativePath="..\..\src\lib\common.cpp"
 			>
@@ -242,6 +222,22 @@
 		</File>
 		<File
 			RelativePath="..\..\src\lib\message_dialog.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\rgba_colour.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\rgba_colour.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\text_renderer.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\text_renderer.h"
 			>
 		</File>
 		<File

@@ -2,7 +2,7 @@
 #define INCLUDED_WINDOW_MANAGER_GDI_H
 
 
-#include "lib/gfx/bitmap.h"
+#include "lib/bitmap.h"
 #include "lib/common.h"
 #include "lib/input.h"
 
