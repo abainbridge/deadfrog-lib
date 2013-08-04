@@ -1,7 +1,7 @@
 #include "lib/hi_res_time.h"
 #include "lib/input.h"
-#include "lib/gfx/bitmap.h"
-#include "lib/gfx/text_renderer.h"
+#include "lib/bitmap.h"
+#include "lib/text_renderer.h"
 #include "lib/window_manager.h"
 
 #define WIN32_LEAN_AND_MEAN

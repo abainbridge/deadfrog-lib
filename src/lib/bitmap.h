@@ -2,7 +2,7 @@
 #define INCLUDED_BITMAP_H
 
 
-#include "lib/gfx/rgba_colour.h"
+#include "lib/rgba_colour.h"
 #include "lib/common.h"
 
 
