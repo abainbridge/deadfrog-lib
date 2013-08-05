@@ -1,3 +1,6 @@
+// This module implements a message dialog box. It's just a wrapper for the local
+// OS's standard message dialog box. It is mostly useful for showing error messages.
+
 #ifndef INCLUDED_MESSAGE_DIALOG_H
 #define INCLUDED_MESSAGE_DIALOG_H
 
