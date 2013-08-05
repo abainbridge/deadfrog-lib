@@ -1,3 +1,7 @@
+// This module implements a portable bitmap and some simple drawing primitives.
+// The bitmap lives entirely in main memory, rather than on the graphics card
+// and all the drawing is done by the CPU. It's still reasonably quick though.
+
 #ifndef INCLUDED_BITMAP_H
 #define INCLUDED_BITMAP_H
 
