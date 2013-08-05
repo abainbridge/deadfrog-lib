@@ -1,9 +1,7 @@
 #include "text_renderer.h"
 
 #include "lib/bitmap.h"
-#include "lib/rgba_colour.h"
 #include "lib/common.h"
-#include "lib/window_manager.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -18,18 +16,23 @@
 // Glyph
 // ****************************************************************************
 
-typedef signed char rleBufType;
+typedef struct
+{
+    unsigned startX;
+    unsigned startY;
+    unsigned runLen;
+} EncodedRun;
+
 
 class Glyph
 {
 public:
-	int m_width;
-	int m_startY;
-	rleBufType *m_rlePixels;
+    unsigned m_width;
+    int m_numRuns;
+    EncodedRun *m_pixelRuns;
 
-	Glyph(int w, int h)
+	Glyph(int w)
 	{
-		m_startY = 0;
 		m_width = w;
 	}
 };
@@ -42,6 +45,7 @@ public:
 TextRenderer *CreateTextRenderer(char const *fontName, int size)
 {
     TextRenderer *tr = new TextRenderer;
+    memset(tr, 0, sizeof(TextRenderer));
 
     // Create a memory bitmap for GDI to render the font into
 	HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
@@ -73,71 +77,23 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
 		"'%s' will be used instead.", 
 		fontName, nameOfFontWeGot);
 
-	// Determine the size of the font
-	tr->maxCharWidth = 0;
-	tr->charHeight = 0;
-	for (int i = 0; i < 256; i++)
+    // Allocate enough EncodedRuns to store the worst case for a glyph of this size.
+    // Worse case is if the whole glyph is encoded as runs of one pixel. There has
+    // to be a gap of one pixel between each run, so there can only be half as many
+    // runs as there are pixels.
+    EncodedRun *tempRuns = new EncodedRun [tr->charHeight * tr->maxCharWidth / 2];
+
+    // Setup stuff needed to render text with GDI
+    SetTextColor(memDC, RGB(255,255,255));
+    SetBkColor(memDC, 0);
+    RECT rect = { 0, tr->maxCharWidth, 0, tr->charHeight };
+
+    // Run-length encode each ASCII character
+    for (int i = 0; i < 256; i++)
 	{
-		char buf[] = {i};
-		SIZE size;
-		GetTextExtentPoint32(memDC, buf, 1, &size);
-		if (size.cx > tr->maxCharWidth)
-			tr->maxCharWidth = size.cx;
-		if (size.cy > tr->maxCharWidth)
-			tr->charHeight = size.cy;
-	}
+        char buf[] = {i};
 
-	// Run-length encode each ASCII character
-    // Format is:
-    //   1 means increment X coord by 1 then draw a pixel
-    //   2 means increment X coord by 2 then draw a pixel
-    //   etc
-    //   -1 means end of row of pixels
-    //   -2 means end of glyph
-	rleBufType *rleBuf = new rleBufType [tr->charHeight * tr->maxCharWidth];	// temp working space
-	for (int i = 0; i < 256; i++)
-	{
-		// Clear a space in the GDI bitmap where we will draw the character
-		SetTextColor(memDC, RGB(255,255,255));
-		RECT rect;
-		rect.left = 0;
-		rect.right = tr->maxCharWidth;
-		rect.top = 0;
-		rect.bottom = tr->charHeight;
-		SetBkColor(memDC, 0);
-		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, "", 0, 0); // Yes I'm using textout to fill a rectangle!
-
-		// Ask GDI to draw the character
-		char buf[] = {i};
-		TextOut(memDC, 0, 0, buf, 1);
-
-        // Read back what GDI put in the bitmap and construct a run-length encoding
-		memset(rleBuf, 0, tr->charHeight * tr->maxCharWidth);
-		rleBufType *pixel = rleBuf;
-		for (int y = 0; y < tr->charHeight; y++)
-		{
-			int blankCount = 1;
-			bool lineEmpty = true;
-			for (int x = 0; x < tr->maxCharWidth; x++)
-			{
-				int c = GetPixel(memDC, x, y);
-				if (c)
-				{
-					lineEmpty = false;
-					*pixel = blankCount;
-					pixel++;
-					blankCount = 1;
-				}
-				else
-				{
-					blankCount++;
-				}
-			}
-
-			*pixel = -1;
-			pixel++;
-		}
-
+        // Get the size of this glyph
         SIZE size;
         GetTextExtentPoint32(memDC, buf, 1, &size);
         if (size.cx > tr->maxCharWidth)
@@ -145,42 +101,57 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
         if (size.cy > tr->maxCharWidth)
             tr->charHeight = size.cy;
 
-        // Create the glyph to store the RLE
-		Glyph *glyph = new Glyph(size.cx, tr->charHeight);
+        // Ask GDI to draw the character
+		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
+
+        // Read back what GDI put in the bitmap and construct a run-length encoding
+		memset(tempRuns, 0, tr->charHeight * tr->maxCharWidth / 2);
+		EncodedRun *run = tempRuns;
+        for (int y = 0; y < tr->charHeight; y++)
+		{
+            int x = 0;
+            while (x < tr->maxCharWidth)
+            {
+                // Skip blank pixels
+                while (!GetPixel(memDC, x, y))
+                {
+                    x++;
+                    if (x >= tr->maxCharWidth)
+                        break;
+                }
+
+                // Have we got to the end of the line?
+                if (x >= tr->maxCharWidth)
+                    continue;
+
+                run->startX = x;
+                run->startY = y;
+                run->runLen = 0;
+
+                // Count non-blank pixels
+                while (GetPixel(memDC, x, y))
+                {
+                    x++;
+                    run->runLen++;
+                    if (x >= tr->maxCharWidth)
+                        break;
+                }
+
+                run++;
+            }
+		}
+
+        // Create the glyph to store the encoded runs we've made
+		Glyph *glyph = new Glyph(size.cx);
 		tr->glyphs[i] = glyph;
 
-		// Optimise the RLE by removing blank lines at the start of the glyph
- 		rleBufType *betterStart = rleBuf;
- 		while (*betterStart == -1)
- 		{
- 			betterStart++;
-			glyph->m_startY++;
- 		}
-
-		// Optimise the RLE by removing blank lines at the end of the glyph
-		rleBufType *betterEnd = pixel;
-		if (glyph->m_startY == tr->charHeight)
-		{
-			// Glyph was entirely blank. Handle this as a special case
-			betterStart--;
-			*betterStart = -2;
-		}
-		else
-		{
-			while (betterEnd > betterStart && 
-                   *(betterEnd-1) == -1    &&
-                   *(betterEnd-2) == -1)
-				betterEnd--;
-			*(betterEnd -1) = -2;
-		}
-
-		// Copy the optimised RLE into the glyph
-		int rleLen = betterEnd - betterStart;
-		glyph->m_rlePixels = new rleBufType [rleLen];
-		memcpy(glyph->m_rlePixels, betterStart, rleLen * sizeof(rleBufType));
+		// Copy the runs into the glyph
+		glyph->m_numRuns = run - tempRuns;
+		glyph->m_pixelRuns = new EncodedRun [glyph->m_numRuns];
+		memcpy(glyph->m_pixelRuns, tempRuns, glyph->m_numRuns * sizeof(EncodedRun));
 	}
 
-	delete [] rleBuf;
+	delete [] tempRuns;
 
 	// Release the GDI resources
     DeleteDC(winDC);
@@ -193,10 +164,9 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
 }
 
 
-int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int _y, char const *text, int maxChars)
+int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text, int maxChars)
 {
     int x = _x;
-    int y = _y;
 
     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
         return 0;	// TODO implement slow but accurate clipping render
@@ -207,28 +177,12 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
             break;
 
         Glyph *glyph = tr->glyphs[(unsigned char)*text];
-        rleBufType *rleBuf = glyph->m_rlePixels;
-
-        RGBAColour **dstLine = bmp->lines + y + glyph->m_startY;
-        int lineOffset = 0;
-
-        while (1)
+        EncodedRun *rleBuf = glyph->m_pixelRuns;
+        for (int i = 0; i < glyph->m_numRuns; i++)
         {
-            if (*rleBuf == -1)
-            {
-                lineOffset = 0;
-                dstLine++;
-            }
-            else if (*rleBuf == -2)
-            {
-                break;
-            }
-            else
-            {
-                lineOffset += *rleBuf;
-                (*dstLine)[x+ lineOffset] = col;
-            }
-
+            RGBAColour *dstLine = bmp->lines[y + rleBuf->startY] + rleBuf->startX + x;
+            for (unsigned i = 0; i < rleBuf->runLen; i++)
+                dstLine[i] = col;
             rleBuf++;
         }
 
@@ -240,37 +194,37 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
 }
 
 
-int DrawTextLeft(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int _x, int _y, char const *_text, ...)
+int DrawTextLeft(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
-    va_start (ap, _text);
-    vsprintf(buf, _text, ap);
-    return DrawTextSimple(tr, c, bmp, _x, _y, buf);
+    va_start (ap, text);
+    vsprintf(buf, text, ap);
+    return DrawTextSimple(tr, c, bmp, x, y, buf);
 }
 
 
-int DrawTextRight(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int _x, int _y, char const *_text, ...)
+int DrawTextRight(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
-    va_start (ap, _text);
-    vsprintf(buf, _text, ap);
+    va_start (ap, text);
+    vsprintf(buf, text, ap);
 
     int width = GetTextWidth(tr, buf);
-    return DrawTextSimple(tr, c, bmp, _x - width, _y, buf);
+    return DrawTextSimple(tr, c, bmp, x - width, y, buf);
 }
 
 
-int DrawTextCentre(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int _x, int _y, char const *_text, ...)
+int DrawTextCentre(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
-    va_start (ap, _text);
-    vsprintf(buf, _text, ap);
+    va_start (ap, text);
+    vsprintf(buf, text, ap);
 
     int width = GetTextWidth(tr, buf);
-    return DrawTextSimple(tr, c, bmp, _x - width/2, _y, buf);
+    return DrawTextSimple(tr, c, bmp, x - width/2, y, buf);
 }
 
 

@@ -1,3 +1,9 @@
+// This module implements a somewhat optimized text renderer.
+// You create a font by specifying the name of any installed font and
+// the point size you want. The font's glyphs will be pre-calculated.
+// Variable width fonts are supported.
+// The renderer currently does not attempt any form of anti-aliasing.
+
 #ifndef TEXT_RENDERER_H
 #define TEXT_RENDERER_H
 
