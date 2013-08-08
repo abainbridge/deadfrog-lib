@@ -164,29 +164,88 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
 }
 
 
-int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text, int maxChars)
+static int DrawTextSimpleClipped(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
 {
     int x = _x;
+    RGBAColour *startRow = bmp->pixels + y * bmp->width;
+    int width = bmp->width;
 
-    if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
-        return 0;	// TODO implement slow but accurate clipping render
+    if (y + tr->charHeight < 0 || y > (int)bmp->height)
+        return 0;
 
     while (*text != '\0')
     {
         if (x + tr->maxCharWidth > (int)bmp->width)
             break;
 
-        Glyph *glyph = tr->glyphs[(unsigned char)*text];
+        Glyph *glyph = tr->glyphs[(unsigned char)*text]; 
         EncodedRun *rleBuf = glyph->m_pixelRuns;
         for (int i = 0; i < glyph->m_numRuns; i++)
         {
-            RGBAColour *dstLine = bmp->lines[y + rleBuf->startY] + rleBuf->startX + x;
-            for (unsigned i = 0; i < rleBuf->runLen; i++)
-                dstLine[i] = col;
+            int y3 = y + rleBuf->startY;
+            if (y3 >= 0 && y3 < (int)bmp->height)
+            {
+                RGBAColour *thisRow = startRow + rleBuf->startY * width;
+                for (unsigned i = 0; i < rleBuf->runLen; i++)
+                {
+                    int x3 = x + rleBuf->startX + i;
+                    if (x3 >= 0 && x3 < width)
+                        thisRow[x3] = col;
+                }
+            }
             rleBuf++;
         }
 
         x += glyph->m_width;
+        text++;
+    }
+
+    return _x - x;
+}
+
+
+int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
+{
+    int x = _x;
+    RGBAColour *startRow = bmp->pixels + y * bmp->width;
+    int width = bmp->width;
+
+    if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
+        return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
+
+    while (*text != '\0')
+    {
+        if (x + tr->maxCharWidth > (int)bmp->width)
+            break;
+
+        // Copy the glyph onto the stack for better cache performance. This increased the 
+        // performance from 13.8 to 14.4 million chars per second. Madness.
+        Glyph glyph = *tr->glyphs[(unsigned char)*text]; 
+        EncodedRun *rleBuf = glyph.m_pixelRuns;
+        for (int i = 0; i < glyph.m_numRuns; i++)
+        {
+            RGBAColour *startPixel = startRow + rleBuf->startY * width + rleBuf->startX + x;
+
+            // Loop unrolled for speed
+            switch (rleBuf->runLen)
+            {
+            case 8: startPixel[7] = col;
+            case 7: startPixel[6] = col;
+            case 6: startPixel[5] = col;
+            case 5: startPixel[4] = col;
+            case 4: startPixel[3] = col;
+            case 3: startPixel[2] = col;
+            case 2: startPixel[1] = col;
+            case 1: startPixel[0] = col;
+                break;
+            default:
+                for (unsigned i = 0; i < rleBuf->runLen; i++)
+                    startPixel[i] = col;
+            }
+            rleBuf++;
+        }
+
+        x += glyph.m_width;
         text++;
     }
 
