@@ -26,7 +26,7 @@ typedef struct
 
 DLL_API TextRenderer *CreateTextRenderer(char const *_fontname, int size);
 
-DLL_API int DrawTextSimple		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, int maxChars = 9999);	// Returns text length in pixels
+DLL_API int DrawTextSimple		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text);       // Returns text length in pixels
 DLL_API int DrawTextLeft		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like simple but with variable args
 DLL_API int DrawTextRight		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like above but with right justify
 DLL_API int DrawTextCentre		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like above but with centre justify
