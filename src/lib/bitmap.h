@@ -49,7 +49,7 @@ DLL_API void        QuickBlit       (BitmapRGBA *destBmp, unsigned x, unsigned y
 
 inline void PutPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
 {
-	bmp->lines[y][x] = c;
+    (bmp->pixels + y * bmp->width)[x] = c;
 }
 
 

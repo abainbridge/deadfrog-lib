@@ -27,7 +27,9 @@ typedef struct
 } WindowData;
 
 
-DLL_API extern WindowData *g_window;
+DLL_API WindowData *g_window;
+
+DLL_API bool GetDesktopRes(int *width, int *height);
 
 // Creates a Window (fullscreen is really just a big window) and a bitmap the size of the window
 // to use as the back buffer of a double buffer. Also initializes the InputManager to get key and mouse

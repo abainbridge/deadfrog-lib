@@ -3,6 +3,8 @@
 
 #ifdef DLL_EXPORTS
  #define DLL_API extern "C" __declspec(dllexport)
+#elif STATIC_LIB
+ #define DLL_API extern
 #else
  #define DLL_API extern "C" __declspec(dllimport)
 #endif

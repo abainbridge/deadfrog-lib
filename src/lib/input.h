@@ -70,7 +70,7 @@ void	            InputManagerAdvance();
 int 	            EventHandler(unsigned int _eventId, unsigned int wParam, int lParam, bool _isAReplayedEvent = false);
 
 
-DLL_API extern InputManager g_inputManager;
+DLL_API InputManager g_inputManager;
 
 
 // Defines for indexes into g_inputManager.keys[] and keyDowns[]

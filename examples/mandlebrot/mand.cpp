@@ -9,7 +9,9 @@
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
-    CreateWin(100, 10, 1920, 1200, false, "Broken Mandelbrot Example");
+    int width, height;
+    GetDesktopRes(&width, &height);
+    CreateWin(100, 30, width - 200, height - 90, true, "Broken Mandelbrot Example");
     HideMouse();
 
     double zoomFactor = 4.0 / (double)g_window->height;

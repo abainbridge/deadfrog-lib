@@ -28,9 +28,8 @@ void ReleaseAssert(bool condition, char const *_fmt, ...)
 		va_list ap;
 		va_start (ap, _fmt);
 		vsprintf(buf, _fmt, ap);
-        int result = MessageDialog("Serious Error", buf, MsgDlgTypeOk);
+        MessageDialog("Serious Error", buf, MsgDlgTypeOk);
 #if defined(_DEBUG) && defined(_MSC_VER)
-		result = result;
 		_CrtDbgBreak();
 #else
 	    exit(-1);
