@@ -91,7 +91,7 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
     // Run-length encode each ASCII character
     for (int i = 0; i < 256; i++)
 	{
-        char buf[] = {i};
+        char buf[] = {(char)i};
 
         // Get the size of this glyph
         SIZE size;
@@ -298,7 +298,7 @@ int GetTextWidth(TextRenderer *tr, char const *text, int len)
 	{
         int width = 0;
         for (; len; len--)
-            width += tr->glyphs[text[len]]->m_width;
+            width += tr->glyphs[(int)text[len]]->m_width;
 
 		return width;
 	}

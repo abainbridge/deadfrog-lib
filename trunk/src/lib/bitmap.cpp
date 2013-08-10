@@ -52,7 +52,7 @@ void PutPix(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour colour)
 	if (x >= bmp->width || y >= bmp->height)
 		return;
 
-	bmp->lines[y][x] = colour;
+	(bmp->pixels + y * bmp->width)[x] = colour;
 }
 
 
@@ -61,7 +61,7 @@ RGBAColour GetPix(BitmapRGBA *bmp, unsigned x, unsigned y)
 	if (x >= bmp->width || y >= bmp->height)
 		return g_colourBlack;
 
-	return bmp->lines[y][x]; 
+	return (bmp->pixels + y * bmp->width)[x]; 
 }
 
 
@@ -87,7 +87,7 @@ void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
     }
 
     // Clip against right
-    if (x + len > int(bmp->width))
+    if (x + (int)len > int(bmp->width))
     {
         if (x > (int)bmp->width)
             return;
@@ -120,7 +120,7 @@ void VLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
     }
 
     // Clip against bottom
-    if (y + len > int(bmp->height))
+    if (y + (int)len > int(bmp->height))
     {
         if (y > (int)bmp->height)
             return;
@@ -283,7 +283,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
         return;
     }
 
-    RGBAColour *pixel = *(bmp->lines + y1) + x1;
+    RGBAColour *pixel = bmp->pixels + y1 * bmp->width + x1;
 
     // Is the line X major or y major?
     if (xDelta >= yDelta)
@@ -430,7 +430,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 
     for (unsigned a = 0; a < h; a++)
     {
-        RGBAColour *line = bmp->lines[y + a] + x;
+        RGBAColour *line = bmp->pixels + (y + a) * bmp->width + x;
         for (unsigned b = 0; b < w; b++)
             line[b] = c;
     }

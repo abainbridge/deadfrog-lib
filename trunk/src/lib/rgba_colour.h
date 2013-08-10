@@ -22,8 +22,8 @@ DLL_API inline RGBAColour Colour(unsigned r, unsigned g, unsigned b)
 }
 
 
-DLL_API extern RGBAColour g_colourBlack;
-DLL_API extern RGBAColour g_colourWhite;
+DLL_API RGBAColour g_colourBlack;
+DLL_API RGBAColour g_colourWhite;
 
 
 #endif

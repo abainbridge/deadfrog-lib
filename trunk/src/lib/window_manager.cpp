@@ -83,6 +83,20 @@ static int clamp(int val, int min, int max)
 }
 
 
+bool GetDesktopRes(int *width, int *height)
+{
+    HWND desktopWindow = GetDesktopWindow();
+    RECT desktopRect;
+    if (GetWindowRect(desktopWindow, &desktopRect) == 0)
+        return false;
+    if (width)
+        *width = desktopRect.right - desktopRect.left;
+    if (height)
+        *height = desktopRect.bottom - desktopRect.top;
+    return true;
+}
+
+
 bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *winName)
 {
 	if (g_window)
