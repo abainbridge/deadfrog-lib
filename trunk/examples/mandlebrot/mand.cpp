@@ -2,13 +2,12 @@
 #include "lib/input.h"
 #include "lib/bitmap.h"
 #include "lib/window_manager.h"
-
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
+    // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
     CreateWin(100, 30, width - 200, height - 90, true, "Broken Mandelbrot Example");
@@ -16,16 +15,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     double zoomFactor = 4.0 / (double)g_window->height;
 
+    // Draw the broken Mandelbrot Set, one line at a time
     for (int y = 0; y < g_window->height; y++)
     {
         double ci = (double)y * zoomFactor - 2.0;
+        
+        // For each pixel on this line...
         for (int x = 0; x < g_window->width; x++)
         {
             double zr = 0.0;
             double zi = 0.0;
             double cr = (double)x * zoomFactor - 3.5;
             int i;
-            for (i = 0; i < 256; i++)
+            for (i = 0; i < 64; i++)
             {
                 double newZr = zr * zr - zi * zi + cr;
                 zi = 2.0 * zr * zi + ci;
@@ -38,14 +40,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             PutPix(g_window->backBuffer, x, y, Colour(i,i,i));
         }
 
+        // Every 8 lines, copy the bitmap to the screen
         if ((y & 7) == 7)
         {
+            // Abort drawing the set if the user presses escape or clicks the close icon
             if (g_window->windowClosed || g_inputManager.keys[KEY_ESC])
                 return 0;
             AdvanceWin();
         }
     }
 
+    // Continue to display the window until the user presses escape or clicks the close icon
     while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
     {
         AdvanceWin();
