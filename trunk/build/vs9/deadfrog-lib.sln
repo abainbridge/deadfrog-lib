@@ -13,7 +13,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "benchmark", "benchmark\benc
 		{06366000-CEA4-4C81-A29F-49E2DF277A93} = {06366000-CEA4-4C81-A29F-49E2DF277A93}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mandlebrot", "..\..\examples\mandlebrot\mandlebrot.vcproj", "{97A5F3B0-3C9A-4B5D-BE9B-1348C59CE167}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mandelbrot", "..\..\examples\mandelbrot\mandelbrot.vcproj", "{97A5F3B0-3C9A-4B5D-BE9B-1348C59CE167}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
