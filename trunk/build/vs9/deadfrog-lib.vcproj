@@ -193,6 +193,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\lib\bmp.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\bmp.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\lib\common.cpp"
 			>
 		</File>
