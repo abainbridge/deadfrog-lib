@@ -28,10 +28,6 @@ WindowData *g_window = NULL;
 // Window Proc
 // ****************************************************************************
 
-#define FULLSCREEN_WINDOW_STYLE (WS_POPUPWINDOW | WS_VISIBLE)
-#define WINDOWED_WINDOW_STYLE (FULLSCREEN_WINDOW_STYLE | (WS_CAPTION | WS_BORDER))
-//#define WINDOWED_WINDOW_STYLE (FULLSCREEN_WINDOW_STYLE | (WS_CAPTION | WS_BORDER | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX))
-
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     WindowData *win = g_window;
@@ -130,10 +126,10 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
 	wc.lpszClassName = winName;
 	RegisterClass(&wc);
 
-	unsigned int windowStyle = FULLSCREEN_WINDOW_STYLE;
+	unsigned int windowStyle = WS_POPUP | WS_VISIBLE;
 	if (_windowed)
 	{
-		windowStyle = WINDOWED_WINDOW_STYLE;
+		windowStyle = WS_POPUPWINDOW | WS_VISIBLE | WS_CAPTION | WS_BORDER;
 
 		RECT windowRect = { 0, 0, width, height };
 		AdjustWindowRect(&windowRect, windowStyle, false);
