@@ -54,12 +54,12 @@ double CalcMillionLinePixelsPerSec(BitmapRGBA *backBuffer)
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; ++i)
     {
-        DrawLine(backBuffer, 300, 300, 320, 600, g_colourWhite);   // 320 long, nice slope
-        DrawLine(backBuffer, 300, 300, 600, 320, g_colourWhite);
-        DrawLine(backBuffer, 300, 300, 301, 315, g_colourWhite);   // 16 long, nice slope
-        DrawLine(backBuffer, 300, 300, 315, 301, g_colourWhite);
-        DrawLine(backBuffer, 300, 300, 450, 451, g_colourWhite);   // 151 long, annoying slope
-        DrawLine(backBuffer, 300, 300, 451, 450, g_colourWhite);
+        DrawLine(backBuffer, 0, 0, 20,  300, g_colourWhite);   // 320 long, nice slope
+        DrawLine(backBuffer, 0, 0, 300, 20, g_colourWhite);
+        DrawLine(backBuffer, 0, 0, 1,   15, g_colourWhite);    // 16 long, nice slope
+        DrawLine(backBuffer, 0, 0, 15,  1, g_colourWhite);
+        DrawLine(backBuffer, 0, 0, 150, 151, g_colourWhite);   // 151 long, annoying slope
+        DrawLine(backBuffer, 0, 0, 151, 150, g_colourWhite);
     }
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
