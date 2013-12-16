@@ -35,6 +35,9 @@ void DeleteBitmapRGBA(BitmapRGBA *bmp)
 }
 
 
+#define GetLine(bmp, y) ((bmp)->pixels + (bmp)->width * (y))
+
+
 void ClearBitmap(BitmapRGBA *bmp, RGBAColour colour)
 {
     RectFill(bmp, 0, 0, bmp->width, bmp->height, colour);
@@ -43,7 +46,7 @@ void ClearBitmap(BitmapRGBA *bmp, RGBAColour colour)
 
 RGBAColour GetPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y)
 {
-	return bmp->lines[y][x];
+	return GetLine(bmp, y)[x];
 }
 
 
@@ -52,7 +55,7 @@ void PutPix(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour colour)
 	if (x >= bmp->width || y >= bmp->height)
 		return;
 
-	(bmp->pixels + y * bmp->width)[x] = colour;
+	PutPixUnclipped(bmp, x, y, colour);
 }
 
 
@@ -61,13 +64,13 @@ RGBAColour GetPix(BitmapRGBA *bmp, unsigned x, unsigned y)
 	if (x >= bmp->width || y >= bmp->height)
 		return g_colourBlack;
 
-	return (bmp->pixels + y * bmp->width)[x]; 
+	return GetLine(bmp, y)[x]; 
 }
 
 
 void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
-    RGBAColour *line = bmp->lines[y];
+    RGBAColour *line = GetLine(bmp, y);
     for (unsigned i = 0; i < len; i++)
         line[x + i] = c;
 }
@@ -102,7 +105,7 @@ void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 void VLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
     for (unsigned i = 0; i < len; i++)
-        bmp->lines[y + i][x] = c;
+        GetLine(bmp, y + i)[x] = c;
 }
 
 
@@ -283,7 +286,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
         return;
     }
 
-    RGBAColour *pixel = bmp->pixels + y1 * bmp->width + x1;
+    RGBAColour *pixel = GetLine(bmp, y1) + x1;
 
     // Is the line X major or y major?
     if (xDelta >= yDelta)
@@ -430,7 +433,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 
     for (unsigned a = 0; a < h; a++)
     {
-        RGBAColour *line = bmp->pixels + (y + a) * bmp->width + x;
+        RGBAColour *line = GetLine(bmp, y + a) + x;
         for (unsigned b = 0; b < w; b++)
             line[b] = c;
     }
@@ -462,8 +465,8 @@ void MaskedBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
 
 	for (unsigned sy = 0; sy < h; sy++)
 	{
-		RGBAColour *srcLine = srcBmp->lines[sy];
-		RGBAColour *destLine = destBmp->lines[y + sy] + x;
+		RGBAColour *srcLine = GetLine(srcBmp, sy);
+		RGBAColour *destLine = GetLine(destBmp, y + sy) + x;
 		for (unsigned i = 0; i < w; i++)
 		{
 			if (srcLine[i].a > 0)
@@ -489,8 +492,8 @@ void QuickBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
 
     for (unsigned sy = 0; sy < h; sy++)
     {
-        RGBAColour *srcLine = srcBmp->lines[sy];
-        RGBAColour *destLine = destBmp->lines[y + sy] + x;
+        RGBAColour *srcLine = GetLine(srcBmp, sy);
+        RGBAColour *destLine = GetLine(destBmp, y + sy) + x;
         memcpy(destLine, srcLine, w * sizeof(RGBAColour));
     }
 }
