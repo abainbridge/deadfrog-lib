@@ -207,12 +207,12 @@ static int DrawTextSimpleClipped(TextRenderer *tr, RGBAColour col, BitmapRGBA *b
 int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
 {
     int x = _x;
-    RGBAColour *startRow = bmp->pixels + y * bmp->width;
     int width = bmp->width;
 
     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
 
+    RGBAColour *startRow = bmp->pixels + y * bmp->width;
     while (*text != '\0')
     {
         if (x + tr->maxCharWidth > (int)bmp->width)
