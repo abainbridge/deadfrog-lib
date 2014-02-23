@@ -35,9 +35,53 @@ double CalcMillionPixelsPerSec(BitmapRGBA *backBuffer)
 }
 
 
+double CalcMillionHLinePixelsPerSec(BitmapRGBA *backBuffer)
+{
+    unsigned iterations = 1000 * 1000 * 10;
+    double startTime = GetHighResTime();
+    unsigned lineLen = 20;
+    for (unsigned i = 0; i < iterations; i++)
+    {
+        unsigned r = GetRand();
+        RGBAColour c;
+        c.r = r & 0xff;
+        c.g = r & 0xff;
+        c.b = r & 0xff;
+        c.a = 255;
+        HLine(backBuffer, r & 255, (r >> 8) & 255, lineLen, c);
+    }
+    double endTime = GetHighResTime();
+    double duration = endTime - startTime;
+    double numPixels = (double)iterations * lineLen;
+    return (numPixels / duration) / 1e6;
+}
+
+
+double CalcMillionVLinePixelsPerSec(BitmapRGBA *backBuffer)
+{
+    unsigned iterations = 1000 * 1000 * 10;
+    double startTime = GetHighResTime();
+    unsigned lineLen = 20;
+    for (unsigned i = 0; i < iterations; i++)
+    {
+        unsigned r = GetRand();
+        RGBAColour c;
+        c.r = r & 0xff;
+        c.g = r & 0xff;
+        c.b = r & 0xff;
+        c.a = 255;
+        VLine(backBuffer, r & 255, (r >> 8) & 255, lineLen, c);
+    }
+    double endTime = GetHighResTime();
+    double duration = endTime - startTime;
+    double numPixels = (double)iterations * lineLen;
+    return (numPixels / duration) / 1e6;
+}
+
+
 double CalcBillionRectFillPixelsPerSec(BitmapRGBA *backBuffer)
 {
-    unsigned iterations = 1000 * 300;
+    unsigned iterations = 1000 * 100;
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; i++)
         RectFill(backBuffer, 10, 10, 100, 100, g_colourWhite);
@@ -82,6 +126,14 @@ double CalcMillionCharsPerSec(BitmapRGBA *backBuffer, TextRenderer *font)
 }
 
 
+#define END_TEST \
+    textY += yInc; \
+    QuickBlit(g_window->backBuffer, 400, textY, backBmp); \
+    AdvanceWin(); \
+    if (g_window->windowClosed || g_inputManager.keyDowns[KEY_ESC]) return 0; \
+    ClearBitmap(backBmp, g_colourBlack);
+
+
 int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 {
 	CreateWin(100, 100, 1024, 768, true, "Benchmark");
@@ -90,47 +142,49 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 
     ClearBitmap(g_window->backBuffer, g_colourBlack);
     int textY = 10;
+    int yInc = font->charHeight * 3;
     double score;
 
     // Put pixel
-    ClearBitmap(backBmp, g_colourBlack);
     score = CalcMillionPixelsPerSec(backBmp);
     DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY, 
         "Million putpixels per sec = %.1f", score);
-    textY += font->charHeight;
-    QuickBlit(g_window->backBuffer, 400, 100, backBmp);
-    AdvanceWin();
-    if (g_window->windowClosed || g_inputManager.keyDowns[KEY_ESC]) return 0;
+    END_TEST;
+
+    // HLine draw
+    ClearBitmap(backBmp, g_colourBlack);
+    score = CalcMillionHLinePixelsPerSec(backBmp);
+    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY,
+        "Million Hline pixels per sec = %.2f", score);
+    END_TEST;
+
+    // VLine draw
+    ClearBitmap(backBmp, g_colourBlack);
+    score = CalcMillionVLinePixelsPerSec(backBmp);
+    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY,
+        "Million Vline pixels per sec = %.2f", score);
+    END_TEST;
 
     // Line draw
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcMillionLinePixelsPerSec(backBmp);
     DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY,
         "Million line pixels per sec = %.2f", score);
-    textY += font->charHeight;
-    QuickBlit(g_window->backBuffer, 400, 200, backBmp);
-    AdvanceWin();
-    if (g_window->windowClosed || g_inputManager.keyDowns[KEY_ESC]) return 0;
+    END_TEST;
 
     // Rect fill
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcBillionRectFillPixelsPerSec(backBmp);
     DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY, 
         "Rectfill billion pixels per sec = %.2f", score);
-    textY += font->charHeight;
-    QuickBlit(g_window->backBuffer, 400, 300, backBmp);
-    AdvanceWin();
-    if (g_window->windowClosed || g_inputManager.keyDowns[KEY_ESC]) return 0;
+    END_TEST;
 
     // Text render
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcMillionCharsPerSec(backBmp, font);
     DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY, 
         "Million chars per sec = %.2f", score);
-    textY += font->charHeight;
-    QuickBlit(g_window->backBuffer, 400, 400, backBmp);
-    AdvanceWin();
-    if (g_window->windowClosed || g_inputManager.keyDowns[KEY_ESC]) return 0;
+    END_TEST;
 
     DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY,
         "Press ESC to quit");
@@ -140,4 +194,6 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
         AdvanceWin();
         Sleep(100);
     }
+
+    return 0;
 }
