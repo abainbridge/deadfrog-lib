@@ -70,9 +70,23 @@ RGBAColour GetPix(BitmapRGBA *bmp, unsigned x, unsigned y)
 
 void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
-    RGBAColour *line = GetLine(bmp, y);
-    for (unsigned i = 0; i < len; i++)
-        line[x + i] = c;
+    RGBAColour *row = GetLine(bmp, y) + x;
+    if (c.a == 255)
+    {
+        for (unsigned i = 0; i < len; i++)
+            row[i] = c;
+    }
+    else
+    {
+        unsigned char invA = 255 - c.a;
+        for (unsigned i = 0; i < len; i++)
+        {
+            RGBAColour *pixel = row + i;
+            pixel->r = (pixel->r * invA + c.r * c.a) / 255;
+            pixel->g = (pixel->g * invA + c.g * c.a) / 255;
+            pixel->b = (pixel->b * invA + c.b * c.a) / 255;
+        }
+    }
 }
 
 
@@ -104,8 +118,27 @@ void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 
 void VLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
-    for (unsigned i = 0; i < len; i++)
-        GetLine(bmp, y + i)[x] = c;
+    RGBAColour *pixel = GetLine(bmp, y) + x;
+    unsigned const bw = bmp->width;
+    if (c.a == 255)
+    {
+        for (unsigned i = 0; i < len; i++)
+        {
+            *pixel = c;
+            pixel += bw;
+        }
+    }
+    else
+    {
+        unsigned char invA = 255 - c.a;
+        for (unsigned i = 0; i < len; i++)
+        {
+            pixel->r = (pixel->r * invA + c.r * c.a) / 255;
+            pixel->g = (pixel->g * invA + c.g * c.a) / 255;
+            pixel->b = (pixel->b * invA + c.b * c.a) / 255;
+            pixel += bw;
+        }
+    }
 }
 
 
@@ -163,9 +196,13 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
             return HLine(bmp, x2, y1, -xDelta, colour);
     }
 
+    // Get a constant copy of the bitmap width so the compiler can assume it
+    // doesn't get changed by anything (like an aliased pointer).
+    unsigned bmpWidth = bmp->width;
+
     // Clip first end of line
-    if ((unsigned)x1 >= bmp->width || (unsigned)y1 >= bmp->height ||
-        (unsigned)x2 >= bmp->width || (unsigned)y2 >= bmp->height)
+    if ((unsigned)x1 >= bmpWidth || (unsigned)y1 >= bmp->height ||
+        (unsigned)x2 >= bmpWidth || (unsigned)y2 >= bmp->height)
     {
         // Parametric line equation can be written as:
         //   x = rx + t * ux
@@ -221,7 +258,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
         // If x = width then width = rx + t * xDelta.
         // Solving for t gives width - rx = t * xDelta
         // or t = (width - rx) / xDelta
-        t = double(int(bmp->width) - 1 - x1) / double(xDelta);
+        t = double(int(bmpWidth) - 1 - x1) / double(xDelta);
         if (xDelta > 0)
         {
             if (t < tMax)
@@ -243,11 +280,11 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
         int ny2 = y1 + yDelta * tMax;
 
         DebugAssert(nx1 >= 0);
-        DebugAssert(nx1 < (int)bmp->width);
+        DebugAssert(nx1 < (int)bmpWidth);
         DebugAssert(ny1 >= 0);
         DebugAssert(ny1 < (int)bmp->height);
         DebugAssert(nx2 >= 0);
-        DebugAssert(nx2 < (int)bmp->width);
+        DebugAssert(nx2 < (int)bmpWidth);
         DebugAssert(ny1 >= 0);
         DebugAssert(ny1 < (int)bmp->height);
 
@@ -332,7 +369,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
             *pixel = colour;
             pixel += xAdvance;
         }
-        pixel += bmp->width;
+        pixel += bmpWidth;
 
         // Do the main loop
         for (int i = 0; i < yDelta - 1; i++)
@@ -349,7 +386,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
                 *pixel = colour;
                 pixel += xAdvance;
             }
-            pixel += bmp->width;
+            pixel += bmpWidth;
         }
 
         // Draw the last partial run
@@ -377,7 +414,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
             errorTerm += xDelta;
 
         // Draw vertical run
-        int lineInc = bmp->width;
+        int lineInc = bmpWidth;
         for (; initialPixelCount; initialPixelCount--)
         {
             *pixel = colour;
@@ -415,11 +452,15 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
 
 void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c)
 {
-    if (unsigned(x) + w > bmp->width)
+    // Get a constant copy of the bitmap width so the compiler can assume it
+    // doesn't get changed by anything (like an aliased pointer).
+    unsigned bmpWidth = bmp->width;
+
+    if (unsigned(x) + w > bmpWidth)
     {
-        if (unsigned(x) > bmp->width)
+        if (unsigned(x) > bmpWidth)
             return;
-        w = bmp->width - x;
+        w = bmpWidth - x;
         x = 0;
     }
 
@@ -431,11 +472,26 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
         y = 0;
     }
 
+    RGBAColour *line = GetLine(bmp, y) + x;
     for (unsigned a = 0; a < h; a++)
     {
-        RGBAColour *line = GetLine(bmp, y + a) + x;
+//         // Draw a row of pixels. Loop unrolled via Duff's Device
+//         unsigned b = 0;
+//         switch (w % 8) {
+//         case 0: do { line[b] = c; b++;
+//         case 7:      line[b] = c; b++;
+//         case 6:      line[b] = c; b++;
+//         case 5:      line[b] = c; b++;
+//         case 4:      line[b] = c; b++;
+//         case 3:      line[b] = c; b++;
+//         case 2:      line[b] = c; b++;
+//         case 1:      line[b] = c; b++;
+//                 } while (b < w);
+//         }
         for (unsigned b = 0; b < w; b++)
             line[b] = c;
+
+        line += bmpWidth;
     }
 }
 
