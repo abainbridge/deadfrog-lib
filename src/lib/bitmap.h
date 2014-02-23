@@ -1,4 +1,4 @@
-// This module implements a portable bitmap and some simple drawing primitives.
+// This module implements a bitmap data structure and some simple drawing primitives.
 // The bitmap lives entirely in main memory, rather than on the graphics card
 // and all the drawing is done by the CPU. It's still reasonably quick though.
 
@@ -49,7 +49,17 @@ DLL_API void        QuickBlit       (BitmapRGBA *destBmp, unsigned x, unsigned y
 
 inline void PutPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
 {
-    (bmp->pixels + y * bmp->width)[x] = c;
+    RGBAColour *pixel = (bmp->pixels + y * bmp->width) + x;
+//    RGBAColour *pixel = bmp->lines[y] + x;
+    if (c.a == 255)
+        *pixel = c;
+    else
+    {
+        unsigned char invA = 255 - c.a;
+        pixel->r = (pixel->r * invA + c.r * c.a) / 255;
+        pixel->g = (pixel->g * invA + c.g * c.a) / 255;
+        pixel->b = (pixel->b * invA + c.b * c.a) / 255;
+    }
 }
 
 
