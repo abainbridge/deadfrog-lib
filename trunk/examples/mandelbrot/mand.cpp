@@ -13,15 +13,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     CreateWin(100, 30, width - 200, height - 90, true, "Broken Mandelbrot Example");
     HideMouse();
 
-    double zoomFactor = 4.0 / (double)g_window->height;
+    double zoomFactor = 4.0 / (double)g_window->bmp->height;
 
     // Draw the broken Mandelbrot Set, one line at a time
-    for (int y = 0; y < g_window->height; y++)
+    for (unsigned y = 0; y < g_window->bmp->height; y++)
     {
         double ci = (double)y * zoomFactor - 2.0;
         
         // For each pixel on this line...
-        for (int x = 0; x < g_window->width; x++)
+        for (unsigned x = 0; x < g_window->bmp->width; x++)
         {
             double zr = 0.0;
             double zi = 0.0;
@@ -37,7 +37,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
                     break;
             }
             i *= 4;
-            PutPix(g_window->backBuffer, x, y, Colour(i,i,i));
+            PutPix(g_window->bmp, x, y, Colour(i,i,i));
         }
 
         // Every 8 lines, copy the bitmap to the screen
