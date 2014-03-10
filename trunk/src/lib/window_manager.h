@@ -16,13 +16,8 @@ struct WindowDataPrivate;
 typedef struct
 {
     WindowDataPrivate   *_private;
-    
-    BitmapRGBA          *backBuffer;
-    int		            width;
-    int		            height;
-
+    BitmapRGBA          *bmp;
     bool                windowClosed;
-
     unsigned int	    fps;
 } WindowData;
 

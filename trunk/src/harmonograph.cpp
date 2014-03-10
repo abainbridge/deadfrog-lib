@@ -137,7 +137,7 @@ void InitPendula()
 
 void RunSim()
 {
-    double const zoom = g_window->width * 0.6e-3 * (double)BIG_BITMAP_MULTIPLE;
+    double const zoom = g_window->bmp->width * 0.6e-3 * (double)BIG_BITMAP_MULTIPLE;
     double xOffset = 140.0;
     double yOffset = 290.0;
 
@@ -150,7 +150,7 @@ void RunSim()
     if (pendulaAtRest)
         return;
 
-    int y = g_window->height - 220;
+    int y = g_window->bmp->height - 220;
     //        RectFill(g_window->backBuffer, 0, y, g_window->width, g_window->height - y, g_colourBlack);
     //        ClearBitmap(g_window->backBuffer, g_colourBlack);
 
@@ -197,7 +197,7 @@ void RunSim()
             c.r += 16;
 
             PutPix(g_bigBmp, i1.x, i1.y, c);
-            PutPix(g_window->backBuffer, i1.x/(double)BIG_BITMAP_MULTIPLE, i1.y/(double)BIG_BITMAP_MULTIPLE, c);
+            PutPix(g_window->bmp, i1.x/(double)BIG_BITMAP_MULTIPLE, i1.y/(double)BIG_BITMAP_MULTIPLE, c);
         }
     }
 }
@@ -216,7 +216,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     g_bigBmp = CreateBitmapRGBA(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
     TextRenderer *font = CreateTextRenderer("Lucida Console", 10);
 
-    ClearBitmap(g_window->backBuffer, g_colourBlack);
+    ClearBitmap(g_window->bmp, g_colourBlack);
     ClearBitmap(g_bigBmp, g_colourBlack);
 
     g_advanceTime = 0.004 / (double)BIG_BITMAP_MULTIPLE;
@@ -231,7 +231,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         if (g_inputManager.keyDowns[KEY_SPACE])
         {
             InitPendula();
-            ClearBitmap(g_window->backBuffer, g_colourBlack);
+            ClearBitmap(g_window->bmp, g_colourBlack);
             ClearBitmap(g_bigBmp, g_colourBlack);
         }
         if (g_inputManager.keyDowns[KEY_S])
@@ -241,7 +241,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
         RunSim();
 
-        DrawTextSimple(font, g_colourWhite, g_window->backBuffer, 5, height - 20, "Keys: Space to restart  S to save");
+        DrawTextSimple(font, g_colourWhite, g_window->bmp, 5, height - 20, "Keys: Space to restart  S to save");
 
         SleepMillisec(1);
     }
