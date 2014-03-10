@@ -128,7 +128,7 @@ double CalcMillionCharsPerSec(BitmapRGBA *backBuffer, TextRenderer *font)
 
 #define END_TEST \
     textY += yInc; \
-    QuickBlit(g_window->backBuffer, 400, textY, backBmp); \
+    QuickBlit(g_window->bmp, 400, textY, backBmp); \
     AdvanceWin(); \
     if (g_window->windowClosed || g_inputManager.keyDowns[KEY_ESC]) return 0; \
     ClearBitmap(backBmp, g_colourBlack);
@@ -140,53 +140,53 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
     TextRenderer *font = CreateTextRenderer("Courier", 8);
     BitmapRGBA *backBmp = CreateBitmapRGBA(800, 600);
 
-    ClearBitmap(g_window->backBuffer, g_colourBlack);
+    ClearBitmap(g_window->bmp, g_colourBlack);
     int textY = 10;
     int yInc = font->charHeight * 3;
     double score;
 
     // Put pixel
     score = CalcMillionPixelsPerSec(backBmp);
-    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY, 
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
         "Million putpixels per sec = %.1f", score);
     END_TEST;
 
     // HLine draw
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcMillionHLinePixelsPerSec(backBmp);
-    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY,
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Million Hline pixels per sec = %.2f", score);
     END_TEST;
 
     // VLine draw
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcMillionVLinePixelsPerSec(backBmp);
-    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY,
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Million Vline pixels per sec = %.2f", score);
     END_TEST;
 
     // Line draw
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcMillionLinePixelsPerSec(backBmp);
-    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY,
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Million line pixels per sec = %.2f", score);
     END_TEST;
 
     // Rect fill
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcBillionRectFillPixelsPerSec(backBmp);
-    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY, 
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
         "Rectfill billion pixels per sec = %.2f", score);
     END_TEST;
 
     // Text render
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcMillionCharsPerSec(backBmp, font);
-    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY, 
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
         "Million chars per sec = %.2f", score);
     END_TEST;
 
-    DrawTextLeft(font, g_colourWhite, g_window->backBuffer, 10, textY,
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Press ESC to quit");
 
     while (!g_window->windowClosed && !g_inputManager.keyDowns[KEY_ESC])

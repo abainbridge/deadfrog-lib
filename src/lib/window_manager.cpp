@@ -107,8 +107,6 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
     static int const minHeight = 120;
 	width = clamp(width, minWidth, 3000);
 	height = clamp(height, minHeight, 2300);
-	wd->width = width;
-	wd->height = height;
 
 	wd->_private->m_hInstance = GetModuleHandle(0);
 
@@ -143,7 +141,7 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
 		GetWindowRect(desktopWindow, &desktopRect);
 		
         // Make sure a reasonable portion of the window is visible
-        int minX = 100 - wd->width;
+        int minX = 100 - width;
         int maxX = desktopRect.right - 100;
         x = clamp(x, minX, maxX);
 		y = clamp(y, 0, desktopRect.bottom - minHeight);
@@ -166,7 +164,7 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
 		wd->_private->m_titleHeight = 0;
 	}
 
-    wd->backBuffer = CreateBitmapRGBA(width, height);
+    wd->bmp = CreateBitmapRGBA(width, height);
 
 	// Create main window
 	wd->_private->m_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName, 
@@ -236,7 +234,7 @@ void AdvanceWin()
         g_window->_private->m_endOfSecond = currentTime + 1.0;
     }
 
-    BlitBitmapToWindow(g_window, g_window->backBuffer, 0, 0);
+    BlitBitmapToWindow(g_window, g_window->bmp, 0, 0);
 }
 
 
