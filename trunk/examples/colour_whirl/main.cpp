@@ -11,14 +11,13 @@ unsigned available[10000];
 unsigned num_available = 0;
 
 
-
-inline unsigned coord(unsigned x, unsigned y) 
+inline unsigned Coord(unsigned x, unsigned y) 
 { 
     return (x<<16) | y; 
 }
 
 
-__forceinline unsigned colour_diff(RGBAColour a, RGBAColour b)
+inline unsigned ColourDiff(RGBAColour a, RGBAColour b)
 {
     int r = (a.r - b.r)/2;
     r *= r;
@@ -31,29 +30,29 @@ __forceinline unsigned colour_diff(RGBAColour a, RGBAColour b)
 
 
 // Calculate diff between specified colour and neighbours of specified location
-unsigned calc_diff(unsigned x, unsigned y, RGBAColour target_colour)
+unsigned CalcDiff(unsigned x, unsigned y, RGBAColour target_colour)
 {
     unsigned min_diff = UINT_MAX;
 
     RGBAColour *row = g_window->bmp->pixels + (y-1) * g_window->bmp->width + x;
 
-    unsigned diff = colour_diff(row[0], target_colour);
+    unsigned diff = ColourDiff(row[0], target_colour);
     if (diff < min_diff)
         min_diff = diff;
 
     row += g_window->bmp->width;
     
-    diff = colour_diff(row[-1], target_colour);
+    diff = ColourDiff(row[-1], target_colour);
     if (diff < min_diff)
         min_diff = diff;
 
-    diff = colour_diff(row[1], target_colour);
+    diff = ColourDiff(row[1], target_colour);
     if (diff < min_diff)
         min_diff = diff;
 
     row += g_window->bmp->width;
 
-    diff = colour_diff(row[0], target_colour);
+    diff = ColourDiff(row[0], target_colour);
     if (diff < min_diff)
         min_diff = diff;
 
@@ -61,7 +60,7 @@ unsigned calc_diff(unsigned x, unsigned y, RGBAColour target_colour)
 }
 
 
-unsigned find_best(RGBAColour c)
+unsigned FindBest(RGBAColour c)
 {
     unsigned best = 0;
 
@@ -70,7 +69,7 @@ unsigned find_best(RGBAColour c)
     {
         unsigned x = available[i] >> 16;
         unsigned y = available[i] & 0xffff;
-        unsigned diff = calc_diff(x, y, c);
+        unsigned diff = CalcDiff(x, y, c);
         if (diff < min_diff)
         {
             min_diff = diff;
@@ -85,11 +84,11 @@ unsigned find_best(RGBAColour c)
 RGBAColour alreadyAddedCol = g_colourBlack;
 
 
-inline void add_if_new(unsigned x, unsigned y)
+inline void AddIfNew(unsigned x, unsigned y)
 {
     if (GetPix(g_window->bmp, x, y).c == g_colourBlack.c)
     {
-        available[num_available++] = coord(x, y);
+        available[num_available++] = Coord(x, y);
         PutPix(g_window->bmp, x, y, alreadyAddedCol);
     }
 }
@@ -130,11 +129,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     double start_time = GetHighResTime();
 
     alreadyAddedCol.a = 1;
-    available[num_available++] = coord(g_window->bmp->width/2, g_window->bmp->height/2);
+    available[num_available++] = Coord(g_window->bmp->width/2, g_window->bmp->height/2);
 
     for (; n; n--)
     {         
-        unsigned i = find_best(colours[n]);
+        unsigned i = FindBest(colours[n]);
         unsigned x = available[i] >> 16;
         unsigned y = available[i] & 0xffff;
         if (num_available > 1)
@@ -143,14 +142,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
         PutPix(g_window->bmp, x, y, colours[n]);
 
-        add_if_new(x-1, y-1);
-        add_if_new(x  , y-1);
-        add_if_new(x+1, y-1);
-        add_if_new(x-1, y  );
-        add_if_new(x+1, y  );
-        add_if_new(x-1, y+1);
-        add_if_new(x  , y+1);
-        add_if_new(x+1, y+1);
+        AddIfNew(x-1, y-1);
+        AddIfNew(x  , y-1);
+        AddIfNew(x+1, y-1);
+        AddIfNew(x-1, y  );
+        AddIfNew(x+1, y  );
+        AddIfNew(x-1, y+1);
+        AddIfNew(x  , y+1);
+        AddIfNew(x+1, y+1);
 
         // Every so often, copy the bitmap to the screen
         if ((n & 511) == 0)
