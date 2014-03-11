@@ -14,7 +14,7 @@ inline unsigned GetRand()
 }
 
 
-double CalcMillionPixelsPerSec(BitmapRGBA *backBuffer)
+double CalcMillionPixelsPerSec(BitmapRGBA *bmp)
 {
     unsigned iterations = 1000 * 1000 * 10;
     double startTime = GetHighResTime();
@@ -26,7 +26,7 @@ double CalcMillionPixelsPerSec(BitmapRGBA *backBuffer)
         c.g = r & 0xff;
         c.b = r & 0xff;
         c.a = 128;
-        PutPixUnclipped(backBuffer, r & 255, (r >> 8) & 255, c);
+        PutPixUnclipped(bmp, r & 255, (r >> 8) & 255, c);
     }
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
@@ -35,7 +35,7 @@ double CalcMillionPixelsPerSec(BitmapRGBA *backBuffer)
 }
 
 
-double CalcMillionHLinePixelsPerSec(BitmapRGBA *backBuffer)
+double CalcMillionHLinePixelsPerSec(BitmapRGBA *bmp)
 {
     unsigned iterations = 1000 * 1000 * 10;
     double startTime = GetHighResTime();
@@ -48,7 +48,7 @@ double CalcMillionHLinePixelsPerSec(BitmapRGBA *backBuffer)
         c.g = r & 0xff;
         c.b = r & 0xff;
         c.a = 255;
-        HLine(backBuffer, r & 255, (r >> 8) & 255, lineLen, c);
+        HLine(bmp, r & 255, (r >> 8) & 255, lineLen, c);
     }
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
@@ -57,7 +57,7 @@ double CalcMillionHLinePixelsPerSec(BitmapRGBA *backBuffer)
 }
 
 
-double CalcMillionVLinePixelsPerSec(BitmapRGBA *backBuffer)
+double CalcMillionVLinePixelsPerSec(BitmapRGBA *bmp)
 {
     unsigned iterations = 1000 * 1000 * 10;
     double startTime = GetHighResTime();
@@ -70,7 +70,7 @@ double CalcMillionVLinePixelsPerSec(BitmapRGBA *backBuffer)
         c.g = r & 0xff;
         c.b = r & 0xff;
         c.a = 255;
-        VLine(backBuffer, r & 255, (r >> 8) & 255, lineLen, c);
+        VLine(bmp, r & 255, (r >> 8) & 255, lineLen, c);
     }
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
@@ -79,12 +79,12 @@ double CalcMillionVLinePixelsPerSec(BitmapRGBA *backBuffer)
 }
 
 
-double CalcBillionRectFillPixelsPerSec(BitmapRGBA *backBuffer)
+double CalcBillionRectFillPixelsPerSec(BitmapRGBA *bmp)
 {
     unsigned iterations = 1000 * 100;
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; i++)
-        RectFill(backBuffer, 10, 10, 100, 100, g_colourWhite);
+        RectFill(bmp, 10, 10, 100, 100, g_colourWhite);
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
     double numPixels = 100.0 * 100.0 * (double)iterations;
@@ -92,18 +92,18 @@ double CalcBillionRectFillPixelsPerSec(BitmapRGBA *backBuffer)
 }
 
 
-double CalcMillionLinePixelsPerSec(BitmapRGBA *backBuffer)
+double CalcMillionLinePixelsPerSec(BitmapRGBA *bmp)
 {
     unsigned iterations = 1000 * 600;
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; ++i)
     {
-        DrawLine(backBuffer, 0, 0, 20,  300, g_colourWhite);   // 320 long, nice slope
-        DrawLine(backBuffer, 0, 0, 300, 20, g_colourWhite);
-        DrawLine(backBuffer, 0, 0, 1,   15, g_colourWhite);    // 16 long, nice slope
-        DrawLine(backBuffer, 0, 0, 15,  1, g_colourWhite);
-        DrawLine(backBuffer, 0, 0, 150, 151, g_colourWhite);   // 151 long, annoying slope
-        DrawLine(backBuffer, 0, 0, 151, 150, g_colourWhite);
+        DrawLine(bmp, 0, 0, 20,  300, g_colourWhite);   // 320 long, nice slope
+        DrawLine(bmp, 0, 0, 300, 20, g_colourWhite);
+        DrawLine(bmp, 0, 0, 1,   15, g_colourWhite);    // 16 long, nice slope
+        DrawLine(bmp, 0, 0, 15,  1, g_colourWhite);
+        DrawLine(bmp, 0, 0, 150, 151, g_colourWhite);   // 151 long, annoying slope
+        DrawLine(bmp, 0, 0, 151, 150, g_colourWhite);
     }
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
@@ -112,13 +112,13 @@ double CalcMillionLinePixelsPerSec(BitmapRGBA *backBuffer)
 }
 
 
-double CalcMillionCharsPerSec(BitmapRGBA *backBuffer, TextRenderer *font)
+double CalcMillionCharsPerSec(BitmapRGBA *bmp, TextRenderer *font)
 {
     static char const *str = "Here's some interesting text []£# !";
     unsigned iterations = 1000 * 100;
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; i++)
-        DrawTextSimple(font, g_colourWhite, backBuffer, 10, 10, str);
+        DrawTextSimple(font, g_colourWhite, bmp, 10, 10, str);
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
     double numChars = iterations * (double)strlen(str);
