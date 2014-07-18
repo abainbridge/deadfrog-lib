@@ -226,7 +226,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // Continue to display the window until the user presses escape or clicks the close icon
     while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
     {
-        AdvanceWin();
+        InputManagerAdvance();
         
         if (g_inputManager.keyDowns[KEY_SPACE])
         {
@@ -243,6 +243,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
         DrawTextSimple(font, g_colourWhite, g_window->bmp, 5, height - 20, "Keys: Space to restart  S to save");
 
+        UpdateWin();
         SleepMillisec(1);
     }
 

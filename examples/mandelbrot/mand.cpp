@@ -46,14 +46,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             // Abort drawing the set if the user presses escape or clicks the close icon
             if (g_window->windowClosed || g_inputManager.keys[KEY_ESC])
                 return 0;
-            AdvanceWin();
+            UpdateWin();
         }
     }
 
     // Continue to display the window until the user presses escape or clicks the close icon
     while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
     {
-        AdvanceWin();
+        InputManagerAdvance();
         SleepMillisec(100);
     }
 

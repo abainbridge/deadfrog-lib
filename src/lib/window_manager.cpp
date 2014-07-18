@@ -124,7 +124,9 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
 	wc.lpszClassName = winName;
 	RegisterClass(&wc);
 
-	unsigned int windowStyle = WS_POPUP | WS_VISIBLE;
+    wd->bmp = CreateBitmapRGBA(width, height);
+
+    unsigned int windowStyle = WS_POPUP | WS_VISIBLE;
 	if (_windowed)
 	{
 		windowStyle = WS_POPUPWINDOW | WS_VISIBLE | WS_CAPTION | WS_BORDER;
@@ -163,8 +165,6 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
 		wd->_private->m_borderWidth = 1;
 		wd->_private->m_titleHeight = 0;
 	}
-
-    wd->bmp = CreateBitmapRGBA(width, height);
 
 	// Create main window
 	wd->_private->m_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName, 
@@ -207,15 +207,10 @@ static void BlitBitmapToWindow(WindowData *wd, BitmapRGBA *bmp, int x, int y)
 }
 
 
-void AdvanceWin()
+void UpdateWin()
 {
-    // *** Input Manager ***
-    
-    InputManagerAdvance();
-
-    
     // *** FPS Meter ***
-    
+
     g_window->_private->m_framesThisSecond++;
 
     double currentTime = GetHighResTime();

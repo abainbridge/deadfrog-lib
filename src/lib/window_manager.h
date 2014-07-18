@@ -31,8 +31,8 @@ DLL_API bool GetDesktopRes(int *width, int *height);
 // input from the window.
 DLL_API bool CreateWin(int x, int y, int width, int height, bool windowed, char const *winName);
 
-// Blit back buffer to screen, poll for user input and update FPS counter.
-DLL_API void AdvanceWin();
+// Blit back buffer to screen and update FPS counter.
+DLL_API void UpdateWin();
 
 DLL_API void ShowMouse();
 DLL_API void HideMouse();

@@ -28,6 +28,7 @@ typedef struct
     InputManagerPrivate *priv;
 
     bool		windowHasFocus;
+    bool        eventSinceAdvance;  // True if we've seen any events since the last advance
 
     bool		lmb;				// Mouse button states now. These can change in the 
 	bool		mmb;				// middle of the frame.
@@ -66,7 +67,7 @@ DLL_API char const *GetKeyName(int i);
 DLL_API int	        GetKeyId(char const *name);
 
 // Internal functions used by the window manager
-void	            InputManagerAdvance();
+bool	            InputManagerAdvance();  // Returns true if any events occurred since last call
 int 	            EventHandler(unsigned int _eventId, unsigned int wParam, int lParam, bool _isAReplayedEvent = false);
 
 
