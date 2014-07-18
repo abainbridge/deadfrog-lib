@@ -15,6 +15,11 @@ void DebugOut(char *fmt, ...);
 void ReleaseAssert(bool condition, char const *_fmt, ...);
 void ReleaseWarn(bool condition, char const *_fmt, ...);
 
+
+inline int IntMin (int a, int b) { return (a < b) ? a : b; };
+inline int IntMax (int a, int b) { return (a > b) ? a : b; };
+
+
 // Define an assert macro that stops in the debugger in Debug builds but does 
 // nothing in release builds
 #ifdef _DEBUG

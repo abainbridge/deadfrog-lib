@@ -88,9 +88,29 @@ inline void AddIfNew(unsigned x, unsigned y)
 {
     if (GetPix(g_window->bmp, x, y).c == g_colourBlack.c)
     {
-        available[num_available++] = Coord(x, y);
-        PutPix(g_window->bmp, x, y, alreadyAddedCol);
+        if (x > 1 && x < (g_window->bmp->width-1) &&
+            y > 1 && y < (g_window->bmp->height-1))
+        {
+            if (num_available < 10000)
+                available[num_available++] = Coord(x, y);
+            PutPix(g_window->bmp, x, y, alreadyAddedCol);
+        }
     }
+}
+
+
+void PlaceColour(unsigned x, unsigned y, RGBAColour colour)
+{
+    PutPix(g_window->bmp, x, y, colour);
+
+    AddIfNew(x-1, y-1);
+    AddIfNew(x  , y-1);
+    AddIfNew(x+1, y-1);
+    AddIfNew(x-1, y  );
+    AddIfNew(x+1, y  );
+    AddIfNew(x-1, y+1);
+    AddIfNew(x  , y+1);
+    AddIfNew(x+1, y+1);
 }
 
 
@@ -99,21 +119,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-    CreateWin(0, 0, width, height, false, "Colour Whirl Example");
-//    CreateWin(100, 30, width - 200, height - 90, true, "Colour Whirl Example");
+//    CreateWin(0, 0, width, height, false, "Colour Whirl Example");
+    CreateWin(100, 30, 1200, 900, true, "Colour Whirl Example");
     HideMouse();
     ClearBitmap(g_window->bmp, g_colourBlack);
 
     // Create an array of colours
-    int const max_component = 64;
-    int const scale = 256 / max_component;
+    int const max_component = 100;
+    double const scale = 256.0 / max_component;
     RGBAColour *colours = new RGBAColour [max_component * max_component * max_component];
     int n = 0;
     {
         for (int r = 0; r < max_component; r++)
             for (int g = 0; g < max_component; g++)
                 for (int b = 0; b < max_component; b++)
-                    colours[n++] = Colour(r * scale, g * scale, b * scale);
+                    colours[n++] = Colour((int)(r * scale), (int)(g * scale), (int)(b * scale));
     }
 
     // Shuffle the array
@@ -128,10 +148,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     double start_time = GetHighResTime();
 
-    alreadyAddedCol.a = 1;
-    available[num_available++] = Coord(g_window->bmp->width/2, g_window->bmp->height/2);
-
-    for (; n; n--)
+    alreadyAddedCol.b = 1;
+    PlaceColour(100, 100, colours[n++]);
+    PlaceColour(101, 100, colours[n++]);
+    PlaceColour(100, 110, colours[n++]);
+    PlaceColour(101, 110, colours[n++]);
+    PlaceColour(g_window->bmp->width/2, g_window->bmp->height/2, colours[n++]);
+ 
+    for (; n && num_available; n--)
     {         
         unsigned i = FindBest(colours[n]);
         unsigned x = available[i] >> 16;
@@ -140,16 +164,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             available[i] = available[num_available - 1];
         num_available--;
 
-        PutPix(g_window->bmp, x, y, colours[n]);
-
-        AddIfNew(x-1, y-1);
-        AddIfNew(x  , y-1);
-        AddIfNew(x+1, y-1);
-        AddIfNew(x-1, y  );
-        AddIfNew(x+1, y  );
-        AddIfNew(x-1, y+1);
-        AddIfNew(x  , y+1);
-        AddIfNew(x+1, y+1);
+        PlaceColour(x, y, colours[n]);
 
         // Every so often, copy the bitmap to the screen
         if ((n & 511) == 0)
