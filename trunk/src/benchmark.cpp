@@ -129,7 +129,8 @@ double CalcMillionCharsPerSec(BitmapRGBA *bmp, TextRenderer *font)
 #define END_TEST \
     textY += yInc; \
     QuickBlit(g_window->bmp, 400, textY, backBmp); \
-    AdvanceWin(); \
+    UpdateWin(); \
+    InputManagerAdvance(); \
     if (g_window->windowClosed || g_inputManager.keyDowns[KEY_ESC]) return 0; \
     ClearBitmap(backBmp, g_colourBlack);
 
@@ -191,7 +192,7 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 
     while (!g_window->windowClosed && !g_inputManager.keyDowns[KEY_ESC])
     {
-        AdvanceWin();
+        InputManagerAdvance();
         Sleep(100);
     }
 

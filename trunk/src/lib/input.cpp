@@ -50,7 +50,10 @@ void CreateInputManager()
 // Returns 0 if the event is handled here, -1 otherwise
 int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_isAReplayedEvent*/)
 {
-    switch (message)
+	if (!g_inputManager.priv)
+		return -1;
+
+	switch (message)
 	{
 		case WM_SETFOCUS:
 		case WM_NCACTIVATE:
@@ -206,13 +209,22 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 			return -1;
 	}
 
+    g_inputManager.eventSinceAdvance = true;
 	return 0;
 }
 
 
-void InputManagerAdvance()
+bool InputManagerAdvance()
 {
-	memcpy(g_inputManager.keyDowns, g_inputManager.priv->m_keyNewDowns, KEY_MAX);
+    MSG msg;
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) 
+    {
+        // handle or dispatch messages
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    } 
+
+    memcpy(g_inputManager.keyDowns, g_inputManager.priv->m_keyNewDowns, KEY_MAX);
 	memset(g_inputManager.priv->m_keyNewDowns, 0, KEY_MAX);
 
 	g_inputManager.numKeysTyped = g_inputManager.priv->m_newNumKeysTyped;
@@ -262,13 +274,9 @@ void InputManagerAdvance()
 	g_inputManager.priv->m_mouseOldY = g_inputManager.mouseY;
 	g_inputManager.priv->m_mouseOldZ = g_inputManager.mouseZ;
 
-    MSG msg;
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) 
-    {
-        // handle or dispatch messages
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    } 
+    bool rv = g_inputManager.eventSinceAdvance;
+    g_inputManager.eventSinceAdvance = false;
+    return rv;
 }
 
 

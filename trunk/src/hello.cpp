@@ -17,8 +17,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     unsigned y = 100;
     while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
     {
-        AdvanceWin(); // Read user input, blit back buffer to screen, etc
         ClearBitmap(g_window->bmp, g_colourBlack);
+        InputManagerAdvance();
 
         x += 1;
         y += 2;
@@ -33,6 +33,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         // Draw frames per second counter
         DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
+        UpdateWin();
         SleepMillisec(10);
     }
 
