@@ -456,21 +456,10 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
     // doesn't get changed by anything (like an aliased pointer).
     unsigned bmpWidth = bmp->width;
 
-    if (unsigned(x) + w > bmpWidth)
-    {
-        if (unsigned(x) > bmpWidth)
-            return;
-        w = bmpWidth - x;
-        x = 0;
-    }
-
-    if (unsigned(y) + h > bmp->height)
-    {
-        if (unsigned(y) > bmp->height)
-            return;
-        h = bmp->height - y;
-        y = 0;
-    }
+    int x1 = IntMax(x, 0);
+    int x2 = IntMin(x + w, bmp->width - 1);
+    int y1 = IntMax(y, 0);
+    int y2 = IntMin(y + h, bmp->height - 1);
 
     RGBAColour *line = GetLine(bmp, y) + x;
     for (unsigned a = 0; a < h; a++)
