@@ -77,7 +77,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy $(OutDir)\$(ProjectName).dll ..\..\python"
+				CommandLine="copy $(ProjectDir)\$(ConfigurationName)\$(ProjectName).dll ..\..\python"
 			/>
 		</Configuration>
 		<Configuration
@@ -152,7 +152,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy $(OutDir)\$(ProjectName).dll ..\..\python"
+				CommandLine="copy $(ProjectDir)\$(ConfigurationName)\$(ProjectName).dll ..\..\python"
 			/>
 		</Configuration>
 	</Configurations>
