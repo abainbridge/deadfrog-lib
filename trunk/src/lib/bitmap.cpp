@@ -3,6 +3,7 @@
 #include "lib/rgba_colour.h"
 #include "lib/common.h"
 
+#include <math.h>
 #include <memory.h>
 #include <stdlib.h>
 
@@ -446,6 +447,87 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
             *pixel = colour;
             pixel += lineInc;
         }
+    }
+}
+
+
+// Calculate the position on a Bezier curve. t is in range 0 to 63356.
+void GetBezierPos(int const *a, int const *b, int const *c, int const *d, int t, int *result)
+{
+    int invT = 65536 - t;
+
+    int pab[2];
+    pab[0] = (a[0] * invT + b[0] * t); 
+    pab[1] = (a[1] * invT + b[1] * t);
+
+    int pbc[2];
+    pbc[0] = (b[0] * invT + c[0] * t); 
+    pbc[1] = (b[1] * invT + c[1] * t);
+
+    int pcd[2];
+    pcd[0] = (c[0] * invT + d[0] * t); 
+    pcd[1] = (c[1] * invT + d[1] * t);
+
+    int v[2];
+    v[0] = ((__int64)pab[0] * invT + (__int64)pbc[0] * t) / 65536; 
+    v[1] = ((__int64)pab[1] * invT + (__int64)pbc[1] * t) / 65536;
+
+    int w[2];
+    w[0] = ((__int64)pbc[0] * invT + (__int64)pcd[0] * t) / 65536; 
+    w[1] = ((__int64)pbc[1] * invT + (__int64)pcd[1] * t) / 65536;
+
+    result[0] = ((__int64)v[0] * invT + (__int64)w[0] * t) >> 32; 
+    result[1] = ((__int64)v[1] * invT + (__int64)w[1] * t) >> 32;
+}
+
+
+static double GetLineLen(int const *a, int const *b)
+{
+    int dx = a[0] - b[0];
+    int dy = a[1] - b[1];
+    double len = sqrt((double)dx * dx + (double)dy * dy);
+    return len;
+}
+
+
+void DrawBezier(BitmapRGBA *bmp, int const *a, int const *b, int const *c, int const *d, RGBAColour col)
+{
+    // Calculate approximate length of a Bezier curve by sampling at a low 
+    // resolution and summing distances between samples.
+    double totalLen = 0;
+    {
+        int v[2];
+        v[0] = a[0];
+        v[1] = a[1];
+       
+        for (int t = 65536/4; t < 65536; t += 16384)
+        {
+            int w[2];
+            GetBezierPos(a, b, c, d, t, w);
+            
+            totalLen += GetLineLen(v, w);
+
+            v[0] = w[0];
+            v[1] = w[1];
+        }
+
+        totalLen += GetLineLen(v, d);
+    }
+
+    // Use curve length to calculate a good increment for loop below
+    int inc = 200000.0 / totalLen;
+
+    // Draw the bezier by sampling at a higher resolution and drawing straight lines between segments
+    int oldP[2];
+    oldP[0] = a[0];
+    oldP[1] = a[1];
+    for (int t = inc; t < 65536; t += inc)
+    {
+        int p[2];
+        GetBezierPos(a, b, c, d, t, p);
+        DrawLine(bmp, oldP[0], oldP[1], p[0], p[1], col);
+        oldP[0] = p[0];
+        oldP[1] = p[1];
     }
 }
 
