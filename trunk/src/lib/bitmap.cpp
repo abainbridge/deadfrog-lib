@@ -515,7 +515,9 @@ void DrawBezier(BitmapRGBA *bmp, int const *a, int const *b, int const *c, int c
     }
 
     // Use curve length to calculate a good increment for loop below
-    int inc = 200000.0 / totalLen;
+    int inc = 1000.0;
+    if (totalLen > 0.0)
+        200000.0 / totalLen;
 
     // Draw the bezier by sampling at a higher resolution and drawing straight lines between segments
     int oldP[2];
