@@ -39,6 +39,9 @@ DLL_API void        DrawLine        (BitmapRGBA *bmp, int x1, int y1, int x2, in
 // Arguments a to d are points, represented as arrays of 2 integers. Curve starts at 'a' and ends at 'd'.
 DLL_API void        DrawBezier      (BitmapRGBA *bmp, int const *a, int const *b, int const *c, int const *d, RGBAColour col);
 
+// Calculate the position on a Bezier curve. t is in range 0 to 63356.
+DLL_API void        GetBezierPos    (int const *a, int const *b, int const *c, int const *d, int t, int *result);
+
 DLL_API void        RectFill        (BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c);
 DLL_API void        RectOutline     (BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c);
 
