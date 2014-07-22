@@ -97,6 +97,9 @@ void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
     if (unsigned(y) >= bmp->height)
         return;
 
+    if (len == 0)
+        return;
+
     // Clip against left
     if (x < 0)
     {
@@ -145,6 +148,9 @@ void VLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 
 void VLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
+    if (len == 0)
+        return;
+
     // Clip against left and right of bmp
     if (unsigned(x) > bmp->width)
         return;
