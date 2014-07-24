@@ -537,6 +537,8 @@ void DrawBezier(BitmapRGBA *bmp, int const *a, int const *b, int const *c, int c
         oldP[0] = p[0];
         oldP[1] = p[1];
     }
+
+    DrawLine(bmp, oldP[0], oldP[1], d[0], d[1], col);
 }
 
 
