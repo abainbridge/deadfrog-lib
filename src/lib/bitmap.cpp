@@ -177,6 +177,9 @@ void VLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 
 void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour)
 {
+    // This implementation is based on that presented in Michael Abrash's Zen of
+    // Graphics Programming (2nd Edition), listing 15-1, page 250.
+
     // We'll always draw top to bottom, to reduce the number of cases we have to
     // handle, and to make lines between the same endpoints draw the same pixels
     if (y1 > y2)
