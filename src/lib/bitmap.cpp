@@ -194,13 +194,13 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
     
     // Special case horizontal and vertical lines
     if (xDelta == 0)
-        return VLine(bmp, x1, y1, yDelta, colour);
+        return VLine(bmp, x1, y1, yDelta+1, colour);
     if (yDelta == 0)
     {
         if (xDelta > 0)
-            return HLine(bmp, x1, y1, xDelta, colour);
+            return HLine(bmp, x1, y1, xDelta+1, colour);
         else
-            return HLine(bmp, x2, y1, -xDelta, colour);
+            return HLine(bmp, x2, y1, 1-xDelta, colour);
     }
 
     // Get a constant copy of the bitmap width so the compiler can assume it
@@ -325,7 +325,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
     // Special case diagonal line
     if (xDelta == yDelta)
     {
-        for (int i = 0; i < xDelta; i++)
+        for (int i = 0; i <= xDelta; i++)
             PutPixUnclipped(bmp, x1 + i * xAdvance, y1 + i, colour);
         return;
     }
