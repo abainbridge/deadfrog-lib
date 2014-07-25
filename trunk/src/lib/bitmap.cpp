@@ -556,7 +556,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
     if (x1 > (int)bmpWidth || x2 < 0 || y1 > (int)bmp->height || y2 < 0)
         return;
 
-    RGBAColour *line = GetLine(bmp, y) + x;
+    RGBAColour *line = GetLine(bmp, y1) + x;
     for (int a = y1; a < y2; a++)
     {
 //         // Draw a row of pixels. Loop unrolled via Duff's Device
