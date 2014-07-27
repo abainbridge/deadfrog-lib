@@ -103,6 +103,8 @@ void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
     // Clip against left
     if (x < 0)
     {
+        if ((int)len <= -x)
+            return;
         len += x;
         x = 0;
     }
@@ -158,6 +160,8 @@ void VLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
     // Clip against top
     if (y < 0)
     {
+        if ((int)len <= -y)
+            return;
         len += y;
         y = 0;
     }
@@ -463,30 +467,31 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
 // Calculate the position on a Bezier curve. t is in range 0 to 63356.
 void GetBezierPos(int const *a, int const *b, int const *c, int const *d, int t, int *result)
 {
-    int invT = 65536 - t;
+    double dt = (double)t / 65536.0;
+    double nt = 1.0 - dt;
 
-    int pab[2];
-    pab[0] = (a[0] * invT + b[0] * t); 
-    pab[1] = (a[1] * invT + b[1] * t);
+    double scalar1 = nt*nt*nt;
+    double scalar2 = 3*nt*nt*dt;
+    double scalar3 = 3*nt*dt*dt;
+    double scalar4 = dt*dt*dt;
 
-    int pbc[2];
-    pbc[0] = (b[0] * invT + c[0] * t); 
-    pbc[1] = (b[1] * invT + c[1] * t);
+    result[0] = (int)(a[0] * scalar1 + b[0] * scalar2 + c[0] * scalar3 + d[0] * scalar4);
+    result[1] = (int)(a[1] * scalar1 + b[1] * scalar2 + c[1] * scalar3 + d[1] * scalar4);
+}
 
-    int pcd[2];
-    pcd[0] = (c[0] * invT + d[0] * t); 
-    pcd[1] = (c[1] * invT + d[1] * t);
 
-    int v[2];
-    v[0] = ((__int64)pab[0] * invT + (__int64)pbc[0] * t) / 65536; 
-    v[1] = ((__int64)pab[1] * invT + (__int64)pbc[1] * t) / 65536;
+void GetBezierDir(int const *a, int const *b, int const *c, int const *d, int t, int *result)
+{
+    double dt = (double)t / 65536.0;
+    double nt = 1.0 - dt;
 
-    int w[2];
-    w[0] = ((__int64)pbc[0] * invT + (__int64)pcd[0] * t) / 65536; 
-    w[1] = ((__int64)pbc[1] * invT + (__int64)pcd[1] * t) / 65536;
+    double scalar1 = -3.0*nt*nt;
+    double scalar2 = 3.0*(1.0 - 4.0*dt + 3.0*dt*dt);
+    double scalar3 = 3.0*(2.0*dt - 3.0*dt*dt);
+    double scalar4 = 3.0*dt*dt;
 
-    result[0] = ((__int64)v[0] * invT + (__int64)w[0] * t) >> 32; 
-    result[1] = ((__int64)v[1] * invT + (__int64)w[1] * t) >> 32;
+    result[0] = (int)(a[0] * scalar1 + b[0] * scalar2 + c[0] * scalar3 + d[0] * scalar4);
+    result[1] = (int)(a[1] * scalar1 + b[1] * scalar2 + c[1] * scalar3 + d[1] * scalar4);
 }
 
 
