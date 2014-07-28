@@ -208,6 +208,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\lib\polygon.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\polygon.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\lib\rgba_colour.cpp"
 			>
 		</File>
