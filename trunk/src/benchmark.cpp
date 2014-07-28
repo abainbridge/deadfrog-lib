@@ -1,5 +1,6 @@
 #include "lib/hi_res_time.h"
 #include "lib/input.h"
+#include "lib/polygon.h"
 #include "lib/text_renderer.h"
 #include "lib/window_manager.h"
 
@@ -81,7 +82,7 @@ double CalcMillionVLinePixelsPerSec(BitmapRGBA *bmp)
 
 double CalcBillionRectFillPixelsPerSec(BitmapRGBA *bmp)
 {
-    unsigned iterations = 1000 * 100;
+    unsigned iterations = 1000 * 200;
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; i++)
         RectFill(bmp, 10, 10, 100, 100, g_colourWhite);
@@ -123,6 +124,60 @@ double CalcMillionCharsPerSec(BitmapRGBA *bmp, TextRenderer *font)
     double duration = endTime - startTime;
     double numChars = iterations * (double)strlen(str);
     return (numChars / duration) / 1000000.0;
+}
+
+
+#define DRAW_POLYGON(PointList,Color,X,Y)                   \
+    Polygon.Length = sizeof(PointList)/sizeof(struct Point); \
+    Polygon.PointPtr = PointList;                            \
+    FillConvexPolygon(bmp, &Polygon, g_colourWhite, X, Y);
+
+
+double CalcBillionPolyFillPixelsPerSec(BitmapRGBA *bmp)
+{
+    unsigned iterations = 100 * 20;
+    double startTime = GetHighResTime();
+    for (unsigned k = 0; k < iterations; k++)
+    {
+        struct PointListHeader Polygon;
+        static struct Point ScreenRectangle[] = {{340,10},{380,10},{380,200},{340,200}};
+        static struct Point Hexagon[] = {{190,250},{100,210},{10,250},{10,350},{100,390},{190,350}};
+        static struct Point Triangle1[] = {{30,0},{15,20},{0,0}};
+        static struct Point Triangle2[] = {{30,20},{15,0},{0,20}};
+        static struct Point Triangle3[] = {{0,20},{20,10},{0,0}};
+        static struct Point Triangle4[] = {{20,20},{20,0},{0,10}};
+
+        DRAW_POLYGON(ScreenRectangle, 3, 0, 1);
+
+        /* Draw adjacent triangles across the top half of the screen */
+        int i, j;
+        for (j=0; j<=80; j+=20) {
+            for (i=0; i<290; i += 30) {
+                DRAW_POLYGON(Triangle1, 2, i, j);
+                DRAW_POLYGON(Triangle2, 4, i+15, j);
+            }
+        }
+
+        /* Draw adjacent triangles across the bottom half of the screen */
+        for (j=100; j<=170; j+=20) {
+            /* Do a row of pointing-right triangles */
+            for (i=0; i<290; i += 20) {
+                DRAW_POLYGON(Triangle3, 40, i, j);
+            }
+            /* Do a row of pointing-left triangles halfway between one row
+            of pointing-right triangles and the next, to fit between */
+            for (i=0; i<290; i += 20) {
+                DRAW_POLYGON(Triangle4, 1, i, j+10);
+            }
+        }
+
+        DRAW_POLYGON(Hexagon, i, 0, 0);
+    }
+    
+    double endTime = GetHighResTime();
+    double duration = endTime - startTime;
+    double numPixels = 87000.0 * (double)iterations;
+    return (numPixels / duration) / 1e9;
 }
 
 
@@ -186,6 +241,14 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
         "Million chars per sec = %.2f", score);
     END_TEST;
+
+    // Polygon fill
+    ClearBitmap(backBmp, g_colourBlack);
+    score = CalcBillionPolyFillPixelsPerSec(backBmp);
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
+        "Polyfill billion pixels per sec = %.2f", score);
+    END_TEST;
+
 
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Press ESC to quit");
