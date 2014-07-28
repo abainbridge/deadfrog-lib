@@ -71,7 +71,7 @@ RGBAColour GetPix(BitmapRGBA *bmp, unsigned x, unsigned y)
 
 void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
-    RGBAColour *row = GetLine(bmp, y) + x;
+    RGBAColour * __restrict row = GetLine(bmp, y) + x;
     if (c.a == 255)
     {
         for (unsigned i = 0; i < len; i++)
@@ -124,7 +124,7 @@ void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 
 void VLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
-    RGBAColour *pixel = GetLine(bmp, y) + x;
+    RGBAColour * __restrict pixel = GetLine(bmp, y) + x;
     unsigned const bw = bmp->width;
     if (c.a == 255)
     {
@@ -337,7 +337,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
         return;
     }
 
-    RGBAColour *pixel = GetLine(bmp, y1) + x1;
+    RGBAColour * __restrict pixel = GetLine(bmp, y1) + x1;
 
     // Is the line X major or y major?
     if (xDelta >= yDelta)
@@ -564,7 +564,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
     if (x1 > (int)bmpWidth || x2 < 0 || y1 > (int)bmp->height || y2 < 0)
         return;
 
-    RGBAColour *line = GetLine(bmp, y1) + x;
+    RGBAColour * __restrict line = GetLine(bmp, y1) + x;
     for (int a = y1; a < y2; a++)
     {
 //         // Draw a row of pixels. Loop unrolled via Duff's Device
