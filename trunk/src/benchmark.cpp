@@ -128,7 +128,7 @@ double CalcMillionCharsPerSec(BitmapRGBA *bmp, TextRenderer *font)
 
 
 #define DRAW_POLYGON(PointList,Color,X,Y)                   \
-    Polygon.Length = sizeof(PointList)/sizeof(struct Point); \
+    Polygon.Length = sizeof(PointList)/sizeof(Point); \
     Polygon.PointPtr = PointList;                            \
     FillConvexPolygon(bmp, &Polygon, g_colourWhite, X, Y);
 
@@ -139,13 +139,13 @@ double CalcBillionPolyFillPixelsPerSec(BitmapRGBA *bmp)
     double startTime = GetHighResTime();
     for (unsigned k = 0; k < iterations; k++)
     {
-        struct PointListHeader Polygon;
-        static struct Point ScreenRectangle[] = {{340,10},{380,10},{380,200},{340,200}};
-        static struct Point Hexagon[] = {{190,250},{100,210},{10,250},{10,350},{100,390},{190,350}};
-        static struct Point Triangle1[] = {{30,0},{15,20},{0,0}};
-        static struct Point Triangle2[] = {{30,20},{15,0},{0,20}};
-        static struct Point Triangle3[] = {{0,20},{20,10},{0,0}};
-        static struct Point Triangle4[] = {{20,20},{20,0},{0,10}};
+        PointListHeader Polygon;
+        static Point ScreenRectangle[] = {{340,10},{380,10},{380,200},{340,200}};
+        static Point Hexagon[] = {{190,250},{100,210},{10,250},{10,350},{100,390},{190,350}};
+        static Point Triangle1[] = {{30,0},{15,20},{0,0}};
+        static Point Triangle2[] = {{30,20},{15,0},{0,20}};
+        static Point Triangle3[] = {{0,20},{20,10},{0,0}};
+        static Point Triangle4[] = {{20,20},{20,0},{0,10}};
 
         DRAW_POLYGON(ScreenRectangle, 3, 0, 1);
 
