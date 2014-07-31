@@ -6,8 +6,8 @@
 // Describes a single point (used for a single vertex)
 typedef struct 
 {
-    int X;
-    int Y;
+    int x;
+    int y;
 } Point;
 
 
@@ -17,8 +17,8 @@ typedef struct
 // first)
 typedef struct 
 {
-    int Length;          // # of points
-    Point *PointPtr;     // pointer to list of points
+    int numPoints;
+    Point *points;
 } PointListHeader;
 
 
