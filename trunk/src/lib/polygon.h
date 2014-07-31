@@ -1,7 +1,11 @@
+// This code originally came from Michael Abrash's Zen of Graphics, 
+// 2nd edition, chapter 23.
+
 #ifndef INCLUDED_POLYGON_H
 #define INCLUDED_POLYGON_H
 
 #include "bitmap.h"
+
 
 // Describes a single point (used for a single vertex)
 typedef struct 

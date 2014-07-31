@@ -42,19 +42,17 @@ struct HLineList
 
 // Advances the index by one vertex forward through the vertex list,
 // wrapping at the end of the list
-#define INDEX_FORWARD(index) index = (index + 1) % vertexList->numPoints;
+#define INDEX_FORWARD(index) index++; if (index >= vertexList->numPoints) index = 0;
 
 // Advances the index by one vertex backward through the vertex list,
 // wrapping at the start of the list
-#define INDEX_BACKWARD(index) index = (index - 1 + vertexList->numPoints) % vertexList->numPoints;
+#define INDEX_BACKWARD(index) index--; if (index < 0) index = vertexList->numPoints - 1;
 
 // Advances the index by one vertex either forward or backward through
-// the vertex list, wrapping at either end of the list */
-#define INDEX_MOVE(index, direction)                                        \
-    if (direction > 0)                                                      \
-        index = (index + 1) % vertexList->numPoints;                        \
-    else                                                                    \
-        index = (index - 1 + vertexList->numPoints) % vertexList->numPoints;
+// the vertex list, wrapping at either end of the list
+#define INDEX_MOVE(index, direction)              \
+    if (direction > 0) { INDEX_FORWARD(index); }  \
+    else               { INDEX_BACKWARD(index); }
 
 
 // Scan converts an edge from (X1,Y1) to (X2,Y2), not including the
@@ -66,25 +64,27 @@ struct HLineList
 static void ScanEdge(int x1, int y1, int x2, int y2, int setXStart,
                      int skipFirst, HLineData **edgePointPtr)
 {
-    int deltaX, height, width, errorTerm, i;
-    int errorTermAdvance, xMajorAdvanceAmt;
+    int errorTerm, errorTermAdvance, xMajorAdvanceAmt;
 
     HLineData *workingEdgePointPtr = *edgePointPtr; // avoid double dereference 
-    int advanceAmt = ((deltaX = x2 - x1) > 0) ? 1 : -1;
+    int deltaX = x2 - x1;
+    int advanceAmt = (deltaX > 0) ? 1 : -1;
     // direction in which X moves (Y2 is always > Y1, so Y always counts up)
 
-    if ((height = y2 - y1) <= 0)  // Y length of the edge 
+    int height = y2 - y1;
+    if (height <= 0)  // Y length of the edge 
         return;     // guard against 0-length and horizontal edges 
 
     // Figure out whether the edge is vertical, diagonal, X-major
     // (mostly horizontal), or Y-major (mostly vertical) and handle
     // appropriately
-    if ((width = abs(deltaX)) == 0) 
+    int width = abs(deltaX);
+    if (width == 0) 
     {
         // The edge is vertical; special-case by just storing the same
         // X coordinate for every scan line
         // Scan the edge for each scan line in turn 
-        for (i = height - skipFirst; i-- > 0; workingEdgePointPtr++) 
+        for (int i = height - skipFirst; i-- > 0; workingEdgePointPtr++) 
         {
             // Store the X coordinate in the appropriate edge list 
             if (setXStart == 1)
@@ -101,7 +101,7 @@ static void ScanEdge(int x1, int y1, int x2, int y2, int setXStart,
             x1 += advanceAmt; // move 1 pixel to the left or right 
 
         // Scan the edge for each scan line in turn 
-        for (i = height - skipFirst; i-- > 0; workingEdgePointPtr++) 
+        for (int i = height - skipFirst; i-- > 0; workingEdgePointPtr++) 
         {
             // Store the X coordinate in the appropriate edge list 
             if (setXStart == 1)
@@ -130,7 +130,7 @@ static void ScanEdge(int x1, int y1, int x2, int y2, int setXStart,
         }
 
         // Scan the edge for each scan line in turn 
-        for (i = height - skipFirst; i-- > 0; workingEdgePointPtr++) 
+        for (int i = height - skipFirst; i-- > 0; workingEdgePointPtr++) 
         {
             // Store the X coordinate in the appropriate edge list 
             if (setXStart == 1)
@@ -170,7 +170,7 @@ static void ScanEdge(int x1, int y1, int x2, int y2, int setXStart,
             }
         }
         // Scan the edge for each scan line in turn 
-        for (i = height - skipFirst; i-- > 0; workingEdgePointPtr++) 
+        for (int i = height - skipFirst; i-- > 0; workingEdgePointPtr++) 
         {
             // Store the X coordinate in the appropriate edge list 
             if (setXStart == 1)
@@ -252,8 +252,6 @@ static void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList *hLines, RGBAColou
 int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader *vertexList, RGBAColour col,
                       int xOffset, int yOffset)
 {
-    int minIndexL, maxIndex, skipFirst, minPointY;
-
     // Point to the vertex list 
     Point *vertices = vertexList->points;
 
@@ -261,6 +259,7 @@ int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader *vertexList, RGBAColour c
     if (vertexList->numPoints == 0)
         return 1;  // reject null polygons 
 
+    int minIndexL, maxIndex, minPointY;
     int maxPointY = minPointY = vertices[minIndexL = maxIndex = 0].y;
     for (int i = 1; i < vertexList->numPoints; i++) 
     {
@@ -314,7 +313,7 @@ int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader *vertexList, RGBAColour c
         int deltaYN = vertices[nextIndex].y - vertices[minIndexL].y;
         int deltaXP = vertices[previousIndex].x - vertices[minIndexL].x;
         int deltaYP = vertices[previousIndex].y - vertices[minIndexL].y;
-        if (((long)deltaXN * deltaYP - (long)deltaYN * deltaXP) < 0L) 
+        if ((deltaXN * deltaYP - deltaYN * deltaXP) < 0L) 
         {
             leftEdgeDir = 1;        // left edge runs up through vertex list 
             int temp = minIndexL;   // swap the indices so MinIndexL   
@@ -349,9 +348,9 @@ int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader *vertexList, RGBAColour c
     int currentIndex = previousIndex;
     
     // Skip the first point of the first line unless the top is flat;
-    //if the top isn't flat, the top vertex is exactly on a right
-    //edge and isn't drawn
-    skipFirst = topIsFlat ? 0 : 1;
+    // if the top isn't flat, the top vertex is exactly on a right
+    // edge and isn't drawn
+    int skipFirst = topIsFlat ? 0 : 1;
     
     // Scan convert each line in the left edge from top to bottom 
     do {
