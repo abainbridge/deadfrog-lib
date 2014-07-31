@@ -11,6 +11,7 @@ for success, 0 if memory allocation failed.
 
 #include "polygon.h"
 #include "bitmap.h"
+#include "common.h"
 #include <stdio.h>
 #include <math.h>
 #include <malloc.h>
@@ -30,19 +31,17 @@ low-level hardware-dependent drawing code) */
 struct HLineList {
     int Length;                // # of horizontal lines 
     int YStart;                // Y coordinate of topmost line 
-    HLineData * hline;   // pointer to list of horz lines 
+    HLineData * hline;         // pointer to list of horz lines 
 };
 
 
 /* Advances the index by one vertex forward through the vertex list,
 wrapping at the end of the list */
-#define INDEX_FORWARD(Index) \
-    Index = (Index + 1) % VertexList->Length;
+#define INDEX_FORWARD(Index) Index = (Index + 1) % VertexList->Length;
 
 /* Advances the index by one vertex backward through the vertex list,
 wrapping at the start of the list */
-#define INDEX_BACKWARD(Index) \
-    Index = (Index - 1 + VertexList->Length) % VertexList->Length;
+#define INDEX_BACKWARD(Index) Index = (Index - 1 + VertexList->Length) % VertexList->Length;
 
 /* Advances the index by one vertex either forward or backward through
 the vertex list, wrapping at either end of the list */
@@ -166,15 +165,58 @@ void ScanEdge(int X1, int Y1, int X2, int Y2, int SetXStart,
 }
 
 
-void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList * HLineList, RGBAColour Color)
+void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList *hLines, RGBAColour col)
 {
-    // Point to the XStart/XEnd descriptor for the first (top) horizontal line
-    HLineData * __restrict HLinePtr = HLineList->hline;
+    int startY = hLines->YStart;
+    int len = hLines->Length;
+    int endY = startY + len;
 
-	// Draw each horizontal line in turn, starting with the top one and advancing one line each time
-    int endY = HLineList->YStart + HLineList->Length;
-    for (int Y = HLineList->YStart; Y < endY; Y++, HLinePtr++) {
-        HLine(bmp, HLinePtr->XStart, Y, HLinePtr->XEnd - HLinePtr->XStart, Color);
+    // Clip against the top of the bitmap
+    if (startY < 0)
+    {
+        if (endY < 0)
+            return;
+
+        hLines -= startY;
+        len += startY;
+        startY = 0;
+    }
+
+    // Clip against the bottom of the bitmap
+    if (endY >= (int)bmp->height)
+    {
+        if (startY >= (int)bmp->height)
+            return;
+
+        len = bmp->height - startY;
+    }
+
+    // Draw the hlines
+    HLineData *firstLine = hLines->hline;
+    HLineData *lastLine = firstLine + len;
+    if (col.a != 255)
+    {
+        // Alpha blended path...
+        int y = startY;
+        for (HLineData * __restrict line = firstLine; line < lastLine; line++, y++)
+            HLine(bmp, line->XStart, y, line->XEnd - line->XStart, col);
+    }
+    else
+    {
+        // Solid colour path...
+        RGBAColour * __restrict row = bmp->pixels + bmp->width * hLines->YStart;
+        for (HLineData * __restrict line = firstLine; line < lastLine; line++) 
+        {
+            // Clip against sides of bitmap
+            int startX = IntMax(0, line->XStart);
+            int endX = IntMin(bmp->width, line->XEnd);
+            if (startX >= (int)bmp->width || endX < 0)
+                continue;
+
+            for (int x = startX; x < endX; x++)
+                row[x] = col;
+            row += bmp->width;
+        }
     }
 }
 
