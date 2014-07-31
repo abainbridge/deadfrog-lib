@@ -127,10 +127,10 @@ double CalcMillionCharsPerSec(BitmapRGBA *bmp, TextRenderer *font)
 }
 
 
-#define DRAW_POLYGON(PointList,Color,X,Y)                   \
-    Polygon.Length = sizeof(PointList)/sizeof(Point); \
-    Polygon.PointPtr = PointList;                            \
-    FillConvexPolygon(bmp, &Polygon, g_colourWhite, X, Y);
+#define DRAW_POLYGON(pointList, Color, x, y)              \
+    Polygon.Length = sizeof(pointList) / sizeof(Point);   \
+    Polygon.PointPtr = pointList;                         \
+    FillConvexPolygon(bmp, &Polygon, g_colourWhite, x, y);
 
 
 double CalcBillionPolyFillPixelsPerSec(BitmapRGBA *bmp)

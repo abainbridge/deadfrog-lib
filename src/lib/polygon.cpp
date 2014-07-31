@@ -20,8 +20,8 @@ for success, 0 if memory allocation failed.
 /* Describes the beginning and ending X coordinates of a single
 horizontal line */
 struct HLineData {
-    int XStart; // X coordinate of leftmost pixel in line 
-    int XEnd;   // X coordinate of rightmost pixel in line 
+    int startX; // X coordinate of leftmost pixel in line 
+    int endX;   // X coordinate of rightmost pixel in line 
 };
 
 /* Describes a Length-long series of horizontal lines, all assumed to
@@ -29,27 +29,27 @@ be on contiguous scan lines starting at YStart and proceeding
 downward (used to describe a scan-converted polygon to the
 low-level hardware-dependent drawing code) */
 struct HLineList {
-    int Length;                // # of horizontal lines 
-    int YStart;                // Y coordinate of topmost line 
-    HLineData * hline;         // pointer to list of horz lines 
+    int numLines;
+    int startY;               // Y coordinate of topmost line 
+    HLineData *hline;         // pointer to list of horz lines 
 };
 
 
 /* Advances the index by one vertex forward through the vertex list,
 wrapping at the end of the list */
-#define INDEX_FORWARD(Index) Index = (Index + 1) % VertexList->Length;
+#define INDEX_FORWARD(Index) Index = (Index + 1) % vertexList->Length;
 
 /* Advances the index by one vertex backward through the vertex list,
 wrapping at the start of the list */
-#define INDEX_BACKWARD(Index) Index = (Index - 1 + VertexList->Length) % VertexList->Length;
+#define INDEX_BACKWARD(Index) Index = (Index - 1 + vertexList->Length) % vertexList->Length;
 
 /* Advances the index by one vertex either forward or backward through
 the vertex list, wrapping at either end of the list */
-#define INDEX_MOVE(Index,Direction)                                   \
+#define INDEX_MOVE(Index, Direction)                                  \
     if (Direction > 0)                                                \
-        Index = (Index + 1) % VertexList->Length;                     \
+        Index = (Index + 1) % vertexList->Length;                     \
     else                                                              \
-        Index = (Index - 1 + VertexList->Length) % VertexList->Length;
+        Index = (Index - 1 + vertexList->Length) % vertexList->Length;
 
 
 /* Scan converts an edge from (X1,Y1) to (X2,Y2), not including the
@@ -59,116 +59,115 @@ closest to the scanned edge without being to the left of the
 scanned edge is chosen. Uses an all-integer approach for speed and
 precision.
 */
-void ScanEdge(int X1, int Y1, int X2, int Y2, int SetXStart,
-              int SkipFirst, HLineData **EdgePointPtr)
+void ScanEdge(int x1, int y1, int x2, int y2, int setXStart,
+              int skipFirst, HLineData **edgePointPtr)
 {
-    int DeltaX, Height, Width, AdvanceAmt, ErrorTerm, i;
-    int ErrorTermAdvance, XMajorAdvanceAmt;
-    HLineData *WorkingEdgePointPtr;
+    int deltaX, height, width, errorTerm, i;
+    int errorTermAdvance, xMajorAdvanceAmt;
 
-    WorkingEdgePointPtr = *EdgePointPtr; // avoid double dereference 
-    AdvanceAmt = ((DeltaX = X2 - X1) > 0) ? 1 : -1;
+    HLineData *workingEdgePointPtr = *edgePointPtr; // avoid double dereference 
+    int advanceAmt = ((deltaX = x2 - x1) > 0) ? 1 : -1;
     // direction in which X moves (Y2 is always > Y1, so Y always counts up)
 
-    if ((Height = Y2 - Y1) <= 0)  // Y length of the edge 
+    if ((height = y2 - y1) <= 0)  // Y length of the edge 
         return;     // guard against 0-length and horizontal edges 
 
     /* Figure out whether the edge is vertical, diagonal, X-major
     (mostly horizontal), or Y-major (mostly vertical) and handle
     appropriately */
-    if ((Width = abs(DeltaX)) == 0) {
+    if ((width = abs(deltaX)) == 0) {
         /* The edge is vertical; special-case by just storing the same
         X coordinate for every scan line */
         // Scan the edge for each scan line in turn 
-        for (i = Height - SkipFirst; i-- > 0; WorkingEdgePointPtr++) {
+        for (i = height - skipFirst; i-- > 0; workingEdgePointPtr++) {
             // Store the X coordinate in the appropriate edge list 
-            if (SetXStart == 1)
-                WorkingEdgePointPtr->XStart = X1;
+            if (setXStart == 1)
+                workingEdgePointPtr->startX = x1;
             else
-                WorkingEdgePointPtr->XEnd = X1;
+                workingEdgePointPtr->endX = x1;
         }
-    } else if (Width == Height) {
+    } else if (width == height) {
         /* The edge is diagonal; special-case by advancing the X
         coordinate 1 pixel for each scan line */
-        if (SkipFirst) // skip the first point if so indicated 
-            X1 += AdvanceAmt; // move 1 pixel to the left or right 
+        if (skipFirst) // skip the first point if so indicated 
+            x1 += advanceAmt; // move 1 pixel to the left or right 
         // Scan the edge for each scan line in turn 
-        for (i = Height - SkipFirst; i-- > 0; WorkingEdgePointPtr++) {
+        for (i = height - skipFirst; i-- > 0; workingEdgePointPtr++) {
             // Store the X coordinate in the appropriate edge list 
-            if (SetXStart == 1)
-                WorkingEdgePointPtr->XStart = X1;
+            if (setXStart == 1)
+                workingEdgePointPtr->startX = x1;
             else
-                WorkingEdgePointPtr->XEnd = X1;
-            X1 += AdvanceAmt; // move 1 pixel to the left or right 
+                workingEdgePointPtr->endX = x1;
+            x1 += advanceAmt; // move 1 pixel to the left or right 
         }
-    } else if (Height > Width) {
+    } else if (height > width) {
         // Edge is closer to vertical than horizontal (Y-major) 
-        if (DeltaX >= 0)
-            ErrorTerm = 0; // initial error term going left->right 
+        if (deltaX >= 0)
+            errorTerm = 0; // initial error term going left->right 
         else
-            ErrorTerm = -Height + 1;   // going right->left 
-        if (SkipFirst) {   // skip the first point if so indicated 
+            errorTerm = -height + 1;   // going right->left 
+        if (skipFirst) {   // skip the first point if so indicated 
             // Determine whether it's time for the X coord to advance 
-            if ((ErrorTerm += Width) > 0) {
-                X1 += AdvanceAmt; // move 1 pixel to the left or right 
-                ErrorTerm -= Height; // advance ErrorTerm to next point 
+            if ((errorTerm += width) > 0) {
+                x1 += advanceAmt; // move 1 pixel to the left or right 
+                errorTerm -= height; // advance ErrorTerm to next point 
             }
         }
         // Scan the edge for each scan line in turn 
-        for (i = Height - SkipFirst; i-- > 0; WorkingEdgePointPtr++) {
+        for (i = height - skipFirst; i-- > 0; workingEdgePointPtr++) {
             // Store the X coordinate in the appropriate edge list 
-            if (SetXStart == 1)
-                WorkingEdgePointPtr->XStart = X1;
+            if (setXStart == 1)
+                workingEdgePointPtr->startX = x1;
             else
-                WorkingEdgePointPtr->XEnd = X1;
+                workingEdgePointPtr->endX = x1;
             // Determine whether it's time for the X coord to advance 
-            if ((ErrorTerm += Width) > 0) {
-                X1 += AdvanceAmt; // move 1 pixel to the left or right 
-                ErrorTerm -= Height; // advance ErrorTerm to correspond 
+            if ((errorTerm += width) > 0) {
+                x1 += advanceAmt; // move 1 pixel to the left or right 
+                errorTerm -= height; // advance ErrorTerm to correspond 
             }
         }
     } else {
         // Edge is closer to horizontal than vertical (X-major) 
         // Minimum distance to advance X each time 
-        XMajorAdvanceAmt = (Width / Height) * AdvanceAmt;
+        xMajorAdvanceAmt = (width / height) * advanceAmt;
         // Error term advance for deciding when to advance X 1 extra 
-        ErrorTermAdvance = Width % Height;
-        if (DeltaX >= 0)
-            ErrorTerm = 0; // initial error term going left->right 
+        errorTermAdvance = width % height;
+        if (deltaX >= 0)
+            errorTerm = 0; // initial error term going left->right 
         else
-            ErrorTerm = -Height + 1;   // going right->left 
-        if (SkipFirst) {   // skip the first point if so indicated 
-            X1 += XMajorAdvanceAmt;    // move X minimum distance 
+            errorTerm = -height + 1;   // going right->left 
+        if (skipFirst) {   // skip the first point if so indicated 
+            x1 += xMajorAdvanceAmt;    // move X minimum distance 
             // Determine whether it's time for X to advance one extra 
-            if ((ErrorTerm += ErrorTermAdvance) > 0) {
-                X1 += AdvanceAmt;       // move X one more 
-                ErrorTerm -= Height; // advance ErrorTerm to correspond 
+            if ((errorTerm += errorTermAdvance) > 0) {
+                x1 += advanceAmt;       // move X one more 
+                errorTerm -= height; // advance ErrorTerm to correspond 
             }
         }
         // Scan the edge for each scan line in turn 
-        for (i = Height - SkipFirst; i-- > 0; WorkingEdgePointPtr++) {
+        for (i = height - skipFirst; i-- > 0; workingEdgePointPtr++) {
             // Store the X coordinate in the appropriate edge list 
-            if (SetXStart == 1)
-                WorkingEdgePointPtr->XStart = X1;
+            if (setXStart == 1)
+                workingEdgePointPtr->startX = x1;
             else
-                WorkingEdgePointPtr->XEnd = X1;
-            X1 += XMajorAdvanceAmt;    // move X minimum distance 
+                workingEdgePointPtr->endX = x1;
+            x1 += xMajorAdvanceAmt;    // move X minimum distance 
             // Determine whether it's time for X to advance one extra 
-            if ((ErrorTerm += ErrorTermAdvance) > 0) {
-                X1 += AdvanceAmt;       // move X one more 
-                ErrorTerm -= Height; // advance ErrorTerm to correspond 
+            if ((errorTerm += errorTermAdvance) > 0) {
+                x1 += advanceAmt;       // move X one more 
+                errorTerm -= height; // advance ErrorTerm to correspond 
             }
         }
     }
 
-    *EdgePointPtr = WorkingEdgePointPtr;   // advance caller's ptr 
+    *edgePointPtr = workingEdgePointPtr;   // advance caller's ptr 
 }
 
 
 void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList *hLines, RGBAColour col)
 {
-    int startY = hLines->YStart;
-    int len = hLines->Length;
+    int startY = hLines->startY;
+    int len = hLines->numLines;
     int endY = startY + len;
 
     // Clip against the top of the bitmap
@@ -199,17 +198,17 @@ void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList *hLines, RGBAColour col)
         // Alpha blended path...
         int y = startY;
         for (HLineData * __restrict line = firstLine; line < lastLine; line++, y++)
-            HLine(bmp, line->XStart, y, line->XEnd - line->XStart, col);
+            HLine(bmp, line->startX, y, line->endX - line->startX, col);
     }
     else
     {
         // Solid colour path...
-        RGBAColour * __restrict row = bmp->pixels + bmp->width * hLines->YStart;
+        RGBAColour * __restrict row = bmp->pixels + bmp->width * hLines->startY;
         for (HLineData * __restrict line = firstLine; line < lastLine; line++) 
         {
             // Clip against sides of bitmap
-            int startX = IntMax(0, line->XStart);
-            int endX = IntMin(bmp->width, line->XEnd);
+            int startX = IntMax(0, line->startX);
+            int endX = IntMin(bmp->width, line->endX);
             if (startX >= (int)bmp->width || endX < 0)
                 continue;
 
@@ -221,8 +220,8 @@ void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList *hLines, RGBAColour col)
 }
 
 
-int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader * VertexList, RGBAColour Color,
-                      int XOffset, int YOffset)
+int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader *vertexList, RGBAColour col,
+                      int xOffset, int yOffset)
 {
     int i, MinIndexL, MaxIndex, MinIndexR, SkipFirst, Temp;
     int MinPoint_Y, MaxPoint_Y, TopIsFlat, LeftEdgeDir;
@@ -233,13 +232,13 @@ int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader * VertexList, RGBAColour 
     Point *VertexPtr;
 
     // Point to the vertex list 
-    VertexPtr = VertexList->PointPtr;
+    VertexPtr = vertexList->PointPtr;
 
     // Scan the list to find the top and bottom of the polygon 
-    if (VertexList->Length == 0)
+    if (vertexList->Length == 0)
         return(1);  // reject null polygons 
     MaxPoint_Y = MinPoint_Y = VertexPtr[MinIndexL = MaxIndex = 0].Y;
-    for (i = 1; i < VertexList->Length; i++) {
+    for (i = 1; i < vertexList->Length; i++) {
         if (VertexPtr[i].Y < MinPoint_Y)
             MinPoint_Y = VertexPtr[MinIndexL = i].Y; // new top 
         else if (VertexPtr[i].Y > MaxPoint_Y)
@@ -298,14 +297,14 @@ int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader * VertexList, RGBAColour 
     in that case the top vertex has a right edge component, and set
     the top scan line to draw, which is likewise the second line of
     the polygon unless the top is flat */
-    if ((WorkingHLineList.Length =
+    if ((WorkingHLineList.numLines =
         MaxPoint_Y - MinPoint_Y - 1 + TopIsFlat) <= 0)
         return(1);  // there's nothing to draw, so we're done 
-    WorkingHLineList.YStart = YOffset + MinPoint_Y + 1 - TopIsFlat;
+    WorkingHLineList.startY = yOffset + MinPoint_Y + 1 - TopIsFlat;
 
     // Get memory in which to store the line list we generate 
     //   WorkingHLineList.HLinePtr = (HLineData *)malloc(sizeof(HLineData) * WorkingHLineList.Length);
-    WorkingHLineList.hline = (HLineData *)alloca(sizeof(HLineData) * WorkingHLineList.Length);
+    WorkingHLineList.hline = (HLineData *)alloca(sizeof(HLineData) * WorkingHLineList.numLines);
     if (WorkingHLineList.hline == NULL)
         return(0);  // couldn't get memory for the line list 
 
@@ -321,9 +320,9 @@ int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader * VertexList, RGBAColour 
     // Scan convert each line in the left edge from top to bottom 
     do {
         INDEX_MOVE(CurrentIndex,LeftEdgeDir);
-        ScanEdge(VertexPtr[PreviousIndex].X + XOffset,
+        ScanEdge(VertexPtr[PreviousIndex].X + xOffset,
             VertexPtr[PreviousIndex].Y,
-            VertexPtr[CurrentIndex].X + XOffset,
+            VertexPtr[CurrentIndex].X + xOffset,
             VertexPtr[CurrentIndex].Y, 1, SkipFirst, &EdgePointPtr);
         PreviousIndex = CurrentIndex;
         SkipFirst = 0; // scan convert the first point from now on 
@@ -338,16 +337,16 @@ int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader * VertexList, RGBAColour 
     the nearest points to the left of but not exactly on the edge */
     do {
         INDEX_MOVE(CurrentIndex,-LeftEdgeDir);
-        ScanEdge(VertexPtr[PreviousIndex].X + XOffset - 1,
+        ScanEdge(VertexPtr[PreviousIndex].X + xOffset - 1,
             VertexPtr[PreviousIndex].Y,
-            VertexPtr[CurrentIndex].X + XOffset - 1,
+            VertexPtr[CurrentIndex].X + xOffset - 1,
             VertexPtr[CurrentIndex].Y, 0, SkipFirst, &EdgePointPtr);
         PreviousIndex = CurrentIndex;
         SkipFirst = 0; // scan convert the first point from now on 
     } while (CurrentIndex != MaxIndex);
 
     // Draw the line list representing the scan converted polygon 
-    DrawHorizontalLineList(bmp, &WorkingHLineList, Color);
+    DrawHorizontalLineList(bmp, &WorkingHLineList, col);
 
     // Release the line list's memory and we're successfully done 
     //   free(WorkingHLineList.HLinePtr);
