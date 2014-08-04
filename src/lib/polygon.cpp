@@ -42,11 +42,11 @@ struct HLineList
 
 // Advances the index by one vertex forward through the vertex list,
 // wrapping at the end of the list
-#define INDEX_FORWARD(index) index++; if (index >= vertexList->numPoints) index = 0;
+#define INDEX_FORWARD(index) index = (index + 1) % vertexList->numPoints;
 
 // Advances the index by one vertex backward through the vertex list,
 // wrapping at the start of the list
-#define INDEX_BACKWARD(index) index--; if (index < 0) index = vertexList->numPoints - 1;
+#define INDEX_BACKWARD(index) index = (index - 1 + vertexList->numPoints) % vertexList->numPoints;
 
 // Advances the index by one vertex either forward or backward through
 // the vertex list, wrapping at either end of the list
