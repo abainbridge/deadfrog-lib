@@ -55,6 +55,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 
 	switch (message)
 	{
+        case WM_ACTIVATE:
+            break;
 		case WM_SETFOCUS:
 		case WM_NCACTIVATE:
 			g_inputManager.windowHasFocus = true;
