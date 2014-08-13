@@ -288,10 +288,10 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
             return;
 
         // Now recalc (x1,y1) and (x2,y2)
-        int nx1 = x1 + xDelta * tMin;
-        int ny1 = y1 + yDelta * tMin;
-        int nx2 = x1 + xDelta * tMax;
-        int ny2 = y1 + yDelta * tMax;
+        int nx1 = x1 + (int)(xDelta * tMin);
+        int ny1 = y1 + (int)(yDelta * tMin);
+        int nx2 = x1 + (int)(xDelta * tMax);
+        int ny2 = y1 + (int)(yDelta * tMax);
 
         DebugAssert(nx1 >= 0);
         DebugAssert(nx1 < (int)bmpWidth);
@@ -529,9 +529,9 @@ void DrawBezier(BitmapRGBA *bmp, int const *a, int const *b, int const *c, int c
     }
 
     // Use curve length to calculate a good increment for loop below
-    int inc = 1000.0;
+    int inc = 1000;
     if (totalLen > 0.0)
-        inc = 200000.0 / totalLen;
+        inc = (int)(200000.0 / totalLen);
 
     // Draw the bezier by sampling at a higher resolution and drawing straight lines between segments
     int oldP[2];
@@ -557,12 +557,14 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
     unsigned bmpWidth = bmp->width;
 
     int x1 = IntMax(x, 0);
-    int x2 = IntMin(x + w, bmp->width - 1);
+    int x2 = IntMin(x + w, bmp->width) - 1;
     int y1 = IntMax(y, 0);
-    int y2 = IntMin(y + h, bmp->height - 1);
+    int y2 = IntMin(y + h, bmp->height) - 1;
 
     if (x1 > (int)bmpWidth || x2 < 0 || y1 > (int)bmp->height || y2 < 0)
         return;
+
+    w = x2 - x1 + 1;
 
     RGBAColour * __restrict line = GetLine(bmp, y1) + x;
     for (int a = y1; a < y2; a++)
