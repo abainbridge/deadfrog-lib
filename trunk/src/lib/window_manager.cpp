@@ -51,6 +51,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     switch (message)
 	{
+        case WM_SIZE:
+        {
+            int w = lParam & 0xffff;
+            int h = (lParam & 0xffff0000) >> 16;
+            if (w != win->bmp->width || h != win->bmp->height)
+            {
+                DeleteBitmapRGBA(win->bmp);
+                win->bmp = CreateBitmapRGBA(w, h);
+            }
+            break;
+        }
+
         case WM_PAINT:
             return DefWindowProc(hWnd, message, wParam, lParam);
             break;
@@ -93,7 +105,7 @@ bool GetDesktopRes(int *width, int *height)
 }
 
 
-bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *winName)
+bool CreateWin(int width, int height, bool _windowed, char const *winName)
 {
 	if (g_window)
         return false;
@@ -126,10 +138,10 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
 
     wd->bmp = CreateBitmapRGBA(width, height);
 
-    unsigned int windowStyle = WS_POPUP | WS_VISIBLE;
+    unsigned int windowStyle = WS_VISIBLE;
 	if (_windowed)
 	{
-		windowStyle = WS_POPUPWINDOW | WS_VISIBLE | WS_CAPTION | WS_BORDER;
+		windowStyle |= WS_OVERLAPPEDWINDOW;
 
 		RECT windowRect = { 0, 0, width, height };
 		AdjustWindowRect(&windowRect, windowStyle, false);
@@ -141,15 +153,11 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
 		HWND desktopWindow = GetDesktopWindow();
 		RECT desktopRect;
 		GetWindowRect(desktopWindow, &desktopRect);
-		
-        // Make sure a reasonable portion of the window is visible
-        int minX = 100 - width;
-        int maxX = desktopRect.right - 100;
-        x = clamp(x, minX, maxX);
-		y = clamp(y, 0, desktopRect.bottom - minHeight);
 	}
 	else
 	{
+        windowStyle |= WS_POPUP;
+
 		DEVMODE devmode;
 		devmode.dmSize = sizeof(DEVMODE);
 		devmode.dmBitsPerPel = 32;
@@ -160,15 +168,13 @@ bool CreateWin(int x, int y, int width, int height, bool _windowed, char const *
 		ReleaseAssert(ChangeDisplaySettings(&devmode, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL,
             "Couldn't change screen resolution to %i x %i", width, height);
         
-		x = 0;
-		y = 0;
 		wd->_private->m_borderWidth = 1;
 		wd->_private->m_titleHeight = 0;
 	}
 
 	// Create main window
 	wd->_private->m_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName, 
-		windowStyle, x, y, width, height,
+		windowStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height,
 		NULL, NULL, 0/*g_hInstance*/, NULL);
 
     wd->_private->m_endOfSecond = GetHighResTime() + 1.0;
