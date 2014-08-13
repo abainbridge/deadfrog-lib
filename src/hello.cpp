@@ -10,7 +10,7 @@
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
-	CreateWin(100, 10, 800, 600, true, "Hello World Example");
+	CreateWin(800, 600, true, "Hello World Example");
     TextRenderer *font = CreateTextRenderer("Courier New", 12);
 
     unsigned x = 100;

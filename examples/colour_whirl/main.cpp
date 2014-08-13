@@ -119,8 +119,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-//    CreateWin(0, 0, width, height, false, "Colour Whirl Example");
-    CreateWin(100, 30, 1200, 900, true, "Colour Whirl Example");
+//    CreateWin(width, height, false, "Colour Whirl Example");
+    CreateWin(1200, 900, true, "Colour Whirl Example");
     HideMouse();
     ClearBitmap(g_window->bmp, g_colourBlack);
 

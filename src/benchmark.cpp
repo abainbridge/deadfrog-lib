@@ -192,7 +192,7 @@ double CalcBillionPolyFillPixelsPerSec(BitmapRGBA *bmp)
 
 int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 {
-	CreateWin(100, 100, 1024, 768, true, "Benchmark");
+	CreateWin(1024, 768, true, "Benchmark");
     TextRenderer *font = CreateTextRenderer("Courier", 8);
     BitmapRGBA *backBmp = CreateBitmapRGBA(800, 600);
 
