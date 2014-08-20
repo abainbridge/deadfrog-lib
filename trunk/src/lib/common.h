@@ -16,8 +16,13 @@ void ReleaseAssert(bool condition, char const *_fmt, ...);
 void ReleaseWarn(bool condition, char const *_fmt, ...);
 
 
-inline int IntMin (int a, int b) { return (a < b) ? a : b; };
-inline int IntMax (int a, int b) { return (a > b) ? a : b; };
+inline int IntMin(int a, int b) { return (a < b) ? a : b; };
+inline int IntMax(int a, int b) { return (a > b) ? a : b; };
+inline int RoundToInt(double r) {
+    int tmp = static_cast<int> (r);
+    tmp += (r-tmp>=.5) - (r-tmp<=-.5);
+    return tmp;
+}
 
 
 // Define an assert macro that stops in the debugger in Debug builds but does 

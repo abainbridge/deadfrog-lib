@@ -288,10 +288,10 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
             return;
 
         // Now recalc (x1,y1) and (x2,y2)
-        int nx1 = x1 + (int)(xDelta * tMin);
-        int ny1 = y1 + (int)(yDelta * tMin);
-        int nx2 = x1 + (int)(xDelta * tMax);
-        int ny2 = y1 + (int)(yDelta * tMax);
+        int nx1 = x1 + RoundToInt(xDelta * tMin);
+        int ny1 = y1 + RoundToInt(yDelta * tMin);
+        int nx2 = x1 + RoundToInt(xDelta * tMax);
+        int ny2 = y1 + RoundToInt(yDelta * tMax);
 
         DebugAssert(nx1 >= 0);
         DebugAssert(nx1 < (int)bmpWidth);
@@ -565,8 +565,8 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
         return;
 
     w = x2 - x1 + 1;
-
-    RGBAColour * __restrict line = GetLine(bmp, y1) + x;
+  
+    RGBAColour * __restrict line = GetLine(bmp, y1) + x1;
     for (int a = y1; a <= y2; a++)
     {
 //         // Draw a row of pixels. Loop unrolled via Duff's Device
