@@ -24,7 +24,8 @@ typedef struct
 } TextRenderer;
 
 
-DLL_API TextRenderer *CreateTextRenderer(char const *_fontname, int size);
+// Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
+DLL_API TextRenderer *CreateTextRenderer(char const *fontname, int size, int weight);
 
 DLL_API int DrawTextSimple		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text);       // Returns text length in pixels
 DLL_API int DrawTextLeft		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like simple but with variable args
