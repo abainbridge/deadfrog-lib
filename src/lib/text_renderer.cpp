@@ -42,20 +42,23 @@ public:
 // Public Functions
 // ****************************************************************************
 
-TextRenderer *CreateTextRenderer(char const *fontName, int size)
+TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
 {
+    if (size < 4 || size > 1000 || weight < 1 || weight > 9)
+        return NULL;
+
     TextRenderer *tr = new TextRenderer;
     memset(tr, 0, sizeof(TextRenderer));
 
     // Create a memory bitmap for GDI to render the font into
 	HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
     HDC memDC = CreateCompatibleDC(winDC);
-    HBITMAP memBmp = CreateCompatibleBitmap(memDC, size * 4, size * 2);
+    HBITMAP memBmp = CreateCompatibleBitmap(memDC, size * 10, size * 2);
 	HBITMAP winBmp = (HBITMAP)SelectObject(memDC, memBmp);
 
 	int scaledSize = -MulDiv(size, GetDeviceCaps(memDC, LOGPIXELSY), 72);
 
- 	HFONT fontHandle = CreateFont(scaledSize, 0, 0, 0, FW_NORMAL, false, false, false, 
+ 	HFONT fontHandle = CreateFont(scaledSize, 0, 0, 0, weight * 100, false, false, false, 
  							  ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 							  NONANTIALIASED_QUALITY, DEFAULT_PITCH,
  							  fontName);
