@@ -11,10 +11,10 @@ typedef union
 } RGBAColour;
 
 
-DLL_API inline RGBAColour Colour(unsigned r, unsigned g, unsigned b)
+DLL_API inline RGBAColour Colour(unsigned r, unsigned g, unsigned b, unsigned a=255)
 {
 	RGBAColour c;
-	c.a = 255;
+	c.a = a;
 	c.b = b;
 	c.g = g;
 	c.r = r;
