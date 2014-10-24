@@ -50,7 +50,7 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
     // Create a memory bitmap for GDI to render the font into
 	HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
     HDC memDC = CreateCompatibleDC(winDC);
-    HBITMAP memBmp = CreateCompatibleBitmap(memDC, size * 2, size * 2);
+    HBITMAP memBmp = CreateCompatibleBitmap(memDC, size * 4, size * 2);
 	HBITMAP winBmp = (HBITMAP)SelectObject(memDC, memBmp);
 
 	int scaledSize = -MulDiv(size, GetDeviceCaps(memDC, LOGPIXELSY), 72);
@@ -66,7 +66,7 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
 	TEXTMETRIC textMetrics;
 	GetTextMetrics(memDC, &textMetrics);
 	tr->charHeight = textMetrics.tmHeight;
-	tr->maxCharWidth = textMetrics.tmAveCharWidth;
+	tr->maxCharWidth = textMetrics.tmMaxCharWidth;
 	tr->fixedWidth = (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth);
 
 	// Ask GDI about the name of the font
@@ -78,15 +78,16 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
 		fontName, nameOfFontWeGot);
 
     // Allocate enough EncodedRuns to store the worst case for a glyph of this size.
-    // Worse case is if the whole glyph is encoded as runs of one pixel. There has
+    // Worst case is if the whole glyph is encoded as runs of one pixel. There has
     // to be a gap of one pixel between each run, so there can only be half as many
     // runs as there are pixels.
-    EncodedRun *tempRuns = new EncodedRun [tr->charHeight * tr->maxCharWidth / 2];
+    unsigned tempRunsSize = tr->charHeight * (tr->maxCharWidth / 2 + 1);
+    EncodedRun *tempRuns = new EncodedRun [tempRunsSize];
 
     // Setup stuff needed to render text with GDI
     SetTextColor(memDC, RGB(255,255,255));
     SetBkColor(memDC, 0);
-    RECT rect = { 0, tr->maxCharWidth, 0, tr->charHeight };
+    RECT rect = { 0, 0, tr->maxCharWidth, tr->charHeight };
 
     // Run-length encode each ASCII character
     for (int i = 0; i < 256; i++)
@@ -98,14 +99,14 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size)
         GetTextExtentPoint32(memDC, buf, 1, &size);
         if (size.cx > tr->maxCharWidth)
             tr->maxCharWidth = size.cx;
-        if (size.cy > tr->maxCharWidth)
+        if (size.cy > tr->charHeight)
             tr->charHeight = size.cy;
 
         // Ask GDI to draw the character
 		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
 
         // Read back what GDI put in the bitmap and construct a run-length encoding
-		memset(tempRuns, 0, tr->charHeight * tr->maxCharWidth / 2);
+		memset(tempRuns, 0, tempRunsSize);
 		EncodedRun *run = tempRuns;
         for (int y = 0; y < tr->charHeight; y++)
 		{
