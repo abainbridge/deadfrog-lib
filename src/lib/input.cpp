@@ -42,8 +42,8 @@ void CreateInputManager()
     memset(g_inputManager.priv, 0, sizeof(InputManagerPrivate));
 	g_inputManager.priv->m_lastClickTime = 0.0;
 
+    g_inputManager.eventSinceAdvance = true;
     g_inputManager.windowHasFocus = true;
-
 }
 
 
