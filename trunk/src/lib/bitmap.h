@@ -52,6 +52,9 @@ DLL_API void        MaskedBlit      (BitmapRGBA *destBmp, int x, int y, BitmapRG
 // Copies the source bitmap to the destination bitmap, including pixels whose source alpha values are 0
 DLL_API void        QuickBlit       (BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp);
 
+// Copies the source bitmap to the destination bitmap, scaling the result down by the specified scale factor
+DLL_API void        ScaleDownBlit   (BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp);
+
 
 
 inline void PutPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
