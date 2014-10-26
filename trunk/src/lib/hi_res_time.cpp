@@ -13,9 +13,6 @@ inline double GetLowLevelTime();
 
 static void InitialiseHighResTime()
 {
-	// Start be getting the frequency the Performance Counter uses.
-	// We need to use the Performance Counter to calibrate the Pentium
-	// Counter, if we are going to use it.
     LARGE_INTEGER count;
     QueryPerformanceFrequency(&count);
     g_tickInterval = 1.0 / (double)count.QuadPart;
