@@ -647,3 +647,37 @@ void QuickBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
         memcpy(destLine, srcLine, w * sizeof(RGBAColour));
     }
 }
+
+
+void ScaleDownBlit(BitmapRGBA *dest, unsigned x, unsigned y, unsigned scale, BitmapRGBA *src)
+{
+    unsigned outW = src->width / scale;
+    unsigned outH = src->height / scale;
+    unsigned scaleSqrd = scale * scale;
+
+    for (unsigned dy = 0; dy < outH; dy++)
+    {
+        for (unsigned dx = 0; dx < outW; dx++)
+        {
+            int r = 0, g = 0, b = 0, a = 0;
+            for (unsigned sy = dy * scale; sy < (dy+1) * scale; sy++)
+            {
+                for (unsigned sx = dx * scale; sx < (dx+1) * scale; sx++)
+                {
+                    RGBAColour srcPix = GetPix(src, sx, sy);
+                    r += srcPix.r;
+                    g += srcPix.g;
+                    b += srcPix.b;
+                    a += srcPix.a;
+                }
+            }
+
+            r /= scaleSqrd;
+            g /= scaleSqrd;
+            b /= scaleSqrd;
+            a /= scaleSqrd;
+
+            PutPix(dest, x + dx, y + dy, Colour(r,g,b,a));
+        }
+    }
+}
