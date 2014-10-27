@@ -52,3 +52,31 @@ void ReleaseWarn(bool condition, char const *_fmt, ...)
 	#endif
 	}
 }
+
+
+#if (_MSC_VER < 1800)
+int c99_vsnprintf(char *str, size_t size, char const *fmt, va_list ap)
+{
+    int count = -1;
+
+    if (size != 0)
+        count = _vsnprintf_s(str, size, _TRUNCATE, fmt, ap);
+    if (count == -1)
+        count = _vscprintf(fmt, ap);
+
+    return count;
+}
+
+
+int snprintf(char *s, size_t n, char const *fmt, ...)
+{
+    int count;
+    va_list ap;
+
+    va_start(ap, fmt);
+    count = c99_vsnprintf(s, n, fmt, ap);
+    va_end(ap);
+
+    return count;
+}
+#endif
