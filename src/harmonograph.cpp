@@ -208,13 +208,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // Setup the window
     int width = 1024;
     int height = width * 9 / 16;
-    bool windowed = true;
-    windowed = false;
     GetDesktopRes(&width, &height);
-    CreateWin(width, height, windowed, "Harmonograph");
+    CreateWin(width, height, WT_WINDOWED, "Harmonograph");
 
     g_bigBmp = CreateBitmapRGBA(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
-    TextRenderer *font = CreateTextRenderer("Lucida Console", 10);
+    TextRenderer *font = CreateTextRenderer("Lucida Console", 10, 4);
 
     ClearBitmap(g_window->bmp, g_colourBlack);
     ClearBitmap(g_bigBmp, g_colourBlack);

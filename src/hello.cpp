@@ -10,8 +10,8 @@
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
-	CreateWin(800, 600, true, "Hello World Example");
-    TextRenderer *font = CreateTextRenderer("Courier New", 12);
+	CreateWin(800, 600, WT_WINDOWED, "Hello World Example");
+    TextRenderer *font = CreateTextRenderer("Courier New", 12, 4);
 
     unsigned x = 100;
     unsigned y = 100;
