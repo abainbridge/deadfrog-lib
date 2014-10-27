@@ -42,6 +42,12 @@ public:
 // Public Functions
 // ****************************************************************************
 
+static bool GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
+{
+    return buf[(h - y - 1) * w + x];
+}
+
+
 TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
 {
     if (size < 4 || size > 1000 || weight < 1 || weight > 9)
@@ -50,35 +56,42 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
     TextRenderer *tr = new TextRenderer;
     memset(tr, 0, sizeof(TextRenderer));
 
-    // Create a memory bitmap for GDI to render the font into
-	HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
+    // Get the font from GDI
+    HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
     HDC memDC = CreateCompatibleDC(winDC);
-    HBITMAP memBmp = CreateCompatibleBitmap(memDC, size * 10, size * 2);
-	HBITMAP winBmp = (HBITMAP)SelectObject(memDC, memBmp);
+    int scaledSize = -MulDiv(size, GetDeviceCaps(memDC, LOGPIXELSY), 72);
+    HFONT fontHandle = CreateFont(scaledSize, 0, 0, 0, weight * 100, false, false, false, 
+        ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        NONANTIALIASED_QUALITY, DEFAULT_PITCH,
+        fontName);
+    ReleaseAssert(fontHandle != NULL, "Couldn't find Windows font '%s'", fontName);
 
-	int scaledSize = -MulDiv(size, GetDeviceCaps(memDC, LOGPIXELSY), 72);
+    // Ask GDI about the font size and fixed-widthness
+    SelectObject(memDC, fontHandle); 
+    TEXTMETRIC textMetrics;
+    GetTextMetrics(memDC, &textMetrics);
+    tr->charHeight = textMetrics.tmHeight;
+    tr->maxCharWidth = textMetrics.tmMaxCharWidth;
+    tr->fixedWidth = (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth);
 
- 	HFONT fontHandle = CreateFont(scaledSize, 0, 0, 0, weight * 100, false, false, false, 
- 							  ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-							  NONANTIALIASED_QUALITY, DEFAULT_PITCH,
- 							  fontName);
-	ReleaseAssert(fontHandle != NULL, "Couldn't find Windows font '%s'", fontName);
+    // Ask GDI about the name of the font
+    char nameOfFontWeGot[256];
+    GetTextFace(memDC, 256, nameOfFontWeGot);
+    ReleaseWarn(strnicmp(nameOfFontWeGot, fontName, 255) == 0,
+        "Attempt to load font '%s' failed.\n"
+        "'%s' will be used instead.", 
+        fontName, nameOfFontWeGot);
 
-	// Ask GDI about the font fixed-widthness
-	SelectObject(memDC, fontHandle); 
-	TEXTMETRIC textMetrics;
-	GetTextMetrics(memDC, &textMetrics);
-	tr->charHeight = textMetrics.tmHeight;
-	tr->maxCharWidth = textMetrics.tmMaxCharWidth;
-	tr->fixedWidth = (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth);
-
-	// Ask GDI about the name of the font
-	char nameOfFontWeGot[256];
-	GetTextFace(memDC, 256, nameOfFontWeGot);
-	ReleaseWarn(strnicmp(nameOfFontWeGot, fontName, 255) == 0,
-		"Attempt to load font '%s' failed.\n"
-		"'%s' will be used instead.", 
-		fontName, nameOfFontWeGot);
+    // Create an off-screen bitmap
+    BITMAPINFO bmpInfo = { 0 };
+    bmpInfo.bmiHeader.biBitCount = 32;
+    bmpInfo.bmiHeader.biHeight = tr->charHeight;
+    bmpInfo.bmiHeader.biWidth = tr->maxCharWidth;
+    bmpInfo.bmiHeader.biPlanes = 1;
+    bmpInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    UINT *gdiPixels = 0;
+    HBITMAP memBmp = CreateDIBSection(memDC, (BITMAPINFO *)&bmpInfo, DIB_RGB_COLORS, (void **)&gdiPixels, NULL, 0);
+	HBITMAP prevBmp = (HBITMAP)SelectObject(memDC, memBmp);
 
     // Allocate enough EncodedRuns to store the worst case for a glyph of this size.
     // Worst case is if the whole glyph is encoded as runs of one pixel. There has
@@ -98,12 +111,12 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
         char buf[] = {(char)i};
 
         // Get the size of this glyph
-        SIZE size;
-        GetTextExtentPoint32(memDC, buf, 1, &size);
-        if (size.cx > tr->maxCharWidth)
-            tr->maxCharWidth = size.cx;
-        if (size.cy > tr->charHeight)
-            tr->charHeight = size.cy;
+        SIZE glyphSize;
+        GetTextExtentPoint32(memDC, buf, 1, &glyphSize);
+//         if (glyphSize.cx > tr->maxCharWidth)
+//             tr->maxCharWidth = glyphSize.cx;
+//         if (glyphSize.cy > tr->charHeight)
+//             tr->charHeight = glyphSize.cy;
 
         // Ask GDI to draw the character
 		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
@@ -117,7 +130,7 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
             while (x < tr->maxCharWidth)
             {
                 // Skip blank pixels
-                while (!GetPixel(memDC, x, y))
+                while (!GetPixelFromBuffer(gdiPixels, tr->maxCharWidth, tr->charHeight, x, y))
                 {
                     x++;
                     if (x >= tr->maxCharWidth)
@@ -133,7 +146,7 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
                 run->runLen = 0;
 
                 // Count non-blank pixels
-                while (GetPixel(memDC, x, y))
+                while (GetPixelFromBuffer(gdiPixels, tr->maxCharWidth, tr->charHeight, x, y))
                 {
                     x++;
                     run->runLen++;
@@ -146,7 +159,7 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
 		}
 
         // Create the glyph to store the encoded runs we've made
-		Glyph *glyph = new Glyph(size.cx);
+		Glyph *glyph = new Glyph(glyphSize.cx);
 		tr->glyphs[i] = glyph;
 
 		// Copy the runs into the glyph
@@ -162,7 +175,7 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
     DeleteDC(memDC);
 	DeleteObject(fontHandle);
 	DeleteObject(memBmp);
-	DeleteObject(winBmp);
+	DeleteObject(prevBmp);
 
     return tr;
 }
