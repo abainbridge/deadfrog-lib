@@ -120,7 +120,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     int width, height;
     GetDesktopRes(&width, &height);
 //    CreateWin(width, height, false, "Colour Whirl Example");
-    CreateWin(1200, 900, true, "Colour Whirl Example");
+    CreateWin(1200, 900, WT_WINDOWED, "Colour Whirl Example");
     HideMouse();
     ClearBitmap(g_window->bmp, g_colourBlack);
 
@@ -178,7 +178,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     }
 
     double endTime = GetHighResTime();
-    TextRenderer *font = CreateTextRenderer("Courier New", 10);
+    TextRenderer *font = CreateTextRenderer("Courier New", 10, 4);
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
     // Continue to display the window until the user presses escape or clicks the close icon

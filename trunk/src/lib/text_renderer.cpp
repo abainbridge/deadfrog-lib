@@ -44,7 +44,7 @@ public:
 
 static bool GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
 {
-    return buf[(h - y - 1) * w + x];
+    return buf[(h - y - 1) * w + x] > 0;
 }
 
 

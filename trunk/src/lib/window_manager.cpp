@@ -105,7 +105,7 @@ bool GetDesktopRes(int *width, int *height)
 }
 
 
-bool CreateWin(int width, int height, bool _windowed, char const *winName)
+bool CreateWin(int width, int height, WindowType winType, char const *winName)
 {
 	if (g_window)
         return false;
@@ -139,7 +139,7 @@ bool CreateWin(int width, int height, bool _windowed, char const *winName)
     wd->bmp = CreateBitmapRGBA(width, height);
 
     unsigned int windowStyle = WS_VISIBLE;
-	if (_windowed)
+	if (winType == WT_WINDOWED)
 	{
 		windowStyle |= WS_OVERLAPPEDWINDOW;
 
