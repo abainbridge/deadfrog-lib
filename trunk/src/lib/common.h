@@ -12,8 +12,13 @@
 
 void DebugOut(char *fmt, ...);
 
-void ReleaseAssert(bool condition, char const *_fmt, ...);
-void ReleaseWarn(bool condition, char const *_fmt, ...);
+void ReleaseAssert(bool condition, char const *fmt, ...);
+void ReleaseWarn(bool condition, char const *fmt, ...);
+
+
+#if (_MSC_VER < 1800)
+int snprintf(char *s, size_t n, char const *fmt, ...);
+#endif
 
 
 inline int IntMin(int a, int b) { return (a < b) ? a : b; };
