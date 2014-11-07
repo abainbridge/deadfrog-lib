@@ -46,6 +46,9 @@ DLL_API void        GetBezierDir    (int const *a, int const *b, int const *c, i
 DLL_API void        RectFill        (BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c);
 DLL_API void        RectOutline     (BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c);
 
+DLL_API void        CircleOutline   (BitmapRGBA *bmp, int x, int y, unsigned r, RGBAColour c);
+DLL_API void        CircleFill      (BitmapRGBA *bmp, int x, int y, unsigned r, RGBAColour c);
+
 // Copies the source bitmap to the destination bitmap, skipping pixels whose source alpha values are 0
 DLL_API void        MaskedBlit      (BitmapRGBA *destBmp, int x, int y, BitmapRGBA *srcBmp);
 
