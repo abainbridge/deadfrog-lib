@@ -599,74 +599,63 @@ void RectOutline(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColo
 }
 
 
-void CircleOutline(BitmapRGBA *bmp, int x, int y, unsigned radius, RGBAColour c)
+void CircleOutline(BitmapRGBA *bmp, int x0, int y0, unsigned radius, RGBAColour c)
 {
-    // This code was copied from Zen of Graphics (2nd edition) by Mike Abrash,
-    // listing 17.3, page 276.
+    // This is the standard Bresenham or Mid-point circle algorithm
+    int x = radius;
+    int y = 0;
+    int radiusError = 1 - x;
 
-    // Set up to draw the circle by setting the initial point to one end of
-    // the 1/8th of a circle arc we'll draw.
-    int majorAxis = 0;
-    int minorAxis = radius;
-    
-    unsigned radiusSqMinusMajorAxisSq = radius * radius;  
-    unsigned minorAxisSquaredThreshold = minorAxis * minorAxis - minorAxis;
-
-    // Draw all points along an arc of 1/8th of the circle, drawing all 8
-    // symmetries at the same time.
-    do 
+    do
     {
-        PutPix(bmp, x + majorAxis, y - minorAxis, c);
-        PutPix(bmp, x - majorAxis, y - minorAxis, c);
-        PutPix(bmp, x + majorAxis, y + minorAxis, c);
-        PutPix(bmp, x - majorAxis, y + minorAxis, c);
-
-        PutPix(bmp, x + minorAxis, y - majorAxis, c);
-        PutPix(bmp, x - minorAxis, y - majorAxis, c);
-        PutPix(bmp, x + minorAxis, y + majorAxis, c);
-        PutPix(bmp, x - minorAxis, y + majorAxis, c);
-
-        majorAxis++;
-
-        if ((radiusSqMinusMajorAxisSq -= 2 * majorAxis - 1) <= minorAxisSquaredThreshold)
+        PutPix(bmp, x0 + x, y0 + y, c);
+        PutPix(bmp, x0 + y, y0 + x, c);
+        PutPix(bmp, x0 - x, y0 + y, c);
+        PutPix(bmp, x0 - y, y0 + x, c);
+        PutPix(bmp, x0 - x, y0 - y, c);
+        PutPix(bmp, x0 - y, y0 - x, c);
+        PutPix(bmp, x0 + x, y0 - y, c);
+        PutPix(bmp, x0 + y, y0 - x, c);
+        y++;
+        if (radiusError < 0)
         {
-            minorAxis--;
-            minorAxisSquaredThreshold -= 2 * minorAxis;
+            radiusError += 2 * y + 1;
         }
-    } while (majorAxis <= minorAxis);
+        else
+        {
+            x--;
+            radiusError += 2 * (y - x + 1);
+        }
+    } while (x >= y);
 }
 
 
-void CircleFill(BitmapRGBA *bmp, int x, int y, unsigned radius, RGBAColour c)
+void CircleFill(BitmapRGBA *bmp, int x0, int y0, unsigned radius, RGBAColour c)
 {
-    // This code is based on the that from Zen of Graphics (2nd edition) by Mike 
-    // Abrash, listing 17.3, page 276.
-
-    // Set up to draw the circle by setting the initial point to one end of
-    // the 1/8th of a circle arc we'll draw.
-    int majorAxis = 0;
-    int minorAxis = radius;
-
-    unsigned radiusSqMinusMajorAxisSq = radius * radius;  
-    unsigned minorAxisSquaredThreshold = minorAxis * minorAxis - minorAxis;
+    int x = radius;
+    int y = 0;
+    int radiusError = 1 - x;
 
     // Iterate through all points along an arc of 1/8th of the circle, drawing
     // horizontal chords for all 4 symmetries at the same time.
     do 
     {
-        HLine(bmp, x - majorAxis, y - minorAxis, majorAxis*2, c);
-        HLine(bmp, x - majorAxis, y + minorAxis, majorAxis*2, c);
-        HLine(bmp, x - minorAxis, y - majorAxis, minorAxis*2, c);
-        HLine(bmp, x - minorAxis, y + majorAxis, minorAxis*2, c);
+        HLine(bmp, x0 - x, y0 - y, x*2+1, c);
+        HLine(bmp, x0 - x, y0 + y, x*2+1, c);
+        HLine(bmp, x0 - y, y0 - x, y*2+1, c);
+        HLine(bmp, x0 - y, y0 + x, y*2+1, c);
 
-        majorAxis++;
-
-        if ((radiusSqMinusMajorAxisSq -= 2 * majorAxis - 1) <= minorAxisSquaredThreshold)
+        y++;
+        if (radiusError < 0)
         {
-            minorAxis--;
-            minorAxisSquaredThreshold -= 2 * minorAxis;
+            radiusError += 2 * y + 1;
         }
-    } while (majorAxis <= minorAxis);
+        else
+        {
+            x--;
+            radiusError += 2 * (y - x + 1);
+        }
+    } while (x >= y);
 }
 
 
