@@ -566,7 +566,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 
     w = x2 - x1 + 1;
   
-    RGBAColour * __restrict line = GetLine(bmp, y1) + x1;
+    RGBAColour * __restrict line = GetLine(bmp, y1);
     for (int a = y1; a <= y2; a++)
     {
 //         // Draw a row of pixels. Loop unrolled via Duff's Device
@@ -582,7 +582,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 //         case 1:      line[b] = c; b++;
 //                 } while (b < w);
 //         }
-        for (unsigned b = 0; b < w; b++)
+        for (unsigned b = x1; b < x2; b++)
             line[b] = c;
 
         line += bmpWidth;
