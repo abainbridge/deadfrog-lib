@@ -582,7 +582,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 //         case 1:      line[b] = c; b++;
 //                 } while (b < w);
 //         }
-        for (unsigned b = x1; b < x2; b++)
+        for (unsigned b = x1; b <= x2; b++)
             line[b] = c;
 
         line += bmpWidth;
