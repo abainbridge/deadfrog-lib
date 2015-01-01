@@ -232,7 +232,7 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
     RGBAColour *startRow = bmp->pixels + y * bmp->width;
     while (*text != '\0')
     {
-        if (x + tr->maxCharWidth > (int)bmp->width)
+        if (x + tr->glyphs[*text]->m_width > (int)bmp->width)
             break;
 
         // Copy the glyph onto the stack for better cache performance. This increased the 
