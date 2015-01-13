@@ -314,8 +314,8 @@ int GetTextWidth(TextRenderer *tr, char const *text, int len)
 	else
 	{
         int width = 0;
-        for (; len; len--)
-            width += tr->glyphs[(int)text[len]]->m_width;
+        for (int i = 0; i < len; i++)
+            width += tr->glyphs[(int)text[i]]->m_width;
 
 		return width;
 	}
