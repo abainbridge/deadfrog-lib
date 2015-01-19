@@ -582,7 +582,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 //         case 1:      line[b] = c; b++;
 //                 } while (b < w);
 //         }
-        for (unsigned b = x1; b <= x2; b++)
+        for (int b = x1; b <= x2; b++)
             line[b] = c;
 
         line += bmpWidth;
@@ -656,6 +656,122 @@ void CircleFill(BitmapRGBA *bmp, int x0, int y0, unsigned radius, RGBAColour c)
             radiusError += 2 * (y - x + 1);
         }
     } while (x >= y);
+}
+
+
+static void EllipsePlotPoints(BitmapRGBA *bmp, int x0, int y0, int x, int y, RGBAColour c)
+{
+    PutPix(bmp, x0 + x, y0 + y, c);
+    PutPix(bmp, x0 - x, y0 + y, c);
+    PutPix(bmp, x0 + x, y0 - y, c);
+    PutPix(bmp, x0 - x, y0 - y, c);
+}
+
+
+void EllipseOutline(BitmapRGBA *bmp, int x0, int y0, unsigned rx, unsigned ry, RGBAColour c)
+{
+    int rxSqrd = rx * rx;
+    int rySqrd = ry * ry;
+    int x = 0;
+    int y = ry;
+    int px = 0;
+    int py = 2 * rxSqrd * y;
+
+    // Plot the initial point in each quadrant.
+    EllipsePlotPoints(bmp, x0, y0, x, y, c);
+
+    // Region 1
+    int p = rySqrd - (rxSqrd * ry) + RoundToInt(0.25 * (double)rxSqrd);
+    while (px < py) 
+    {
+        x++;
+        px += 2 * rySqrd;
+        if (p < 0)
+            p += rySqrd + px;
+        else 
+        {
+            y--;
+            py -= 2 * rxSqrd;
+            p += rySqrd + px - py;
+        }
+
+        EllipsePlotPoints(bmp, x0, y0, x, y, c);
+    }
+
+    // Region 2
+    p = RoundToInt(rySqrd * (x+0.5) * (x+0.5) + rxSqrd * (y-1) * (y-1) - rxSqrd * rySqrd);
+    while (y > 0) 
+    {
+        y--;
+        py -= 2 * rxSqrd;
+        if (p > 0)
+            p += rxSqrd - py;
+        else 
+        {
+            x++;
+            px += 2 * rySqrd;
+            p += rxSqrd - py + px;
+        }
+        
+        EllipsePlotPoints(bmp, x0, y0, x, y, c);
+    }
+}
+
+
+static void EllipsePlotHlines(BitmapRGBA *bmp, int x0, int y0, int x, int y, RGBAColour c)
+{
+    HLine(bmp, x0 - x, y0 + y, x * 2 + 1, c);
+    HLine(bmp, x0 - x, y0 - y, x * 2 + 1, c);
+}
+
+
+void EllipseFill(BitmapRGBA *bmp, int x0, int y0, unsigned rx, unsigned ry, RGBAColour c)
+{
+    int rxSqrd = rx * rx;
+    int rySqrd = ry * ry;
+    int x = 0;
+    int y = ry;
+    int px = 0;
+    int py = 2 * rxSqrd * y;
+
+    // Plot the initial point in each quadrant.
+    EllipsePlotHlines(bmp, x0, y0, x, y, c);
+
+    // Region 1
+    int p = rySqrd - (rxSqrd * ry) + RoundToInt(0.25 * (double)rxSqrd);
+    while (px < py) 
+    {
+        x++;
+        px += 2 * rySqrd;
+        if (p < 0)
+            p += rySqrd + px;
+        else 
+        {
+            y--;
+            py -= 2 * rxSqrd;
+            p += rySqrd + px - py;
+        }
+
+        EllipsePlotHlines(bmp, x0, y0, x, y, c);
+    }
+
+    // Region 2
+    p = RoundToInt(rySqrd * (x+0.5) * (x+0.5) + rxSqrd * (y-1) * (y-1) - rxSqrd * rySqrd);
+    while (y > 0) 
+    {
+        y--;
+        py -= 2 * rxSqrd;
+        if (p > 0)
+            p += rxSqrd - py;
+        else 
+        {
+            x++;
+            px += 2 * rySqrd;
+            p += rxSqrd - py + px;
+        }
+
+        EllipsePlotHlines(bmp, x0, y0, x, y, c);
+    }
 }
 
 

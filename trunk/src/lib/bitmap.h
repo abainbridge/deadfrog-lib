@@ -49,6 +49,9 @@ DLL_API void        RectOutline     (BitmapRGBA *bmp, int x, int y, unsigned w, 
 DLL_API void        CircleOutline   (BitmapRGBA *bmp, int x, int y, unsigned r, RGBAColour c);
 DLL_API void        CircleFill      (BitmapRGBA *bmp, int x, int y, unsigned r, RGBAColour c);
 
+DLL_API void        EllipseOutline  (BitmapRGBA *bmp, int x, int y, unsigned rx, unsigned ry, RGBAColour c);
+DLL_API void        EllipseFill     (BitmapRGBA *bmp, int x, int y, unsigned rx, unsigned ry, RGBAColour c);
+
 // Copies the source bitmap to the destination bitmap, skipping pixels whose source alpha values are 0
 DLL_API void        MaskedBlit      (BitmapRGBA *destBmp, int x, int y, BitmapRGBA *srcBmp);
 
@@ -57,7 +60,6 @@ DLL_API void        QuickBlit       (BitmapRGBA *destBmp, unsigned x, unsigned y
 
 // Copies the source bitmap to the destination bitmap, scaling the result down by the specified scale factor
 DLL_API void        ScaleDownBlit   (BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp);
-
 
 
 inline void PutPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
