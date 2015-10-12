@@ -60,6 +60,7 @@ DLL_API void        QuickBlit       (BitmapRGBA *destBmp, unsigned x, unsigned y
 
 // Copies the source bitmap to the destination bitmap, scaling the result down by the specified scale factor
 DLL_API void        ScaleDownBlit   (BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp);
+DLL_API void        ScaleUpBlit     (BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp);
 
 
 inline void PutPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)

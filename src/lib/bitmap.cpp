@@ -567,25 +567,19 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
     w = x2 - x1 + 1;
   
     RGBAColour * __restrict line = GetLine(bmp, y1);
-    for (int a = y1; a <= y2; a++)
+    if (c.a == 255)
     {
-//         // Draw a row of pixels. Loop unrolled via Duff's Device
-//         unsigned b = 0;
-//         switch (w % 8) {
-//         case 0: do { line[b] = c; b++;
-//         case 7:      line[b] = c; b++;
-//         case 6:      line[b] = c; b++;
-//         case 5:      line[b] = c; b++;
-//         case 4:      line[b] = c; b++;
-//         case 3:      line[b] = c; b++;
-//         case 2:      line[b] = c; b++;
-//         case 1:      line[b] = c; b++;
-//                 } while (b < w);
-//         }
-        for (int b = x1; b <= x2; b++)
-            line[b] = c;
-
-        line += bmpWidth;
+        for (int a = y1; a <= y2; a++)
+        {
+            for (int b = x1; b <= x2; b++)
+                line[b] = c;
+            line += bmpWidth;
+        }
+    }
+    else
+    {
+        for (int a = y1; a <= y2; a++)
+            HLineUnclipped(bmp, x1, a, w, c);
     }
 }
 
@@ -856,4 +850,34 @@ void ScaleDownBlit(BitmapRGBA *dest, unsigned x, unsigned y, unsigned scale, Bit
             PutPix(dest, x + dx, y + dy, Colour(r,g,b,a));
         }
     }
+}
+
+
+void ScaleUpBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp)
+{
+    for (unsigned sy = 0; sy < srcBmp->height; sy++)
+    {
+        for (unsigned j = 0; j < scale; j++)
+        {
+            RGBAColour *srcPixel = srcBmp->lines[sy];
+            RGBAColour *destPixel = destBmp->lines[y + sy * scale + j] + x * scale;
+
+            for (unsigned sx = 0; sx < srcBmp->width; sx++)
+            {
+                for (unsigned i = 0; i < scale; i++)
+                {
+                    *destPixel = *srcPixel;
+                    destPixel++;
+                }
+
+                srcPixel++;
+            }
+        }
+    }
+
+    for (unsigned sy = 0; sy < srcBmp->height; sy++)
+        HLine(destBmp, x, y + sy * scale, srcBmp->width * scale, Colour(0,0,208));
+
+    for (unsigned sx = 0; sx < srcBmp->width; sx++)
+        VLine(destBmp, x + sx * scale, y, srcBmp->height * scale, Colour(0,0,208));
 }
