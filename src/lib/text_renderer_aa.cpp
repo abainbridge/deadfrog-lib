@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include <limits.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,16 +20,15 @@
 class GlyphAa
 {
 public:
-    int m_minX;
     int m_minY;
     int m_width;
     int m_height;
     int m_pitch;
     unsigned char *m_pixelData; // A 2D array of pixels. Each pixel is a char, representing an alpha value. Number of pixels is m_width * m_height.
+    signed char m_kerning[255];   // An array containing the kerning offsets need when this glyph is followed by every other possible glyph.
 
 	GlyphAa(int minX, int maxX, int minY, int maxY)
 	{
-        m_minX = minX;
         m_minY = minY;
         if (maxX == 0 || maxY < 0)
         {
@@ -57,6 +57,107 @@ static unsigned GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
 }
 
 
+// Find the right-hand end of the glyph at the specified scan-line. Return
+// the distance from that point to the right-hand edge of the glyph's bounding
+// box.
+static float GetGapAtRight(GlyphAa *glyph, int y)
+{
+    //     01234   (glyph->m_width = 5, glyph->m_minY = 1)
+    //    +-----+
+    //    |*    |   y = 1, gap = 4
+    //    |*    |   y = 2, gap = 4
+    //    |**** |   y = 3, gap = 1
+    //    |*   *|   y = 4, gap = 0
+    //    |**** |   y = 5, gap = 1
+    //    |     |   y = 6, gap = 5
+    //    +-----|
+
+    y -= glyph->m_minY;
+    unsigned char *line = glyph->m_pixelData + y * glyph->m_width;
+
+    for (int x = glyph->m_width - 1; x >= 0; x--)
+    {
+        if (line[x] < 255)
+        {
+            float gap = glyph->m_width - x;
+            gap -= (float)(255 - line[x]) / 255.0;
+            return gap;
+        }
+    }
+
+    return 0.0f;
+}
+
+
+static float GetGapAtLeft(GlyphAa *glyph, int y)
+{
+    y -= glyph->m_minY;
+    unsigned char *line = glyph->m_pixelData + y * glyph->m_width;
+
+    for (int x = 0; x < glyph->m_width; x++)
+    {
+        if (line[x] < 255)
+        {
+            float gap = x;
+            gap += line[x] / 255.0;
+            return gap;
+        }
+    }
+
+    return 0.0f;
+}
+
+
+static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
+{
+    // Calculate how many pixels in the X direction to add after rendering
+    // glyph 'a' before glyph 'b'. I call this the kerning distance.
+    // Start by assuming that the Kerning distance is just the width of glyph
+    // 'a'. We then use a heuristic to determine how big the gap will look
+    // when the two glyphs are rendered with this kerning distance. The 
+    // heuristic will calculate something like the force of repulsion
+    // you'd get if the two glyphs had the same charge. For each row, we 
+    // calculate the distance between the two glyphs and say that the force
+    // is 1 / sqrt(dist). We sum all the forces and divide by the height of the
+    // overlapping regions of the two glyphs. We then iterate this process,
+    // gradually reducing the separation until the force reaches a target 
+    // amount.
+
+    // Early exit on invisible glyphs
+    if (a->m_width == 0)
+        return aveCharWidth + 1;
+
+    // Calculate the vertical extent of overlap between the two glyphs.
+    int startY = max(a->m_minY, b->m_minY);
+    int endY = min(a->m_minY + a->m_height, b->m_minY + b->m_height);
+
+    int maxI = aveCharWidth / 3;
+    int minI = -aveCharWidth / 2;
+    for (int i = maxI; i > minI; i--)
+    {
+        float force = 0.0f;
+        for (int y = startY; y < endY; y++)
+        {   
+            float aRight = GetGapAtRight(a, y);
+            float bLeft = GetGapAtLeft(b, y);
+            float sep = aRight + bLeft + i;
+            force += 1.0 / (sep * sep);         // Model the repulsive force using the inverse square law (like coulomb repulsion)
+        }
+
+        force /= (float)(endY - startY + 1);
+        force *= (aveCharWidth * aveCharWidth) / (30.0f * 30.0f);   // Make force independent of font size
+        if (force > 0.01f)
+        {
+            if (i < 0)
+                i /= 2.0;       // Hack alert - The algorithm has a tendency to over do the squeezing up of combinations like "To" and "L'". Assume that any large amount of squeezing up is over done and reduce by half.
+            return a->m_width + i;
+        }
+    }
+
+    return a->m_width + minI/2.0;
+}
+
+
 TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
 {
     if (size < 4 || size > 1000 || weight < 1 || weight > 9)
@@ -80,6 +181,7 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
     TEXTMETRIC textMetrics;
     GetTextMetrics(memDC, &textMetrics);
     tr->charHeight = textMetrics.tmHeight;
+    tr->aveCharWidth = textMetrics.tmAveCharWidth;
     tr->maxCharWidth = textMetrics.tmMaxCharWidth;
     tr->fixedWidth = (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth);
 
@@ -112,14 +214,6 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
 	{
         char buf[] = {(char)i};
 
-        // Get the size of this glyph
-        SIZE glyphSize;
-        GetTextExtentPoint32(memDC, buf, 1, &glyphSize);
-//         if (glyphSize.cx > tr->maxCharWidth)
-//             tr->maxCharWidth = glyphSize.cx;
-//         if (glyphSize.cy > tr->charHeight)
-//             tr->charHeight = glyphSize.cy;
-
         // Ask GDI to draw the character
 		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
 
@@ -134,18 +228,23 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
             for (int x = 0; x < tr->maxCharWidth; x++)
             {
                 unsigned c = GetPixelFromBuffer(gdiPixels, tr->maxCharWidth, tr->charHeight, x, y);
-                if ((c & 0xff00) > 0x1000)
+                // Only use the green component because it's the middle of the pixel.
+                unsigned char g = 255 - ((c & 0x00ff00) >> 8);
+                // Test if it is NOT entirely transparent...
+                if (g < 255)
                 {
                     if (x < minX) 
                         minX = x;
                     if (x > maxX) 
                         maxX = x;
-                    if (y < minY) minY = y;
-                    if (y > maxY) maxY = y;
+                    if (y < minY) 
+                        minY = y;
+                    if (y > maxY) 
+                        maxY = y;
                 }
             }
         }    
-        
+
         GlyphAa *glyph = new GlyphAa(minX, maxX, minY, maxY);
         unsigned char *pixel = glyph->m_pixelData;
         for (int y = minY; y <= maxY; y++)
@@ -156,7 +255,6 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
                 unsigned char r = (c & 0xff0000) >> 16;
                 unsigned char g = (c & 0x00ff00) >> 8;
                 unsigned char b = (c & 0x0000ff) >> 0;
-//                DebugAssert(r == g && g == b);
                 *pixel = 255 - g;
                 pixel++;
             }
@@ -171,6 +269,15 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
 	DeleteObject(fontHandle);
 	DeleteObject(memBmp);
 	DeleteObject(prevBmp);
+
+    for (int i = 0; i < 255; i++)
+    {
+        for (int j = 0; j < 255; j++)
+        {
+            int dist = GetKerningDist(tr->glyphs[i], tr->glyphs[j], tr->aveCharWidth);
+            tr->glyphs[i]->m_kerning[j] = dist;
+        }
+    }
 
     return tr;
 }
@@ -231,6 +338,7 @@ int DrawTextSimple(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int star
         GlyphAa *glyph = tr->glyphs[(unsigned char)*text]; 
         unsigned char *glyphPixel = glyph->m_pixelData;
         RGBAColour *destPixel = bmp->pixels + (glyph->m_minY + _y) * bmp->width + currentX;
+//        RectFill(bmp, currentX, _y + glyph->m_minY, glyph->m_width, glyph->m_height, Colour(255,0,255));
 
         for (int y = 0; y < glyph->m_height; y++)
         {
@@ -260,8 +368,9 @@ int DrawTextSimple(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int star
             }
         }
 
-        currentX += glyph->m_width + 1;
         text++;
+
+        currentX += glyph->m_kerning[*text];
     }
 
     return currentX - startX;
@@ -313,7 +422,13 @@ int GetTextWidth(TextRendererAa *tr, char const *text, int len)
 	{
         int width = 0;
         for (int i = 0; i < len; i++)
-            width += tr->glyphs[(int)text[i]]->m_width + 1;
+        {
+            GlyphAa *glyph = tr->glyphs[(int)text[i]];
+            if (i + 1 < len)
+                width += glyph->m_kerning[(int)text[i+1]];
+            else
+                width += glyph->m_width;
+        }
 
 		return width;
 	}

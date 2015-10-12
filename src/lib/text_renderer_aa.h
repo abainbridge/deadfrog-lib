@@ -18,7 +18,8 @@ typedef struct
 {
 	GlyphAa     *glyphs[256];
 	bool		fixedWidth;
-	int			maxCharWidth;
+    int         aveCharWidth;
+    int			maxCharWidth;
 	int			charHeight;	// in pixels
 } TextRendererAa;
 
