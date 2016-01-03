@@ -63,7 +63,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="deadfrog-lib.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="C:\Coding\deadfrog-lib\build\vs9\Debug"
+				AdditionalLibraryDirectories="../../build/vs9/debug"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
