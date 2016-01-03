@@ -93,6 +93,9 @@ void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 
 void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
+    if (len > (1<<31))
+        return;
+
     // Clip against top and bottom of bmp
     if (unsigned(y) >= bmp->height)
         return;
@@ -150,7 +153,7 @@ void VLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 
 void VLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 {
-    if (len == 0)
+    if (len == 0 || len > (1 << 31))
         return;
 
     // Clip against left and right of bmp
@@ -167,13 +170,10 @@ void VLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
     }
 
     // Clip against bottom
+    if (y > (int)bmp->height)
+        return;
     if (y + (int)len > int(bmp->height))
-    {
-        if (y > (int)bmp->height)
-            return;
-
         len = bmp->height - y;
-    }
 
     VLineUnclipped(bmp, x, y, len, c);
 }
