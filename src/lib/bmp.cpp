@@ -231,12 +231,12 @@ bool SaveBmp(BitmapRGBA *bmp, char const *filename)
     unsigned char *img = new unsigned char [3*w*h];
     memset(img, 0, sizeof(img));
 
-    for(int x=0; x<w; x++)
+    for(int x = 0; x < w; x++)
     {
-        for(int j=0; j<h; j++)
+        for(int j = 0; j < h; j++)
         {
             int y = (h-1) - j;
-            RGBAColour c = GetPix(bmp, x, j);
+            RGBAColour c = GetPix(bmp, x, y);
             img[(x+y*w)*3+2] = c.r;
             img[(x+y*w)*3+1] = c.g;
             img[(x+y*w)*3+0] = c.b;
@@ -262,12 +262,12 @@ bool SaveBmp(BitmapRGBA *bmp, char const *filename)
     bmpinfoheader[11] = (unsigned char)(       h>>24);
 
     FILE *f = fopen(filename, "wb");
-    fwrite(bmpfileheader,1,14,f);
-    fwrite(bmpinfoheader,1,40,f);
+    fwrite(bmpfileheader, 1, 14, f);
+    fwrite(bmpinfoheader, 1, 40, f);
     for(int i=0; i<h; i++)
     {
-        fwrite(img+(w*(h-i-1)*3),3,w,f);
-        fwrite(bmppad,1,(4-(w*3)%4)%4,f);
+        fwrite(img+(w*(h-i-1)*3), 3, w, f);
+        fwrite(bmppad, 1, (4-(w*3)%4)%4, f);
     }
     fclose(f);
 
