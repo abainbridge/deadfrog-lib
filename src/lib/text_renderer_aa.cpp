@@ -321,6 +321,31 @@ static int DrawTextSimpleClipped(TextRendererAa *tr, RGBAColour col, BitmapRGBA 
 }
 
 
+static inline void PixelBlend(unsigned &d, const unsigned s, unsigned alpha)
+{
+    const unsigned a     = alpha + 1;
+
+    const unsigned dst_rb = d & 0xFF00FF;
+    const unsigned dst_g  = d & 0xFF00;
+
+    const unsigned src_rb = s & 0xFF00FF;
+    const unsigned src_g  = s & 0xFF00;
+
+    unsigned d_rb = src_rb - dst_rb;
+    unsigned d_g  =  src_g - dst_g;
+
+    d_rb *= a;
+    d_g  *= a;  
+    d_rb >>= 8;
+    d_g  >>= 8;
+
+    unsigned rb = (d_rb + dst_rb) & 0xFF00FF;
+    unsigned g  = (d_g  + dst_g) & 0xFF00;
+
+    d = rb | g;
+}
+
+
 int DrawTextSimple(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int startX, int _y, char const *text)
 {
     //     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
@@ -346,21 +371,8 @@ int DrawTextSimple(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int star
 
             for (int x = 0; x < glyph->m_width; x++)
             {
-                int alpha = (*glyphPixel * col.a) >> 8;
-                int oneMinusAlpha = 255 - alpha;
-
-                int r = col.r * alpha;
-                int g = col.g * alpha;
-                int b = col.b * alpha;
-                
-                r += thisRow[x].r * oneMinusAlpha;
-                g += thisRow[x].g * oneMinusAlpha;
-                b += thisRow[x].b * oneMinusAlpha;
-
-                thisRow[x].r = r >> 8;
-                thisRow[x].g = g >> 8;
-                thisRow[x].b = b >> 8;
-
+                unsigned alpha = (*glyphPixel * col.a) >> 8;
+                PixelBlend(thisRow[x].c, col.c, alpha);
                 glyphPixel++;
             }
         }
