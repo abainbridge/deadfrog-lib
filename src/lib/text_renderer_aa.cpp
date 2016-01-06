@@ -25,7 +25,7 @@ public:
     int m_height;
     int m_pitch;
     unsigned char *m_pixelData; // A 2D array of pixels. Each pixel is a char, representing an alpha value. Number of pixels is m_width * m_height.
-    signed char m_kerning[255];   // An array containing the kerning offsets need when this glyph is followed by every other possible glyph.
+    signed char m_kerning[255]; // An array containing the kerning offsets need when this glyph is followed by every other possible glyph.
 
 	GlyphAa(int minX, int maxX, int minY, int maxY)
 	{
@@ -77,10 +77,10 @@ static float GetGapAtRight(GlyphAa *glyph, int y)
 
     for (int x = glyph->m_width - 1; x >= 0; x--)
     {
-        if (line[x] < 255)
+        if (line[x] > 0)
         {
             float gap = glyph->m_width - x;
-            gap -= (float)(255 - line[x]) / 255.0;
+            gap -= (float)(line[x]) / 255.0;
             return gap;
         }
     }
@@ -96,10 +96,10 @@ static float GetGapAtLeft(GlyphAa *glyph, int y)
 
     for (int x = 0; x < glyph->m_width; x++)
     {
-        if (line[x] < 255)
+        if (line[x] > 0)
         {
             float gap = x;
-            gap += line[x] / 255.0;
+            gap += (255 - line[x]) / 255.0;
             return gap;
         }
     }
@@ -255,7 +255,7 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
                 unsigned char r = (c & 0xff0000) >> 16;
                 unsigned char g = (c & 0x00ff00) >> 8;
                 unsigned char b = (c & 0x0000ff) >> 0;
-                *pixel = 255 - g;
+                *pixel = g;
                 pixel++;
             }
 		}
@@ -346,23 +346,20 @@ int DrawTextSimple(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int star
 
             for (int x = 0; x < glyph->m_width; x++)
             {
-                if (*glyphPixel < 255)
-                {
-                    int alpha = *glyphPixel;
-                    int oneMinusAlpha = 255 - alpha;
+                int alpha = (*glyphPixel * col.a) >> 8;
+                int oneMinusAlpha = 255 - alpha;
 
-                    int r = col.r * oneMinusAlpha;
-                    int g = col.g * oneMinusAlpha;
-                    int b = col.b * oneMinusAlpha;
-                    
-                    r += thisRow[x].r * alpha;
-                    g += thisRow[x].g * alpha;
-                    b += thisRow[x].b * alpha;
+                int r = col.r * alpha;
+                int g = col.g * alpha;
+                int b = col.b * alpha;
+                
+                r += thisRow[x].r * oneMinusAlpha;
+                g += thisRow[x].g * oneMinusAlpha;
+                b += thisRow[x].b * oneMinusAlpha;
 
-                    thisRow[x].r = r >> 8;
-                    thisRow[x].g = g >> 8;
-                    thisRow[x].b = b >> 8;
-                }
+                thisRow[x].r = r >> 8;
+                thisRow[x].g = g >> 8;
+                thisRow[x].b = b >> 8;
 
                 glyphPixel++;
             }
