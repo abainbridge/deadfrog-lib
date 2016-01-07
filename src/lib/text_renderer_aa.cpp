@@ -68,6 +68,7 @@ public:
             m_height = 0;
             m_pitch = 0;
             m_pixelData = NULL;
+            m_gapsAtLeft = m_gapsAtRight = NULL;
         }
         else
         {
