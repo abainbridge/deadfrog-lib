@@ -356,19 +356,31 @@ int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int st
 //         if (x + tr->maxCharWidth > (int)bmp->width)
 //             break;
 
-        GlyphAa *glyph = tr->glyphs[(unsigned char)*text]; 
-        unsigned char *glyphPixel = glyph->m_pixelData;
-        RGBAColour *destPixel = bmp->pixels + (glyph->m_minY + _y) * bmp->width + currentX;
-//        RectFill(bmp, currentX, _y + glyph->m_minY, glyph->m_width, glyph->m_height, Colour(255,0,255));
+        GlyphAa * __restrict glyph = tr->glyphs[(unsigned char)*text]; 
+        unsigned char * __restrict glyphPixel = glyph->m_pixelData;
+        RGBAColour * __restrict destPixel = bmp->pixels + (glyph->m_minY + _y) * bmp->width + currentX;
 
         for (int y = 0; y < glyph->m_height; y++)
         {
-            RGBAColour *thisRow = destPixel + y * bmp->width;
+            RGBAColour * __restrict thisRow = destPixel + y * bmp->width;
 
-            for (int x = 0; x < glyph->m_width; x++)
+            int startX = 0;
+
+            if (glyph->m_width & 1)
+            {
+                startX = 1;
+                unsigned alpha = (*glyphPixel * col.a) >> 8;
+                PixelBlend(thisRow[0], col, alpha);
+                glyphPixel++;
+            }
+
+            for (int x = startX; x < glyph->m_width; x += 2)
             {
                 unsigned alpha = (*glyphPixel * col.a) >> 8;
                 PixelBlend(thisRow[x], col, alpha);
+                glyphPixel++;
+                alpha = (*glyphPixel * col.a) >> 8;
+                PixelBlend(thisRow[x+1], col, alpha);
                 glyphPixel++;
             }
         }
