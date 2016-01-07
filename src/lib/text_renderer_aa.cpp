@@ -32,7 +32,8 @@ public:
     int m_pitch;
     unsigned char *m_pixelData; // A 2D array of pixels. Each pixel is a char, representing an alpha value. Number of pixels is m_width * m_height.
     signed char m_kerning[255]; // An array containing the kerning offsets need when this glyph is followed by every other possible glyph.
-
+    float *m_gapsAtLeft;        // Look up table used to speed up kerning calculations. Freed once font creation is complete.
+    float *m_gapsAtRight;       // As above
 
 	GlyphAa(unsigned *gdiPixels, int gdiPixelsWidth, int gdiPixelsHeight)
 	{
@@ -85,13 +86,21 @@ public:
                     pixel++;
                 }
             }
+
+            m_gapsAtLeft = new float[gdiPixelsHeight];
+            m_gapsAtRight = new float[gdiPixelsHeight];
+            for (int y = 0; y < gdiPixelsHeight; y++)
+            {
+                CalcGapAtLeft(y);
+                CalcGapAtRight(y);
+            }
 	    }
     }
 
     // Find the right-hand end of the glyph at the specified scan-line. Return
     // the distance from that point to the right-hand edge of the glyph's bounding
     // box.
-    float GetGapAtRight(int y)
+    void CalcGapAtRight(int y)
     {
         //     01234   (m_width = 5, m_minY = 1)
         //    +-----+
@@ -103,6 +112,12 @@ public:
         //    |     |   y = 6, gap = 5
         //    +-----|
 
+        if (y < m_minY || y >= (m_minY + m_height))
+        {
+            m_gapsAtRight[y] = m_width;
+            return;
+        }
+
         y -= m_minY;
         unsigned char *line = m_pixelData + y * m_width;
 
@@ -112,16 +127,22 @@ public:
             {
                 float gap = m_width - x;
                 gap -= (float)(line[x]) / 255.0;
-                return gap;
+                m_gapsAtRight[y] = gap;
+                return;
             }
         }
 
-        return 0.0f;
+        m_gapsAtRight[y] = 0.0f;
     }
 
-
-    float GetGapAtLeft(int y)
+    void CalcGapAtLeft(int y)
     {
+        if (y < m_minY || y >= (m_minY + m_height))
+        {
+            m_gapsAtRight[y] = m_width;
+            return;
+        }
+
         y -= m_minY;
         unsigned char *line = m_pixelData + y * m_width;
 
@@ -131,11 +152,19 @@ public:
             {
                 float gap = x;
                 gap += (255 - line[x]) / 255.0;
-                return gap;
+                m_gapsAtLeft[y] = gap;
+                return;
             }
         }
 
-        return 0.0f;
+        m_gapsAtLeft[y] = 0.0f;
+    }
+
+    void FreeKerningTables()
+    {
+        delete [] m_gapsAtLeft;
+        delete [] m_gapsAtRight;
+        m_gapsAtLeft = m_gapsAtRight = NULL;
     }
 };
 
@@ -174,8 +203,8 @@ static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
         float force = 0.0f;
         for (int y = startY; y < endY; y++)
         {   
-            float aRight = a->GetGapAtRight(y);
-            float bLeft = b->GetGapAtLeft(y);
+            float aRight = a->m_gapsAtRight[y];
+            float bLeft = b->m_gapsAtLeft[y];
             float sep = aRight + bLeft + i;
             force += 1.0 / (sep * sep);         // Model the repulsive force using the inverse square law (like coulomb repulsion)
         }
@@ -265,14 +294,17 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
 	DeleteObject(memBmp);
 	DeleteObject(prevBmp);
 
-    for (int i = 0; i < 255; i++)
+    for (int i = 0; i < 256; i++)
     {
-        for (int j = 0; j < 255; j++)
+        for (int j = 0; j < 256; j++)
         {
             int dist = GetKerningDist(tr->glyphs[i], tr->glyphs[j], tr->aveCharWidth);
             tr->glyphs[i]->m_kerning[j] = dist;
         }
     }
+
+    for (int i = 0; i < 256; i++)
+        tr->glyphs[i]->FreeKerningTables();
 
     return tr;
 }
