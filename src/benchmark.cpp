@@ -2,6 +2,7 @@
 #include "lib/input.h"
 #include "lib/polygon.h"
 #include "lib/text_renderer.h"
+#include "lib/text_renderer_aa.h"
 #include "lib/window_manager.h"
 
 #include <string.h>
@@ -127,6 +128,24 @@ double CalcMillionCharsPerSec(BitmapRGBA *bmp, TextRenderer *font)
 }
 
 
+double CalcMillionAaCharsPerSec(BitmapRGBA *bmp, TextRendererAa *font)
+{
+    static char const *str = "Here's some interesting text []£# !";
+    unsigned iterations = 1000 * 100;
+    double startTime = GetHighResTime();
+    for (unsigned i = 0; i < iterations; i++)
+        DrawTextSimpleAa(font, Colour(255,255,255,60), bmp, 10, 10, str);
+    double endTime = GetHighResTime();
+
+    RectFill(bmp, 10, 10, 500, font->charHeight, g_colourBlack);
+    DrawTextSimpleAa(font, Colour(255,255,255,255), bmp, 10, 10, str);
+
+    double duration = endTime - startTime;
+    double numChars = iterations * (double)strlen(str);
+    return (numChars / duration) / 1000000.0;
+}
+
+
 #define DRAW_POLYGON(pointList, Color, x, y)              \
     Polygon.numPoints = sizeof(pointList) / sizeof(Point);   \
     Polygon.points = pointList;                         \
@@ -193,7 +212,8 @@ double CalcBillionPolyFillPixelsPerSec(BitmapRGBA *bmp)
 int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 {
 	CreateWin(1024, 768, WT_WINDOWED, "Benchmark");
-    TextRenderer *font = CreateTextRenderer("Courier", 8, 4);
+    TextRenderer *font = CreateTextRenderer("Courier New", 10, 4);
+    TextRendererAa *fontAa = CreateTextRendererAa("Courier New", 10, 4);
     BitmapRGBA *backBmp = CreateBitmapRGBA(800, 600);
 
     ClearBitmap(g_window->bmp, g_colourBlack);
@@ -242,13 +262,19 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
         "Million chars per sec = %.2f", score);
     END_TEST;
 
+    // Text render AA
+    ClearBitmap(backBmp, g_colourBlack);
+    score = CalcMillionAaCharsPerSec(backBmp, fontAa);
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
+        "Million Anti-aliased chars per sec = %.2f", score);
+    END_TEST;
+
     // Polygon fill
     ClearBitmap(backBmp, g_colourBlack);
     score = CalcBillionPolyFillPixelsPerSec(backBmp);
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
         "Polyfill billion pixels per sec = %.2f", score);
     END_TEST;
-
 
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Press ESC to quit");

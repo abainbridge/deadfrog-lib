@@ -283,7 +283,7 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
 }
 
 
-static int DrawTextSimpleClipped(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
+static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
 {
     int x = _x;
     RGBAColour *startRow = bmp->pixels + y * bmp->width;
@@ -345,7 +345,7 @@ static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned alpha)
 }
 
 
-int DrawTextSimple(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int startX, int _y, char const *text)
+int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int startX, int _y, char const *text)
 {
     //     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
 //         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
@@ -355,9 +355,6 @@ int DrawTextSimple(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int star
     {
 //         if (x + tr->maxCharWidth > (int)bmp->width)
 //             break;
-
-        if (*text == 'e')
-            text = text;
 
         GlyphAa *glyph = tr->glyphs[(unsigned char)*text]; 
         unsigned char *glyphPixel = glyph->m_pixelData;
@@ -385,41 +382,41 @@ int DrawTextSimple(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int star
 }
 
 
-int DrawTextLeft(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+int DrawTextLeftAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
     va_start (ap, text);
     vsprintf(buf, text, ap);
-    return DrawTextSimple(tr, c, bmp, x, y, buf);
+    return DrawTextSimpleAa(tr, c, bmp, x, y, buf);
 }
 
 
-int DrawTextRight(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
-{
-    char buf[512];
-    va_list ap;
-    va_start (ap, text);
-    vsprintf(buf, text, ap);
-
-    int width = GetTextWidth(tr, buf);
-    return DrawTextSimple(tr, c, bmp, x - width, y, buf);
-}
-
-
-int DrawTextCentre(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+int DrawTextRightAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
     va_start (ap, text);
     vsprintf(buf, text, ap);
 
-    int width = GetTextWidth(tr, buf);
-    return DrawTextSimple(tr, c, bmp, x - width/2, y, buf);
+    int width = GetTextWidthAa(tr, buf);
+    return DrawTextSimpleAa(tr, c, bmp, x - width, y, buf);
 }
 
 
-int GetTextWidth(TextRendererAa *tr, char const *text, int len)
+int DrawTextCentreAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+{
+    char buf[512];
+    va_list ap;
+    va_start (ap, text);
+    vsprintf(buf, text, ap);
+
+    int width = GetTextWidthAa(tr, buf);
+    return DrawTextSimpleAa(tr, c, bmp, x - width/2, y, buf);
+}
+
+
+int GetTextWidthAa(TextRendererAa *tr, char const *text, int len)
 {
 	len = min((int)strlen(text), len);
 	if (tr->fixedWidth)
