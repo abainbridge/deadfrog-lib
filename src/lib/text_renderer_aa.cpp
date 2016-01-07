@@ -233,14 +233,10 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
                 // Test if it is NOT entirely transparent...
                 if (g < 255)
                 {
-                    if (x < minX) 
-                        minX = x;
-                    if (x > maxX) 
-                        maxX = x;
-                    if (y < minY) 
-                        minY = y;
-                    if (y > maxY) 
-                        maxY = y;
+                    minX = min(x, minX);
+                    maxX = max(x, maxX);
+                    minY = min(y, minY);
+                    maxY = max(y, maxY);
                 }
             }
         }    
@@ -252,10 +248,7 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
             for (int x = minX; x <= maxX; x++)
             {
                 unsigned c = GetPixelFromBuffer(gdiPixels, tr->maxCharWidth, tr->charHeight, x, y);
-                unsigned char r = (c & 0xff0000) >> 16;
-                unsigned char g = (c & 0x00ff00) >> 8;
-                unsigned char b = (c & 0x0000ff) >> 0;
-                *pixel = g;
+                *pixel = (c & 0x00ff00) >> 8;
                 pixel++;
             }
 		}
