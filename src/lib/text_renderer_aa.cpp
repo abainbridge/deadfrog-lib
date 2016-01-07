@@ -321,6 +321,7 @@ static int DrawTextSimpleClipped(TextRendererAa *tr, RGBAColour col, BitmapRGBA 
 }
 
 
+// Alpha is 0 to 255.
 static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned alpha)
 {
     const unsigned a     = alpha + 1;
@@ -339,7 +340,7 @@ static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned alpha)
     d_rb >>= 8;
     d_g  >>= 8;
 
-    d.c = (d_rb + dst_rb) & 0xFF00FF;
+    d.c = (d_rb + dst_rb); // & 0xFF00FF; I'm pretty sure we can never get overflow here and therefore don't need this mask
     d.g = (d_g  + dst_g);
 }
 
