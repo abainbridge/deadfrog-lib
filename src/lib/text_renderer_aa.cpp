@@ -322,9 +322,9 @@ static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGB
 
 
 // Alpha is 0 to 255.
-static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned alpha)
+static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned char glyphPixel)
 {
-    const unsigned a     = alpha + 1;
+    const unsigned a     = ((glyphPixel * s.a) >> 8) + 1;
 
     const unsigned dst_rb = d.c & 0xFF00FF;
     const unsigned dst_g  = d.g;
@@ -369,18 +369,15 @@ int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int st
             if (glyph->m_width & 1)
             {
                 startX = 1;
-                unsigned alpha = (*glyphPixel * col.a) >> 8;
-                PixelBlend(thisRow[0], col, alpha);
+                PixelBlend(thisRow[0], col, *glyphPixel);
                 glyphPixel++;
             }
 
             for (int x = startX; x < glyph->m_width; x += 2)
             {
-                unsigned alpha = (*glyphPixel * col.a) >> 8;
-                PixelBlend(thisRow[x], col, alpha);
+                PixelBlend(thisRow[x], col, *glyphPixel);
                 glyphPixel++;
-                alpha = (*glyphPixel * col.a) >> 8;
-                PixelBlend(thisRow[x+1], col, alpha);
+                PixelBlend(thisRow[x+1], col, *glyphPixel);
                 glyphPixel++;
             }
         }
