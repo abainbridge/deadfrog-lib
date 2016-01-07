@@ -195,7 +195,8 @@ static int DrawTextSimpleClipped(TextRenderer *tr, RGBAColour col, BitmapRGBA *b
         if (x + tr->maxCharWidth > (int)bmp->width)
             break;
 
-        Glyph *glyph = tr->glyphs[(unsigned char)*text]; 
+        unsigned char c = *((unsigned char const *)text);
+        Glyph *glyph = tr->glyphs[c]; 
         EncodedRun *rleBuf = glyph->m_pixelRuns;
         for (int i = 0; i < glyph->m_numRuns; i++)
         {
@@ -232,7 +233,8 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
     RGBAColour *startRow = bmp->pixels + y * bmp->width;
     while (*text != '\0')
     {
-        if (x + tr->glyphs[*text]->m_width > (int)bmp->width)
+        unsigned char c = *((unsigned char const *)text);
+        if (x + tr->glyphs[c]->m_width > (int)bmp->width)
             break;
 
         // Copy the glyph onto the stack for better cache performance. This increased the 
