@@ -119,8 +119,8 @@ public:
             return;
         }
 
-        y -= m_minY;
-        unsigned char *line = m_pixelData + y * m_width;
+        int localY = y - m_minY;
+        unsigned char *line = m_pixelData + localY * m_width;
 
         for (int x = m_width - 1; x >= 0; x--)
         {
@@ -140,12 +140,12 @@ public:
     {
         if (y < m_minY || y >= (m_minY + m_height))
         {
-            m_gapsAtRight[y] = m_width;
+            m_gapsAtLeft[y] = m_width;
             return;
         }
 
-        y -= m_minY;
-        unsigned char *line = m_pixelData + y * m_width;
+        int localY = y - m_minY;
+        unsigned char *line = m_pixelData + localY * m_width;
 
         for (int x = 0; x < m_width; x++)
         {
@@ -202,7 +202,7 @@ static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
     for (int i = maxI; i > minI; i--)
     {
         float force = 0.0f;
-        for (int y = startY; y < endY; y++)
+        for (int y = startY; y <= endY; y++)
         {   
             float aRight = a->m_gapsAtRight[y];
             float bLeft = b->m_gapsAtLeft[y];
