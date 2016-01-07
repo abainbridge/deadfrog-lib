@@ -13,6 +13,12 @@
 #include <stdlib.h>
 
 
+static unsigned GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
+{
+    return buf[(h - y - 1) * w + x];
+}
+
+
 // ****************************************************************************
 // GlyphAa
 // ****************************************************************************
@@ -27,8 +33,33 @@ public:
     unsigned char *m_pixelData; // A 2D array of pixels. Each pixel is a char, representing an alpha value. Number of pixels is m_width * m_height.
     signed char m_kerning[255]; // An array containing the kerning offsets need when this glyph is followed by every other possible glyph.
 
-	GlyphAa(int minX, int maxX, int minY, int maxY)
+
+	GlyphAa(unsigned *gdiPixels, int gdiPixelsWidth, int gdiPixelsHeight)
 	{
+        int minX = INT_MAX;
+        int maxX = -1;
+        int minY = INT_MAX;
+        int maxY = -1;
+
+        // Find the dimensions of the glyph
+        for (int y = 0; y < gdiPixelsHeight; y++)
+        {
+            for (int x = 0; x < gdiPixelsWidth; x++)
+            {
+                unsigned c = GetPixelFromBuffer(gdiPixels, gdiPixelsWidth, gdiPixelsHeight, x, y);
+                // Only use the green component because it's the middle of the pixel, and unaffected by ClearType.
+                unsigned char g = 255 - ((c & 0x00ff00) >> 8);
+                // Test if it is NOT entirely transparent...
+                if (g < 255)
+                {
+                    minX = min(x, minX);
+                    maxX = max(x, maxX);
+                    minY = min(y, minY);
+                    maxY = max(y, maxY);
+                }
+            }
+        }    
+
         m_minY = minY;
         if (maxX == 0 || maxY < 0)
         {
@@ -40,73 +71,78 @@ public:
         else
         {
             m_width = maxX - minX + 1;
-		    m_height = maxY - minY + 1;
+            m_height = maxY - minY + 1;
             m_pixelData = new unsigned char [m_width * m_height];
+
+            // Copy the pixel data from the GDI bitmap into this glyph's own store.
+            unsigned char *pixel = m_pixelData;
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    unsigned c = GetPixelFromBuffer(gdiPixels, gdiPixelsWidth, gdiPixelsHeight, x, y);
+                    *pixel = (c & 0x00ff00) >> 8;
+                    pixel++;
+                }
+            }
+	    }
+    }
+
+    // Find the right-hand end of the glyph at the specified scan-line. Return
+    // the distance from that point to the right-hand edge of the glyph's bounding
+    // box.
+    float GetGapAtRight(int y)
+    {
+        //     01234   (m_width = 5, m_minY = 1)
+        //    +-----+
+        //    |*    |   y = 1, gap = 4
+        //    |*    |   y = 2, gap = 4
+        //    |**** |   y = 3, gap = 1
+        //    |*   *|   y = 4, gap = 0
+        //    |**** |   y = 5, gap = 1
+        //    |     |   y = 6, gap = 5
+        //    +-----|
+
+        y -= m_minY;
+        unsigned char *line = m_pixelData + y * m_width;
+
+        for (int x = m_width - 1; x >= 0; x--)
+        {
+            if (line[x] > 0)
+            {
+                float gap = m_width - x;
+                gap -= (float)(line[x]) / 255.0;
+                return gap;
+            }
         }
-	}
+
+        return 0.0f;
+    }
+
+
+    float GetGapAtLeft(int y)
+    {
+        y -= m_minY;
+        unsigned char *line = m_pixelData + y * m_width;
+
+        for (int x = 0; x < m_width; x++)
+        {
+            if (line[x] > 0)
+            {
+                float gap = x;
+                gap += (255 - line[x]) / 255.0;
+                return gap;
+            }
+        }
+
+        return 0.0f;
+    }
 };
 
 
 // ****************************************************************************
 // Functions
 // ****************************************************************************
-
-static unsigned GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
-{
-    return buf[(h - y - 1) * w + x];
-}
-
-
-// Find the right-hand end of the glyph at the specified scan-line. Return
-// the distance from that point to the right-hand edge of the glyph's bounding
-// box.
-static float GetGapAtRight(GlyphAa *glyph, int y)
-{
-    //     01234   (glyph->m_width = 5, glyph->m_minY = 1)
-    //    +-----+
-    //    |*    |   y = 1, gap = 4
-    //    |*    |   y = 2, gap = 4
-    //    |**** |   y = 3, gap = 1
-    //    |*   *|   y = 4, gap = 0
-    //    |**** |   y = 5, gap = 1
-    //    |     |   y = 6, gap = 5
-    //    +-----|
-
-    y -= glyph->m_minY;
-    unsigned char *line = glyph->m_pixelData + y * glyph->m_width;
-
-    for (int x = glyph->m_width - 1; x >= 0; x--)
-    {
-        if (line[x] > 0)
-        {
-            float gap = glyph->m_width - x;
-            gap -= (float)(line[x]) / 255.0;
-            return gap;
-        }
-    }
-
-    return 0.0f;
-}
-
-
-static float GetGapAtLeft(GlyphAa *glyph, int y)
-{
-    y -= glyph->m_minY;
-    unsigned char *line = glyph->m_pixelData + y * glyph->m_width;
-
-    for (int x = 0; x < glyph->m_width; x++)
-    {
-        if (line[x] > 0)
-        {
-            float gap = x;
-            gap += (255 - line[x]) / 255.0;
-            return gap;
-        }
-    }
-
-    return 0.0f;
-}
-
 
 static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
 {
@@ -138,8 +174,8 @@ static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
         float force = 0.0f;
         for (int y = startY; y < endY; y++)
         {   
-            float aRight = GetGapAtRight(a, y);
-            float bLeft = GetGapAtLeft(b, y);
+            float aRight = a->GetGapAtRight(y);
+            float bLeft = b->GetGapAtLeft(y);
             float sep = aRight + bLeft + i;
             force += 1.0 / (sep * sep);         // Model the repulsive force using the inverse square law (like coulomb repulsion)
         }
@@ -217,42 +253,8 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
         // Ask GDI to draw the character
 		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
 
-        int minX = INT_MAX;
-        int maxX = -1;
-        int minY = INT_MAX;
-        int maxY = -1;
-
-        // Find the dimensions of the glyph
-        for (int y = 0; y < tr->charHeight; y++)
-        {
-            for (int x = 0; x < tr->maxCharWidth; x++)
-            {
-                unsigned c = GetPixelFromBuffer(gdiPixels, tr->maxCharWidth, tr->charHeight, x, y);
-                // Only use the green component because it's the middle of the pixel.
-                unsigned char g = 255 - ((c & 0x00ff00) >> 8);
-                // Test if it is NOT entirely transparent...
-                if (g < 255)
-                {
-                    minX = min(x, minX);
-                    maxX = max(x, maxX);
-                    minY = min(y, minY);
-                    maxY = max(y, maxY);
-                }
-            }
-        }    
-
-        GlyphAa *glyph = new GlyphAa(minX, maxX, minY, maxY);
-        unsigned char *pixel = glyph->m_pixelData;
-        for (int y = minY; y <= maxY; y++)
-		{
-            for (int x = minX; x <= maxX; x++)
-            {
-                unsigned c = GetPixelFromBuffer(gdiPixels, tr->maxCharWidth, tr->charHeight, x, y);
-                *pixel = (c & 0x00ff00) >> 8;
-                pixel++;
-            }
-		}
-
+        // Create our Glyph format from the GDI image
+        GlyphAa *glyph = new GlyphAa(gdiPixels, tr->maxCharWidth, tr->charHeight);
 		tr->glyphs[i] = glyph;
 	}
 
