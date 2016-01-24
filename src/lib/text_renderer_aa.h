@@ -12,23 +12,20 @@
 
 
 struct BitmapRGBA;
-class GlyphAa;
+class MasterGlyph;
 
 
 typedef struct
 {
-	GlyphAa     *glyphs[256];
-	bool		fixedWidth;
-    int         aveCharWidth;
-    int			maxCharWidth;
-	int			charHeight;	// in pixels
+	MasterGlyph *glyphs[256];   // Pointers may be NULL if glyph is blank.
+	bool	    fixedWidth;
 } TextRendererAa;
 
 
 // Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
-DLL_API TextRendererAa *CreateTextRendererAa(char const *fontname, int size, int weight);
+DLL_API TextRendererAa *CreateTextRendererAa(char const *font_name, int weight);
 
-DLL_API int DrawTextSimpleAa    (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text);       // Returns text length in pixels
+DLL_API int DrawTextSimpleAa    (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text);         // Returns text length in pixels
 DLL_API int DrawTextLeftAa      (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like simple but with variable args
 DLL_API int DrawTextRightAa	    (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like above but with right justify
 DLL_API int DrawTextCentreAa    (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like above but with centre justify

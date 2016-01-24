@@ -2,179 +2,40 @@
 
 #include "lib/bitmap.h"
 #include "lib/common.h"
+#include "lib/master_glyph.h"
+#include "lib/sized_glyph.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include <limits.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 
-static unsigned GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
-{
-    return buf[(h - y - 1) * w + x];
-}
-
-
 // ****************************************************************************
-// GlyphAa
+// 
 // ****************************************************************************
 
-class GlyphAa
-{
-public:
-    int m_minY;
-    int m_width;
-    int m_height;
-    int m_pitch;
-    unsigned char *m_pixelData; // A 2D array of pixels. Each pixel is a char, representing an alpha value. Number of pixels is m_width * m_height.
-    signed char m_kerning[255]; // An array containing the kerning offsets need when this glyph is followed by every other possible glyph.
-    float *m_gapsAtLeft;        // Look up table used to speed up kerning calculations. Freed once font creation is complete.
-    float *m_gapsAtRight;       // As above
+// class SizedRenderer
+// {
+// public:
+//     SizedGlyph *glyphs[256];
+//     int         avgCharWidth;
+//     int			maxCharWidth;
+//     int			charHeight;	// in pixels
+// 
+//     SizedRenderer(MasterGlyph *master);
+// };
 
-	GlyphAa(unsigned *gdiPixels, int gdiPixelsWidth, int gdiPixelsHeight)
-	{
-        int minX = INT_MAX;
-        int maxX = -1;
-        int minY = INT_MAX;
-        int maxY = -1;
-
-        // Find the dimensions of the glyph
-        for (int y = 0; y < gdiPixelsHeight; y++)
-        {
-            for (int x = 0; x < gdiPixelsWidth; x++)
-            {
-                unsigned c = GetPixelFromBuffer(gdiPixels, gdiPixelsWidth, gdiPixelsHeight, x, y);
-                // Only use the green component because it's the middle of the pixel, and unaffected by ClearType.
-                unsigned char g = 255 - ((c & 0x00ff00) >> 8);
-                // Test if it is NOT entirely transparent...
-                if (g < 255)
-                {
-                    minX = min(x, minX);
-                    maxX = max(x, maxX);
-                    minY = min(y, minY);
-                    maxY = max(y, maxY);
-                }
-            }
-        }    
-
-        m_minY = minY;
-        if (maxX == 0 || maxY < 0)
-        {
-            m_width = 0;
-            m_height = 0;
-            m_pitch = 0;
-            m_pixelData = NULL;
-            m_gapsAtLeft = m_gapsAtRight = NULL;
-        }
-        else
-        {
-            m_width = maxX - minX + 1;
-            m_height = maxY - minY + 1;
-            m_pixelData = new unsigned char [m_width * m_height];
-
-            // Copy the pixel data from the GDI bitmap into this glyph's own store.
-            unsigned char *pixel = m_pixelData;
-            for (int y = minY; y <= maxY; y++)
-            {
-                for (int x = minX; x <= maxX; x++)
-                {
-                    unsigned c = GetPixelFromBuffer(gdiPixels, gdiPixelsWidth, gdiPixelsHeight, x, y);
-                    *pixel = (c & 0x00ff00) >> 8;
-                    pixel++;
-                }
-            }
-
-            m_gapsAtLeft = new float[gdiPixelsHeight];
-            m_gapsAtRight = new float[gdiPixelsHeight];
-            for (int y = 0; y < gdiPixelsHeight; y++)
-            {
-                CalcGapAtLeft(y);
-                CalcGapAtRight(y);
-            }
-	    }
-    }
-
-    // Find the right-hand end of the glyph at the specified scan-line. Return
-    // the distance from that point to the right-hand edge of the glyph's bounding
-    // box.
-    void CalcGapAtRight(int y)
-    {
-        //     01234   (m_width = 5, m_minY = 1)
-        //    +-----+
-        //    |*    |   y = 1, gap = 4
-        //    |*    |   y = 2, gap = 4
-        //    |**** |   y = 3, gap = 1
-        //    |*   *|   y = 4, gap = 0
-        //    |**** |   y = 5, gap = 1
-        //    |     |   y = 6, gap = 5
-        //    +-----|
-
-        if (y < m_minY || y >= (m_minY + m_height))
-        {
-            m_gapsAtRight[y] = m_width;
-            return;
-        }
-
-        int localY = y - m_minY;
-        unsigned char *line = m_pixelData + localY * m_width;
-
-        for (int x = m_width - 1; x >= 0; x--)
-        {
-            if (line[x] > 0)
-            {
-                float gap = m_width - x;
-                gap -= (float)(line[x]) / 255.0;
-                m_gapsAtRight[y] = gap;
-                return;
-            }
-        }
-
-        m_gapsAtRight[y] = 0.0f;
-    }
-
-    void CalcGapAtLeft(int y)
-    {
-        if (y < m_minY || y >= (m_minY + m_height))
-        {
-            m_gapsAtLeft[y] = m_width;
-            return;
-        }
-
-        int localY = y - m_minY;
-        unsigned char *line = m_pixelData + localY * m_width;
-
-        for (int x = 0; x < m_width; x++)
-        {
-            if (line[x] > 0)
-            {
-                float gap = x;
-                gap += (255 - line[x]) / 255.0;
-                m_gapsAtLeft[y] = gap;
-                return;
-            }
-        }
-
-        m_gapsAtLeft[y] = 0.0f;
-    }
-
-    void FreeKerningTables()
-    {
-        delete [] m_gapsAtLeft;
-        delete [] m_gapsAtRight;
-        m_gapsAtLeft = m_gapsAtRight = NULL;
-    }
-};
 
 
 // ****************************************************************************
 // Functions
 // ****************************************************************************
 
-static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
+static unsigned GetKerningDist(MasterGlyph *a, MasterGlyph *b, int avgCharWidth)
 {
     // Calculate how many pixels in the X direction to add after rendering
     // glyph 'a' before glyph 'b'. I call this the kerning distance.
@@ -191,14 +52,14 @@ static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
 
     // Early exit on invisible glyphs
     if (a->m_width == 0)
-        return aveCharWidth + 1;
+        return avgCharWidth + 1;
 
     // Calculate the vertical extent of overlap between the two glyphs.
     int startY = max(a->m_minY, b->m_minY);
     int endY = min(a->m_minY + a->m_height, b->m_minY + b->m_height);
 
-    int maxI = aveCharWidth / 3;
-    int minI = -aveCharWidth / 2;
+    int maxI = avgCharWidth / 3;
+    int minI = -avgCharWidth / 2;
     for (int i = maxI; i > minI; i--)
     {
         float force = 0.0f;
@@ -211,7 +72,7 @@ static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
         }
 
         force /= (float)(endY - startY + 1);
-        force *= (aveCharWidth * aveCharWidth) / (30.0f * 30.0f);   // Make force independent of font size
+        force *= (avgCharWidth * avgCharWidth) / (30.0f * 30.0f);   // Make force independent of font size
         if (force > 0.01f)
         {
             if (i < 0)
@@ -223,10 +84,11 @@ static unsigned GetKerningDist(GlyphAa *a, GlyphAa *b, int aveCharWidth)
     return a->m_width + minI/2.0;
 }
 
+#include "lib/hi_res_time.h"
 
-TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
+TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
 {
-    if (size < 4 || size > 1000 || weight < 1 || weight > 9)
+    if (weight < 1 || weight > 9)
         return NULL;
 
     TextRendererAa *tr = new TextRendererAa;
@@ -235,10 +97,10 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
     // Get the font from GDI
     HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
     HDC memDC = CreateCompatibleDC(winDC);
-    int scaledSize = -MulDiv(size, GetDeviceCaps(memDC, LOGPIXELSY), 72);
+    int scaledSize = -MulDiv(128, GetDeviceCaps(memDC, LOGPIXELSY), 72);
     HFONT fontHandle = CreateFont(scaledSize, 0, 0, 0, weight * 100, false, false, false, 
         ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH,
+        NONANTIALIASED_QUALITY, DEFAULT_PITCH,
         fontName);
     ReleaseAssert(fontHandle != NULL, "Couldn't find Windows font '%s'", fontName);
 
@@ -246,9 +108,9 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
     SelectObject(memDC, fontHandle); 
     TEXTMETRIC textMetrics;
     GetTextMetrics(memDC, &textMetrics);
-    tr->charHeight = textMetrics.tmHeight;
-    tr->aveCharWidth = textMetrics.tmAveCharWidth;
-    tr->maxCharWidth = textMetrics.tmMaxCharWidth;
+//     tr->charHeight = textMetrics.tmHeight;
+//     tr->avgCharWidth = textMetrics.tmAveCharWidth;
+//     tr->maxCharWidth = textMetrics.tmMaxCharWidth;
     tr->fixedWidth = (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth);
 
     // Ask GDI about the name of the font
@@ -259,34 +121,38 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
         "'%s' will be used instead.", 
         fontName, nameOfFontWeGot);
 
-    // Create an off-screen bitmap
+    // Create an off-screen GDI bitmap
     BITMAPINFO bmpInfo = { 0 };
-    bmpInfo.bmiHeader.biBitCount = 32;
-    bmpInfo.bmiHeader.biHeight = tr->charHeight;
-    bmpInfo.bmiHeader.biWidth = tr->maxCharWidth;
+    bmpInfo.bmiHeader.biBitCount = 1;
+    bmpInfo.bmiHeader.biHeight = textMetrics.tmHeight; //tr->charHeight;
+    bmpInfo.bmiHeader.biWidth = textMetrics.tmMaxCharWidth; //tr->maxCharWidth;
     bmpInfo.bmiHeader.biPlanes = 1;
     bmpInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    UINT *gdiPixels = 0;
+    unsigned char *gdiPixels = 0;
     HBITMAP memBmp = CreateDIBSection(memDC, (BITMAPINFO *)&bmpInfo, DIB_RGB_COLORS, (void **)&gdiPixels, NULL, 0);
-	HBITMAP prevBmp = (HBITMAP)SelectObject(memDC, memBmp);
+	ReleaseAssert(memBmp != NULL, "In " __FUNCTION__ " CreateDIBSection failed");
+    HBITMAP prevBmp = (HBITMAP)SelectObject(memDC, memBmp);
 
     // Setup stuff needed to render text with GDI
     SetTextColor(memDC, RGB(255,255,255));
     SetBkColor(memDC, 0);
-    RECT rect = { 0, 0, tr->maxCharWidth, tr->charHeight };
+    RECT rect = { 0, 0, textMetrics.tmMaxCharWidth, textMetrics.tmHeight };
 
+    double startTime = GetHighResTime();
     // For each ASCII character...
-    for (int i = 0; i < 256; i++)
+    for (int i = textMetrics.tmFirstChar; i < textMetrics.tmLastChar; i++)
+//    for (int i = 'A'; i < 'B'; i++)
 	{
         char buf[] = {(char)i};
 
         // Ask GDI to draw the character
 		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
 
-        // Create our Glyph format from the GDI image
-        GlyphAa *glyph = new GlyphAa(gdiPixels, tr->maxCharWidth, tr->charHeight);
-		tr->glyphs[i] = glyph;
+        // Create our MasterGlyphs from the GDI image
+        tr->glyphs[i] = new MasterGlyph;
+        tr->glyphs[i]->CreateFromGdiPixels(gdiPixels, textMetrics.tmMaxCharWidth, textMetrics.tmHeight);
 	}
+    DebugOut("time = %.2fms\n", (GetHighResTime() - startTime) * 1000.0);
 
 	// Release the GDI resources
     DeleteDC(winDC);
@@ -295,17 +161,17 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
 	DeleteObject(memBmp);
 	DeleteObject(prevBmp);
 
-    for (int i = 0; i < 256; i++)
-    {
-        for (int j = 0; j < 256; j++)
-        {
-            int dist = GetKerningDist(tr->glyphs[i], tr->glyphs[j], tr->aveCharWidth);
-            tr->glyphs[i]->m_kerning[j] = dist;
-        }
-    }
-
-    for (int i = 0; i < 256; i++)
-        tr->glyphs[i]->FreeKerningTables();
+//     for (int i = 0; i < 256; i++)
+//     {
+//         for (int j = 0; j < 256; j++)
+//         {
+//             int dist = GetKerningDist(tr->glyphs[i], tr->glyphs[j], textMetrics.tmAveCharWidth);
+//             tr->glyphs[i]->m_kerning[j] = dist;
+//         }
+//     }
+// 
+//     for (int i = 0; i < 256; i++)
+//         tr->glyphs[i]->FreeKerningTables();
 
     return tr;
 }
@@ -313,39 +179,40 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int size, int weight)
 
 static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
 {
-    int x = _x;
-    RGBAColour *startRow = bmp->pixels + y * bmp->width;
-    int width = bmp->width;
-
-    if (y + tr->charHeight < 0 || y > (int)bmp->height)
-        return 0;
-
-    while (*text != '\0')
-    {
-        if (x + tr->maxCharWidth > (int)bmp->width)
-            break;
-
-        GlyphAa *glyph = tr->glyphs[(unsigned char)*text]; 
-        unsigned char *glyphPixel = glyph->m_pixelData;
-
-        for (int y = 0; x < glyph->m_height; y++)
-        {
-            RGBAColour *thisRow = startRow + y * glyph->m_width;
-            
-            for (int x = 0; x < glyph->m_width; x++)
-            {
-                thisRow[x].r = *glyphPixel;
-                thisRow[x].g = *glyphPixel;
-                thisRow[x].b = *glyphPixel;
-                glyphPixel++;
-            }
-        }
-
-        x += glyph->m_width + 25;
-        text++;
-    }
-
-    return _x - x;
+//     int x = _x;
+//     RGBAColour *startRow = bmp->pixels + y * bmp->width;
+//     int width = bmp->width;
+// 
+//     if (y + tr->charHeight < 0 || y > (int)bmp->height)
+//         return 0;
+// 
+//     while (*text != '\0')
+//     {
+//         if (x + tr->maxCharWidth > (int)bmp->width)
+//             break;
+// 
+//         SizedGlyph *glyph = tr->glyphs[(unsigned char)*text]; 
+//         unsigned char *glyphPixel = glyph->m_pixelData;
+// 
+//         for (int y = 0; x < glyph->m_height; y++)
+//         {
+//             RGBAColour *thisRow = startRow + y * glyph->m_width;
+//             
+//             for (int x = 0; x < glyph->m_width; x++)
+//             {
+//                 thisRow[x].r = *glyphPixel;
+//                 thisRow[x].g = *glyphPixel;
+//                 thisRow[x].b = *glyphPixel;
+//                 glyphPixel++;
+//             }
+//         }
+// 
+//         x += glyph->m_width + 25;
+//         text++;
+//     }
+// 
+//     return _x - x;
+    return 0;
 }
 
 
@@ -375,47 +242,48 @@ static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned char g
 
 int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int startX, int _y, char const *text)
 {
-    //     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
-//         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
+//     //     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
+// //         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
+// // 
+//     int currentX = startX;
+//     while (*text != '\0')
+//     {
+// //         if (x + tr->maxCharWidth > (int)bmp->width)
+// //             break;
 // 
-    int currentX = startX;
-    while (*text != '\0')
-    {
-//         if (x + tr->maxCharWidth > (int)bmp->width)
-//             break;
-
-        GlyphAa * __restrict glyph = tr->glyphs[(unsigned char)*text]; 
-        unsigned char * __restrict glyphPixel = glyph->m_pixelData;
-        RGBAColour * __restrict destPixel = bmp->pixels + (glyph->m_minY + _y) * bmp->width + currentX;
-
-        for (int y = 0; y < glyph->m_height; y++)
-        {
-            RGBAColour * __restrict thisRow = destPixel + y * bmp->width;
-
-            int startX = 0;
-
-            if (glyph->m_width & 1)
-            {
-                startX = 1;
-                PixelBlend(thisRow[0], col, *glyphPixel);
-                glyphPixel++;
-            }
-
-            for (int x = startX; x < glyph->m_width; x += 2)
-            {
-                PixelBlend(thisRow[x], col, *glyphPixel);
-                glyphPixel++;
-                PixelBlend(thisRow[x+1], col, *glyphPixel);
-                glyphPixel++;
-            }
-        }
-
-        text++;
-
-        currentX += glyph->m_kerning[*text];
-    }
-
-    return currentX - startX;
+//         SizedGlyph * __restrict glyph = tr->glyphs[(unsigned char)*text]; 
+//         unsigned char * __restrict glyphPixel = glyph->m_pixelData;
+//         RGBAColour * __restrict destPixel = bmp->pixels + (glyph->m_minY + _y) * bmp->width + currentX;
+// 
+//         for (int y = 0; y < glyph->m_height; y++)
+//         {
+//             RGBAColour * __restrict thisRow = destPixel + y * bmp->width;
+// 
+//             int startX = 0;
+// 
+//             if (glyph->m_width & 1)
+//             {
+//                 startX = 1;
+//                 PixelBlend(thisRow[0], col, *glyphPixel);
+//                 glyphPixel++;
+//             }
+// 
+//             for (int x = startX; x < glyph->m_width; x += 2)
+//             {
+//                 PixelBlend(thisRow[x], col, *glyphPixel);
+//                 glyphPixel++;
+//                 PixelBlend(thisRow[x+1], col, *glyphPixel);
+//                 glyphPixel++;
+//             }
+//         }
+// 
+//         text++;
+// 
+//         currentX += glyph->m_kerning[*text];
+//     }
+// 
+//     return currentX - startX;
+    return 0;
 }
 
 
@@ -455,23 +323,24 @@ int DrawTextCentreAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, i
 
 int GetTextWidthAa(TextRendererAa *tr, char const *text, int len)
 {
-	len = min((int)strlen(text), len);
-	if (tr->fixedWidth)
-	{
-		return len * tr->maxCharWidth;
-	}
-	else
-	{
-        int width = 0;
-        for (int i = 0; i < len; i++)
-        {
-            GlyphAa *glyph = tr->glyphs[(int)text[i]];
-            if (i + 1 < len)
-                width += glyph->m_kerning[(int)text[i+1]];
-            else
-                width += glyph->m_width;
-        }
-
-		return width;
-	}
+    return 0;
+// 	len = min((int)strlen(text), len);
+// 	if (tr->fixedWidth)
+// 	{
+// 		return len * tr->maxCharWidth;
+// 	}
+// 	else
+// 	{
+//         int width = 0;
+//         for (int i = 0; i < len; i++)
+//         {
+//             SizedGlyph *glyph = tr->glyphs[(int)text[i]];
+//             if (i + 1 < len)
+//                 width += glyph->m_kerning[(int)text[i+1]];
+//             else
+//                 width += glyph->m_width;
+//         }
+// 
+// 		return width;
+// 	}
 }
