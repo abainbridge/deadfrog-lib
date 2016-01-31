@@ -1,13 +1,16 @@
 // Own header
 #include "master_glyph.h"
 
+// Project headers
+#include "text_renderer_aa_internals.h"
+
 // Standard headers
 #include <algorithm>
 #include <math.h>
 #include <limits.h>
 
 
-static const unsigned NUM_GAPS = 20;
+static const unsigned NUM_GAPS = 20;    // Number of samples (in the Y dimension) to use to calculate the kerning distance.
 
 
 static bool GetPixelFromGdiBuffer(unsigned char *buf, int byteW, int h, int x, int y)
@@ -78,8 +81,8 @@ void MasterGlyph::CreateFromGdiPixels(unsigned char *gdiPixels, int gdiPixelsWid
             }
         }
 
-        m_gapsAtLeft = new float[NUM_GAPS];
-        m_gapsAtRight = new float[NUM_GAPS];
+        m_gapsAtLeft = new int[NUM_GAPS];
+        m_gapsAtRight = new int[NUM_GAPS];
         for (unsigned i = 0; i < NUM_GAPS; i++)
         {
             CalcGapAtLeft(i);
@@ -104,7 +107,7 @@ void MasterGlyph::CalcGapAtRight(int i)
     //    |     |   y = 6, gap = 5
     //    +-----|
 
-    int y = (int)((double)i / (double)NUM_GAPS);
+    int y = (int)((double)MASTER_GLYPH_RESOLUTION * (double)i / (double)NUM_GAPS);
 
     if (y < m_minY || y >= (m_minY + m_height))
     {
@@ -119,20 +122,18 @@ void MasterGlyph::CalcGapAtRight(int i)
     {
         if (line[x] > 0)
         {
-            float gap = m_width - x;
-            gap -= (float)(line[x]) / 255.0;
-            m_gapsAtRight[i] = gap;
+            m_gapsAtRight[i] = m_width - x;
             return;
         }
     }
 
-    m_gapsAtRight[i] = 0.0f;
+    m_gapsAtRight[i] = m_width; // TODO, should this be zero?
 }
 
 
 void MasterGlyph::CalcGapAtLeft(int i)
 {
-    int y = (int)((double)i / (double)NUM_GAPS);
+    int y = (int)((double)MASTER_GLYPH_RESOLUTION * (double)i / (double)NUM_GAPS);
 
     if (y < m_minY || y >= (m_minY + m_height))
     {
@@ -140,25 +141,20 @@ void MasterGlyph::CalcGapAtLeft(int i)
         return;
     }
 
-    int localY = y - m_minY;
-    unsigned char *line = m_pixelData + localY * m_width;
-
     for (int x = 0; x < m_width; x++)
     {
-        if (line[x] > 0)
+        if (GetPix(x, y))
         {
-            float gap = x;
-            gap += (255 - line[x]) / 255.0;
-            m_gapsAtLeft[i] = gap;
+            m_gapsAtLeft[i] = x;
             return;
         }
     }
 
-    m_gapsAtLeft[i] = 0.0f;
+    m_gapsAtLeft[i] = m_width; // TODO, should this be zero?
 }
 
 
-void MasterGlyph::FreeKerningTables()
+void MasterGlyph::KerningCalculationComplete()
 {
     delete [] m_gapsAtLeft;
     delete [] m_gapsAtRight;
@@ -168,7 +164,7 @@ void MasterGlyph::FreeKerningTables()
 
 bool MasterGlyph::GetPix(unsigned x, unsigned y)
 {
-    unsigned char *line = m_pixelData + y * m_widthBytes;
+    unsigned char *line = m_pixelData + (y - m_minY) * m_widthBytes;
     unsigned char pixelByte = line[x / 8];
     unsigned char shiftedPixelByte = pixelByte >> (x & 0x7);
     return shiftedPixelByte & 1;
@@ -177,7 +173,7 @@ bool MasterGlyph::GetPix(unsigned x, unsigned y)
 
 void MasterGlyph::PutPix(unsigned x, unsigned y)
 {
-    unsigned char *line = m_pixelData + y * m_widthBytes;
+    unsigned char *line = m_pixelData + (y - m_minY) * m_widthBytes;
     unsigned char pixelMask = 1 << (x & 0x7);
     line[x / 8] |= pixelMask;
 }

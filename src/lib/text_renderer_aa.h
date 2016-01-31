@@ -10,6 +10,8 @@
 #include "lib/rgba_colour.h"
 #include "lib/common.h"
 
+#include "sized_glyph.h"
+
 
 struct BitmapRGBA;
 class MasterGlyph;
@@ -17,7 +19,8 @@ class MasterGlyph;
 
 typedef struct
 {
-	MasterGlyph *glyphs[256];   // Pointers may be NULL if glyph is blank.
+	MasterGlyph *masterGlyphs[256];   // Pointers may be NULL if glyph is blank.
+    SizedGlyphSet *size10;
 	bool	    fixedWidth;
 } TextRendererAa;
 
@@ -25,12 +28,12 @@ typedef struct
 // Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
 DLL_API TextRendererAa *CreateTextRendererAa(char const *font_name, int weight);
 
-DLL_API int DrawTextSimpleAa    (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text);         // Returns text length in pixels
-DLL_API int DrawTextLeftAa      (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like simple but with variable args
-DLL_API int DrawTextRightAa	    (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like above but with right justify
-DLL_API int DrawTextCentreAa    (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like above but with centre justify
+DLL_API int DrawTextSimpleAa (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text);      // Returns text length in pixels
+DLL_API int DrawTextLeftAa   (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text, ...);	// Like simple but with variable args
+DLL_API int DrawTextRightAa	 (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text, ...);	// Like above but with right justify
+DLL_API int DrawTextCentreAa (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text, ...);	// Like above but with centre justify
 
-DLL_API int	GetTextWidthAa      (TextRendererAa *, char const *text, int len=999999);
+DLL_API int	GetTextWidthAa   (TextRendererAa *, char const *text, int len=999999);
 
 
 #endif

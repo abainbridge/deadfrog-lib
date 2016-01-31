@@ -136,11 +136,11 @@ double CalcMillionAaCharsPerSec(BitmapRGBA *bmp, TextRendererAa *font)
     unsigned iterations = 1000 * 1;
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; i++)
-        DrawTextSimpleAa(font, Colour(255,255,255,60), bmp, 10, 10, str);
+        DrawTextSimpleAa(font, Colour(255,255,255,60), bmp, 10, 10, 10, str);
     double endTime = GetHighResTime();
 
 //    RectFill(bmp, 10, 10, 500, font->charHeight, g_colourBlack);
-    DrawTextSimpleAa(font, Colour(255,255,255,255), bmp, 10, 10, str);
+    DrawTextSimpleAa(font, Colour(255,255,255,255), bmp, 10, 10, 10, str);
 
     double duration = endTime - startTime;
     double numChars = iterations * (double)strlen(str);
@@ -235,7 +235,7 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
         "Font creation took %.2f sec", aaFontCreationTime);
     textY += 15;
 
-//     DrawTextSimpleAa(fontAa, g_colourWhite, g_window->bmp, 10, textY, "Here's some interesting text. See! What?");
+    DrawTextSimpleAa(fontAa, g_colourWhite, g_window->bmp, 10, textY, 10, "Here's some interesting text. See! What?");
 //     textY += 20;
 //     DrawTextSimpleAa(fontAa2, g_colourWhite, g_window->bmp, 10, textY, "Here's some interesting text. See! What?");
 //     textY += 20;
@@ -304,7 +304,7 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Press ESC to quit");
 
-    MasterGlyph *mg = fontAa->glyphs['g'];
+    MasterGlyph *mg = fontAa->masterGlyphs['g'];
     for (int y = 0; y < mg->m_height; y++)
     {
         for (int x = 0; x < mg->m_width; x++)

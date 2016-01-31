@@ -232,6 +232,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\lib\sized_glyph.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\lib\sized_glyph.h"
 			>
 		</File>

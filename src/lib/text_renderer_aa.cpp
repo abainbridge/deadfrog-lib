@@ -1,9 +1,11 @@
 #include "text_renderer_aa.h"
 
+// Project headers
 #include "lib/bitmap.h"
 #include "lib/common.h"
 #include "lib/master_glyph.h"
 #include "lib/sized_glyph.h"
+#include "lib/text_renderer_aa_internals.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -60,7 +62,7 @@ static unsigned GetKerningDist(MasterGlyph *a, MasterGlyph *b, int avgCharWidth)
 
     int maxI = avgCharWidth / 3;
     int minI = -avgCharWidth / 2;
-    for (int i = maxI; i > minI; i--)
+    for (int i = maxI; i > minI; i -= 10)
     {
         float force = 0.0f;
         for (int y = startY; y <= endY; y++)
@@ -97,7 +99,7 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
     // Get the font from GDI
     HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
     HDC memDC = CreateCompatibleDC(winDC);
-    int scaledSize = -MulDiv(128, GetDeviceCaps(memDC, LOGPIXELSY), 72);
+    int scaledSize = -(int)MASTER_GLYPH_RESOLUTION; // -MulDiv(128, GetDeviceCaps(memDC, LOGPIXELSY), 72);
     HFONT fontHandle = CreateFont(scaledSize, 0, 0, 0, weight * 100, false, false, false, 
         ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         NONANTIALIASED_QUALITY, DEFAULT_PITCH,
@@ -149,8 +151,8 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
 		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
 
         // Create our MasterGlyphs from the GDI image
-        tr->glyphs[i] = new MasterGlyph;
-        tr->glyphs[i]->CreateFromGdiPixels(gdiPixels, textMetrics.tmMaxCharWidth, textMetrics.tmHeight);
+        tr->masterGlyphs[i] = new MasterGlyph;
+        tr->masterGlyphs[i]->CreateFromGdiPixels(gdiPixels, textMetrics.tmMaxCharWidth, textMetrics.tmHeight);
 	}
     DebugOut("time = %.2fms\n", (GetHighResTime() - startTime) * 1000.0);
 
@@ -161,23 +163,23 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
 	DeleteObject(memBmp);
 	DeleteObject(prevBmp);
 
-//     for (int i = 0; i < 256; i++)
-//     {
-//         for (int j = 0; j < 256; j++)
-//         {
-//             int dist = GetKerningDist(tr->glyphs[i], tr->glyphs[j], textMetrics.tmAveCharWidth);
-//             tr->glyphs[i]->m_kerning[j] = dist;
-//         }
-//     }
-// 
-//     for (int i = 0; i < 256; i++)
-//         tr->glyphs[i]->FreeKerningTables();
+    for (int i = textMetrics.tmFirstChar; i < textMetrics.tmLastChar; i++)
+    {
+        for (int j = textMetrics.tmFirstChar; j < textMetrics.tmLastChar; j++)
+        {
+            int dist = GetKerningDist(tr->masterGlyphs[i], tr->masterGlyphs[j], textMetrics.tmAveCharWidth);
+            tr->masterGlyphs[i]->m_kerning[j] = dist;
+        }
+    }
+
+    for (int i = textMetrics.tmFirstChar; i < textMetrics.tmLastChar; i++)
+        tr->masterGlyphs[i]->KerningCalculationComplete();
 
     return tr;
 }
 
 
-static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
+static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, int size, char const *text)
 {
 //     int x = _x;
 //     RGBAColour *startRow = bmp->pixels + y * bmp->width;
@@ -240,11 +242,14 @@ static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned char g
 }
 
 
-int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int startX, int _y, char const *text)
+DLL_API int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, int size, char const *text)
 {
-//     //     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
-// //         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
-// // 
+    if (!tr->size10)
+        tr->size10 = new SizedGlyphSet(tr->masterGlyphs, 10);
+
+    //     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
+//         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
+// 
 //     int currentX = startX;
 //     while (*text != '\0')
 //     {
@@ -287,17 +292,17 @@ int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int st
 }
 
 
-int DrawTextLeftAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+int DrawTextLeftAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, int size, char const *text, ...)
 {
     char buf[512];
     va_list ap;
     va_start (ap, text);
     vsprintf(buf, text, ap);
-    return DrawTextSimpleAa(tr, c, bmp, x, y, buf);
+    return DrawTextSimpleAa(tr, c, bmp, x, y, size, buf);
 }
 
 
-int DrawTextRightAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+int DrawTextRightAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, int size, char const *text, ...)
 {
     char buf[512];
     va_list ap;
@@ -305,11 +310,11 @@ int DrawTextRightAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, in
     vsprintf(buf, text, ap);
 
     int width = GetTextWidthAa(tr, buf);
-    return DrawTextSimpleAa(tr, c, bmp, x - width, y, buf);
+    return DrawTextSimpleAa(tr, c, bmp, x - width, y, size, buf);
 }
 
 
-int DrawTextCentreAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+int DrawTextCentreAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, int size, char const *text, ...)
 {
     char buf[512];
     va_list ap;
@@ -317,7 +322,7 @@ int DrawTextCentreAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, i
     vsprintf(buf, text, ap);
 
     int width = GetTextWidthAa(tr, buf);
-    return DrawTextSimpleAa(tr, c, bmp, x - width/2, y, buf);
+    return DrawTextSimpleAa(tr, c, bmp, x - width/2, y, size, buf);
 }
 
 

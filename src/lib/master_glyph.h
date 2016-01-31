@@ -25,8 +25,8 @@ public:
     int m_height;
     unsigned char *m_pixelData; // A 2D array of pixels. Each pixel is 1 bit. Number of pixels is m_width * m_height.
     signed char m_kerning[255]; // An array containing the kerning offsets need when this glyph is followed by every other possible glyph.
-    float *m_gapsAtLeft;        // Look up table used to speed up kerning calculations. Freed once font creation is complete.
-    float *m_gapsAtRight;       // As above
+    int *m_gapsAtLeft;          // Look up table used to speed up kerning calculations. Freed once font creation is complete.
+    int *m_gapsAtRight;         // As above
 
 private:
     void PutPix(unsigned x, unsigned y);
@@ -35,7 +35,7 @@ private:
 
 public:
     void CreateFromGdiPixels(unsigned char *gdiPixels, int gdiPixelsWidth, int gdiPixelsHeight);
-    void FreeKerningTables();
+    void KerningCalculationComplete();
 
     bool GetPix(unsigned x, unsigned y);
 };
