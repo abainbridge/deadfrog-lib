@@ -3,6 +3,7 @@
 #include "lib/rgba_colour.h"
 #include "lib/common.h"
 
+#include <algorithm>
 #include <math.h>
 #include <memory.h>
 #include <stdlib.h>
@@ -853,6 +854,7 @@ void ScaleDownBlit(BitmapRGBA *dest, unsigned x, unsigned y, unsigned scale, Bit
 }
 
 
+
 void ScaleUpBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp)
 {
     for (unsigned sy = 0; sy < srcBmp->height; sy++)
@@ -880,4 +882,126 @@ void ScaleUpBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, Bi
 
     for (unsigned sx = 0; sx < srcBmp->width; sx++)
         VLine(destBmp, x + sx * scale, y, srcBmp->height * scale, Colour(0,0,208));
+}
+
+
+void BitmapDownsample(BitmapRGBA *src_bmp, BitmapRGBA *dst_bmp)
+{
+    static int *g_px1a = NULL;
+    static int  g_px1a_w = 0;
+    static int *g_px1ab = NULL;
+    static int  g_px1ab_w = 0;
+
+    int w1 = src_bmp->width;
+    int h1 = src_bmp->height;
+
+    int w2 = dst_bmp->width;
+    int h2 = dst_bmp->height;
+
+    // Both buffers must be in ARGB format, and a scanline should be w*4 bytes.
+
+    // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
+    // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
+
+    // arbitrary resize.
+    unsigned int *dsrc  = &src_bmp->pixels->c;
+    unsigned int *ddest = &dst_bmp->pixels->c;
+
+    // If too many input pixels map to one output pixel, our 32-bit accumulation values
+    // could overflow - so, if we have huge mappings like that, cut down the weights:
+    //    256 max color value
+    //   *256 weight_x
+    //   *256 weight_y
+    //   *256 (16*16) maximum # of input pixels (x,y) - unless we cut the weights down...
+    int weight_shift = 0;
+    float source_texels_per_out_pixel = ( (w1/(float)w2 + 1) * (h1/(float)h2 + 1) );
+    float weight_per_pixel = source_texels_per_out_pixel * 256 * 256;  //weight_x * weight_y
+    float accum_per_pixel = weight_per_pixel*256; //color value is 0-255
+    float weight_div = accum_per_pixel / 4294967000.0f;
+    if (weight_div > 1)
+        weight_shift = (int)ceilf( logf((float)weight_div)/logf(2.0f) );
+    weight_shift = std::min(15, weight_shift);  // this could go to 15 and still be ok.
+
+    float fh = 256*h1/(float)h2;
+    float fw = 256*w1/(float)w2;
+
+    // cache x1a, x1b for all the columns:
+    // ...and your OS better have garbage collection on process exit :)
+    if (g_px1ab_w < w2)
+    {
+        if (g_px1ab) delete [] g_px1ab;
+        g_px1ab = new int[w2*2 * 2];
+        g_px1ab_w = w2*2;
+    }
+
+    for (int x2=0; x2<w2; x2++)
+    {
+        // find the x-range of input pixels that will contribute:
+        int x1a = (int)((x2  )*fw); 
+        int x1b = (int)((x2+1)*fw); 
+        x1b = std::min(x1b, 256*w1 - 1);
+        g_px1ab[x2*2+0] = x1a;
+        g_px1ab[x2*2+1] = x1b;
+    }
+
+    // FOR EVERY OUTPUT PIXEL
+    for (int y2=0; y2<h2; y2++)
+    {   
+        // find the y-range of input pixels that will contribute:
+        int y1a = (int)((y2  )*fh); 
+        int y1b = (int)((y2+1)*fh); 
+        y1b = std::min(y1b, 256*h1 - 1);
+        int y1c = y1a >> 8;
+        int y1d = y1b >> 8;
+
+        for (int x2=0; x2<w2; x2++)
+        {
+            // find the x-range of input pixels that will contribute:
+            int x1a = g_px1ab[x2*2+0];    // (computed earlier)
+            int x1b = g_px1ab[x2*2+1];    // (computed earlier)
+            int x1c = x1a >> 8;
+            int x1d = x1b >> 8;
+
+            // ADD UP ALL INPUT PIXELS CONTRIBUTING TO THIS OUTPUT PIXEL:
+            unsigned int r=0, g=0, b=0, a=0;
+            for (int y=y1c; y<=y1d; y++)
+            {
+                unsigned int weight_y = 256;
+                if (y1c != y1d) 
+                {
+                    if (y==y1c)
+                        weight_y = 256 - (y1a & 0xFF);
+                    else if (y==y1d)
+                        weight_y = (y1b & 0xFF);
+                }
+
+                unsigned int *dsrc2 = &dsrc[y*w1 + x1c];
+                for (int x=x1c; x<=x1d; x++)
+                {
+                    unsigned int weight_x = 256;
+                    if (x1c != x1d) 
+                    {
+                        if (x==x1c)
+                            weight_x = 256 - (x1a & 0xFF);
+                        else if (x==x1d)
+                            weight_x = (x1b & 0xFF);
+                    }
+
+                    unsigned int c = *dsrc2++;//dsrc[y*w1 + x];
+                    unsigned int r_src = (c    ) & 0xFF;
+                    unsigned int g_src = (c>> 8) & 0xFF;
+                    unsigned int b_src = (c>>16) & 0xFF;
+                    unsigned int w = (weight_x * weight_y) >> weight_shift;
+                    r += r_src * w;
+                    g += g_src * w;
+                    b += b_src * w;
+                    a += w;
+                }
+            }
+
+            // write results
+            unsigned int c = ((r/a)) | ((g/a)<<8) | ((b/a)<<16);
+            *ddest++ = c;//ddest[y2*w2 + x2] = c;
+        }
+    }
 }
