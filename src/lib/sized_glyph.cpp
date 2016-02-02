@@ -16,7 +16,7 @@
 
 void SizedGlyph::PutPix(unsigned x, unsigned y, unsigned char val)
 {
-    unsigned char *line = m_pixelData + (y - m_minY) * m_width;
+    unsigned char *line = m_pixelData + y * m_width;
     line[x] = val;
 }
 
@@ -24,17 +24,15 @@ void SizedGlyph::PutPix(unsigned x, unsigned y, unsigned char val)
 SizedGlyph::SizedGlyph(MasterGlyph *mg, unsigned output_size)
 {
     double scale_factor = (double)output_size / (double)MASTER_GLYPH_RESOLUTION;
-    m_minY = floor(mg->m_minY * scale_factor);
-    int maxY = ceil((mg->m_minY + mg->m_height) * scale_factor);
-    m_height = maxY - m_minY + 1;
-    m_width = ceil(mg->m_width * scale_factor);
+    m_height = round(mg->m_height * scale_factor);
+    m_width = round(mg->m_width * scale_factor);
     m_pixelData = new unsigned char[m_width * m_height];
 
     int w1 = mg->m_width;
     int h1 = mg->m_height;
 
-    int w2 = int((double)w1 * scale_factor);
-    int h2 = int((double)h1 * scale_factor);
+    int w2 = m_width;
+    int h2 = m_height;
 
     float fh = 256*h1 / (float)h2;
     float fw = 256*w1 / (float)w2;
@@ -105,14 +103,15 @@ SizedGlyph::SizedGlyph(MasterGlyph *mg, unsigned output_size)
             }
 
             // write results
-            unsigned int c = r/a;
+            unsigned int c = r/(a >> 8);
+            c = std::min(c, (unsigned)255);
             PutPix(x2, y2, c);
             //*ddest++ = c;//ddest[y2*w2 + x2] = c;
         }
     }
 
     for (unsigned i = 0; i < 255; i++)
-        m_kerning[i] = output_size;
+        m_kerning[i] = round(mg->m_kerning[i] * scale_factor) + 1;
 }
 
 

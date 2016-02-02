@@ -18,8 +18,6 @@
 class MasterGlyph
 {
 public:
-                                // No need for m_minX because it would always be zero.
-    int m_minY;
     int m_width;                // Width of glyph in pixels
     int m_widthBytes;           // Width of glyph in bytes (differs from m_width/8 due to padding)
     int m_height;

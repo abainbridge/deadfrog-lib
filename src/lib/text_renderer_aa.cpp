@@ -17,23 +17,6 @@
 
 
 // ****************************************************************************
-// 
-// ****************************************************************************
-
-// class SizedRenderer
-// {
-// public:
-//     SizedGlyph *glyphs[256];
-//     int         avgCharWidth;
-//     int			maxCharWidth;
-//     int			charHeight;	// in pixels
-// 
-//     SizedRenderer(MasterGlyph *master);
-// };
-
-
-
-// ****************************************************************************
 // Functions
 // ****************************************************************************
 
@@ -57,15 +40,14 @@ static unsigned GetKerningDist(MasterGlyph *a, MasterGlyph *b, int avgCharWidth)
         return avgCharWidth + 1;
 
     // Calculate the vertical extent of overlap between the two glyphs.
-    int startY = max(a->m_minY, b->m_minY);
-    int endY = min(a->m_minY + a->m_height, b->m_minY + b->m_height);
+    int yOverlap = min(a->m_height, b->m_height);
 
     int maxI = avgCharWidth / 3;
     int minI = -avgCharWidth / 2;
-    for (int i = maxI; i > minI; i -= 10)
+    for (int i = maxI; i > minI; i -= 5)
     {
         float force = 0.0f;
-        for (int y = startY; y <= endY; y++)
+        for (int y = 0; y < yOverlap; y++)
         {   
             float aRight = a->m_gapsAtRight[y];
             float bLeft = b->m_gapsAtLeft[y];
@@ -73,9 +55,9 @@ static unsigned GetKerningDist(MasterGlyph *a, MasterGlyph *b, int avgCharWidth)
             force += 1.0 / (sep * sep);         // Model the repulsive force using the inverse square law (like coulomb repulsion)
         }
 
-        force /= (float)(endY - startY + 1);
-        force *= (avgCharWidth * avgCharWidth) / (30.0f * 30.0f);   // Make force independent of font size
-        if (force > 0.01f)
+        force /= (float)(yOverlap + 1);
+        force *= (avgCharWidth * avgCharWidth) / (3.0f * 3.0f);   // Make force independent of font size
+        if (force > 1.0f)
         {
             if (i < 0)
                 i /= 2.0;       // Hack alert - The algorithm has a tendency to over do the squeezing up of combinations like "To" and "L'". Assume that any large amount of squeezing up is over done and reduce by half.
@@ -242,52 +224,60 @@ static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned char g
 }
 
 
-DLL_API int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, int size, char const *text)
+DLL_API int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int x, int y, int size, char const *text)
 {
     if (!tr->size10)
-        tr->size10 = new SizedGlyphSet(tr->masterGlyphs, 10);
+        tr->size10 = new SizedGlyphSet(tr->masterGlyphs, size);
 
-    //     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
-//         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
-// 
-//     int currentX = startX;
-//     while (*text != '\0')
-//     {
-// //         if (x + tr->maxCharWidth > (int)bmp->width)
-// //             break;
-// 
-//         SizedGlyph * __restrict glyph = tr->glyphs[(unsigned char)*text]; 
-//         unsigned char * __restrict glyphPixel = glyph->m_pixelData;
-//         RGBAColour * __restrict destPixel = bmp->pixels + (glyph->m_minY + _y) * bmp->width + currentX;
-// 
-//         for (int y = 0; y < glyph->m_height; y++)
-//         {
-//             RGBAColour * __restrict thisRow = destPixel + y * bmp->width;
-// 
-//             int startX = 0;
-// 
-//             if (glyph->m_width & 1)
-//             {
-//                 startX = 1;
-//                 PixelBlend(thisRow[0], col, *glyphPixel);
-//                 glyphPixel++;
-//             }
-// 
-//             for (int x = startX; x < glyph->m_width; x += 2)
-//             {
-//                 PixelBlend(thisRow[x], col, *glyphPixel);
-//                 glyphPixel++;
-//                 PixelBlend(thisRow[x+1], col, *glyphPixel);
-//                 glyphPixel++;
-//             }
-//         }
-// 
-//         text++;
-// 
-//         currentX += glyph->m_kerning[*text];
-//     }
-// 
-//     return currentX - startX;
+    if (x < 0 || y < 0 || (y + size) > (int)bmp->height)
+        return DrawTextSimpleClippedAa(tr, col, bmp, x, y, size, text);
+
+    int startX = x;
+    int currentX = x;
+    while (*text != '\0')
+    {
+//         if (x + tr->maxCharWidth > (int)bmp->width)
+//             break;
+
+        SizedGlyph * __restrict glyph = tr->size10->m_sizedGlyphs[(unsigned char)*text]; 
+        if (!glyph)
+        {   
+            currentX += size;
+        }
+        else
+        {
+            unsigned char * __restrict glyphPixel = glyph->m_pixelData;
+            RGBAColour * __restrict destPixel = bmp->pixels + y * bmp->width + currentX;
+
+            for (int y = 0; y < glyph->m_height; y++)
+            {
+                RGBAColour * __restrict thisRow = destPixel + y * bmp->width;
+
+                int startX = 0;
+
+                if (glyph->m_width & 1)
+                {
+                    startX = 1;
+                    PixelBlend(thisRow[0], col, *glyphPixel);
+                    glyphPixel++;
+                }
+
+                for (int x = startX; x < glyph->m_width; x += 2)
+                {
+                    PixelBlend(thisRow[x], col, *glyphPixel);
+                    glyphPixel++;
+                    PixelBlend(thisRow[x + 1], col, *glyphPixel);
+                    glyphPixel++;
+                }
+            }
+
+            currentX += glyph->m_kerning[*(text + 1)];
+        }
+
+        text++;
+    }
+
+    return currentX - startX;
     return 0;
 }
 
