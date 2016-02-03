@@ -21,7 +21,7 @@ public:
 class SizedGlyphSet
 {
 public:
-    SizedGlyph *m_sizedGlyphs[256];
+    SizedGlyph *m_sizedGlyphs[256]; // Blank or missing glyphs will be represented by a NULL pointer
 
     SizedGlyphSet(MasterGlyph *masterGlyphSet[256], int size);
 };
