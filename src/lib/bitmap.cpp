@@ -887,11 +887,6 @@ void ScaleUpBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, Bi
 
 void BitmapDownsample(BitmapRGBA *src_bmp, BitmapRGBA *dst_bmp)
 {
-    static int *g_px1a = NULL;
-    static int  g_px1a_w = 0;
-    static int *g_px1ab = NULL;
-    static int  g_px1ab_w = 0;
-
     int w1 = src_bmp->width;
     int h1 = src_bmp->height;
 
@@ -925,25 +920,6 @@ void BitmapDownsample(BitmapRGBA *src_bmp, BitmapRGBA *dst_bmp)
     float fh = 256*h1/(float)h2;
     float fw = 256*w1/(float)w2;
 
-    // cache x1a, x1b for all the columns:
-    // ...and your OS better have garbage collection on process exit :)
-    if (g_px1ab_w < w2)
-    {
-        if (g_px1ab) delete [] g_px1ab;
-        g_px1ab = new int[w2*2 * 2];
-        g_px1ab_w = w2*2;
-    }
-
-    for (int x2=0; x2<w2; x2++)
-    {
-        // find the x-range of input pixels that will contribute:
-        int x1a = (int)((x2  )*fw); 
-        int x1b = (int)((x2+1)*fw); 
-        x1b = std::min(x1b, 256*w1 - 1);
-        g_px1ab[x2*2+0] = x1a;
-        g_px1ab[x2*2+1] = x1b;
-    }
-
     // FOR EVERY OUTPUT PIXEL
     for (int y2=0; y2<h2; y2++)
     {   
@@ -957,8 +933,10 @@ void BitmapDownsample(BitmapRGBA *src_bmp, BitmapRGBA *dst_bmp)
         for (int x2=0; x2<w2; x2++)
         {
             // find the x-range of input pixels that will contribute:
-            int x1a = g_px1ab[x2*2+0];    // (computed earlier)
-            int x1b = g_px1ab[x2*2+1];    // (computed earlier)
+            // find the x-range of input pixels that will contribute:
+            int x1a = (int)((x2)*fw);
+            int x1b = (int)((x2 + 1)*fw);
+            x1b = std::min(x1b, 256 * w1 - 1);
             int x1c = x1a >> 8;
             int x1d = x1b >> 8;
 
