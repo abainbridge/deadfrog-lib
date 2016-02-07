@@ -247,28 +247,17 @@ DLL_API int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp
         else
         {
             unsigned char * __restrict glyphPixel = glyph->m_pixelData;
-            RGBAColour * __restrict destPixel = bmp->pixels + y * bmp->width + currentX;
-
-            for (int y = 0; y < glyph->m_height; y++)
+            RGBAColour * __restrict thisRow = bmp->pixels + y * bmp->width + currentX;
+            RGBAColour * __restrict lastRow = thisRow + glyph->m_height * bmp->width;
+            while (thisRow < lastRow)
             {
-                RGBAColour * __restrict thisRow = destPixel + y * bmp->width;
-
-                int startX = 0;
-
-                if (glyph->m_width & 1)
-                {
-                    startX = 1;
-                    PixelBlend(thisRow[0], col, *glyphPixel);
-                    glyphPixel++;
-                }
-
-                for (int x = startX; x < glyph->m_width; x += 2)
+                for (int x = 0; x < glyph->m_width; x++)
                 {
                     PixelBlend(thisRow[x], col, *glyphPixel);
                     glyphPixel++;
-                    PixelBlend(thisRow[x + 1], col, *glyphPixel);
-                    glyphPixel++;
                 }
+
+                thisRow += bmp->width;
             }
 
             currentX += glyph->m_kerning[*(text + 1)];
