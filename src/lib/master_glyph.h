@@ -37,3 +37,5 @@ public:
 
     bool GetPix(unsigned x, unsigned y);
 };
+
+// TODO. Store pixel data run-length encoded.

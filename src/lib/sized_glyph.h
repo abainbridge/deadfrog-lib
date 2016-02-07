@@ -25,3 +25,7 @@ public:
 
     SizedGlyphSet(MasterGlyph *masterGlyphSet[256], int size);
 };
+
+// TODO: Generate the glyphs on demand, instead of in SizedGlyphSet's constructor. 
+//       This will require that blank or missing glyphs are no longer represented
+//       by a NULL pointer.
