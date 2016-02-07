@@ -23,8 +23,8 @@ void SizedGlyph::PutPix(unsigned x, unsigned y, unsigned char val)
 
 SizedGlyph::SizedGlyph(MasterGlyph *mg, unsigned output_size)
 {
-    // The downsampling code below if mostly cut-n-paste from code written by
-    // Ryan Geiss (http://www.geisswerks.com/ryan/FAQS/resize.html)
+    // The downsampling code below is based on code written by Ryan Geiss. 
+    // (http://www.geisswerks.com/ryan/FAQS/resize.html)
 
     double scale_factor = (double)output_size / (double)MASTER_GLYPH_RESOLUTION;
     m_height = round(mg->m_height * scale_factor);
