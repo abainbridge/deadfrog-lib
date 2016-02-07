@@ -13,6 +13,9 @@
 #include "sized_glyph.h"
 
 
+const int MAX_FONT_SIZE = 40;
+
+
 struct BitmapRGBA;
 class MasterGlyph;
 
@@ -20,7 +23,7 @@ class MasterGlyph;
 typedef struct
 {
 	MasterGlyph *masterGlyphs[256];   // Pointers may be NULL if glyph is blank.
-    SizedGlyphSet *size10;
+    SizedGlyphSet *sizedGlyphSets[MAX_FONT_SIZE + 1];
 	bool	    fixedWidth;
 } TextRendererAa;
 
