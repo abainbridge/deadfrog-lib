@@ -32,10 +32,16 @@ private:
     void CalcGapAtRight(int i);
 
 public:
-    void CreateFromGdiPixels(unsigned char *gdiPixels, int gdiPixelsWidth, int gdiPixelsHeight);
+    void CreateFromGdiPixels(unsigned char *gdiPixels, int gdiPixelsWidth, int gdiPixelsHeight, bool fixedWidth);
     void KerningCalculationComplete();
 
     bool GetPix(unsigned x, unsigned y);
 };
 
+// TODO. Store an offset that describes the size of the gap to leave at the left 
+// of the glyph. This is only useful for fixed-pitch fonts. It will be used to
+// when the glyph is narrower than the pitch in order to centralize the glyph
+// in its area. At the moment we solve the problem by encoding the gap at the
+// left as part of the glyph, which is wasteful of memory and cycles when 
+// rendering.
 // TODO. Store pixel data run-length encoded.

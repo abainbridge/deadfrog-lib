@@ -36,7 +36,7 @@ DLL_API int DrawTextLeftAa   (TextRendererAa *, RGBAColour c, BitmapRGBA *, int 
 DLL_API int DrawTextRightAa	 (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text, ...);	// Like above but with right justify
 DLL_API int DrawTextCentreAa (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text, ...);	// Like above but with centre justify
 
-DLL_API int	GetTextWidthAa   (TextRendererAa *, char const *text, int len=999999);
+DLL_API int	GetTextWidthAa   (TextRendererAa *, char const *text, int size, int len=999999);
 
 
 #endif

@@ -23,7 +23,7 @@ static bool GetPixelFromGdiBuffer(unsigned char *buf, int byteW, int h, int x, i
 }
 
 
-void MasterGlyph::CreateFromGdiPixels(unsigned char *gdiPixels, int gdiPixelsWidth, int gdiPixelsHeight)
+void MasterGlyph::CreateFromGdiPixels(unsigned char *gdiPixels, int gdiPixelsWidth, int gdiPixelsHeight, bool fixedWidth)
 {
     unsigned gdiByteWidth = (int)ceil(gdiPixelsWidth / 32.0) * 4;
 
@@ -45,6 +45,9 @@ void MasterGlyph::CreateFromGdiPixels(unsigned char *gdiPixels, int gdiPixelsWid
             }
         }
     }    
+
+    if (fixedWidth)
+        minX = 0;
 
     if (maxX == 0 || maxY < 0)
     {

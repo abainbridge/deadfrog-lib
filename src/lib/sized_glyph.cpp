@@ -102,9 +102,18 @@ SizedGlyph::SizedGlyph(MasterGlyph *mg, unsigned output_size)
             int ySize = (256 - y1a) + (256 * (y1d - y1c - 1)) + (y1b);
             int accumulatedArea = xSize * ySize;
 
-            // write results
-            unsigned int c = accumulatedBrightness / (accumulatedArea >> 8);
+            // Calculate brightness for the target pixel from the accumulated result.
+            double linearBrightness = accumulatedBrightness / (double)(accumulatedArea >> 8);
+            
+            // Gamma correct it.
+            const double gamma = 1.0 / 2.2;
+            const double gammaScale = 255.0 / pow(255.0, gamma);
+            unsigned c = pow(linearBrightness, gamma) * gammaScale;
+            
+            // Clamp it to range.
             c = std::min(c, (unsigned)255);
+
+            // Write it.
             PutPix(x2, y2, c);
         }
     }

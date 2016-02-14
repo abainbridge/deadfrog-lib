@@ -91,7 +91,7 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
     SelectObject(memDC, fontHandle); 
     TEXTMETRIC textMetrics;
     GetTextMetrics(memDC, &textMetrics);
-    tr->fixedWidth = (textMetrics.tmAveCharWidth == textMetrics.tmMaxCharWidth);
+    tr->fixedWidth = !(textMetrics.tmPitchAndFamily & TMPF_FIXED_PITCH);
 
     // Ask GDI about the name of the font
     char nameOfFontWeGot[256];
@@ -128,7 +128,7 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
 
         // Create our MasterGlyphs from the GDI image
         tr->masterGlyphs[i] = new MasterGlyph;
-        tr->masterGlyphs[i]->CreateFromGdiPixels(gdiPixels, textMetrics.tmMaxCharWidth, textMetrics.tmHeight);
+        tr->masterGlyphs[i]->CreateFromGdiPixels(gdiPixels, textMetrics.tmMaxCharWidth, textMetrics.tmHeight, tr->fixedWidth);
 	}
 
 	// Release the GDI resources
@@ -138,19 +138,28 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
 	DeleteObject(memBmp);
 	DeleteObject(prevBmp);
 
-    // Create look-up tables to accelerate kerning calculations
-    for (int i = textMetrics.tmFirstChar; i < textMetrics.tmLastChar; i++)
+    if (tr->fixedWidth)
     {
-        for (int j = textMetrics.tmFirstChar; j < textMetrics.tmLastChar; j++)
-        {
-            int dist = GetKerningDist(tr->masterGlyphs[i], tr->masterGlyphs[j], textMetrics.tmAveCharWidth);
-            tr->masterGlyphs[i]->m_kerning[j] = dist;
-        }
+        for (int i = textMetrics.tmFirstChar; i < textMetrics.tmLastChar; i++)
+            for (int j = textMetrics.tmFirstChar; j < textMetrics.tmLastChar; j++)
+                tr->masterGlyphs[i]->m_kerning[j] = textMetrics.tmAveCharWidth;
     }
+    else
+    {
+        // Create look-up tables to accelerate kerning calculations
+        for (int i = textMetrics.tmFirstChar; i < textMetrics.tmLastChar; i++)
+        {
+            for (int j = textMetrics.tmFirstChar; j < textMetrics.tmLastChar; j++)
+            {
+                int dist = GetKerningDist(tr->masterGlyphs[i], tr->masterGlyphs[j], textMetrics.tmAveCharWidth);
+                tr->masterGlyphs[i]->m_kerning[j] = dist;
+            }
+        }
 
-    // Determine the kerning distances for all possible pairs of glyphs
-    for (int i = textMetrics.tmFirstChar; i < textMetrics.tmLastChar; i++)
-        tr->masterGlyphs[i]->KerningCalculationComplete();
+        // Determine the kerning distances for all possible pairs of glyphs
+        for (int i = textMetrics.tmFirstChar; i < textMetrics.tmLastChar; i++)
+            tr->masterGlyphs[i]->KerningCalculationComplete();
+    }
 
     return tr;
 }
@@ -180,42 +189,59 @@ static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned char g
 }
 
 
-static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, int size, char const *text)
+static void DrawClippedGlyph(SizedGlyph *glyph, BitmapRGBA *bmp, int x0, int y0, RGBAColour col)
 {
-//     int x = _x;
-//     RGBAColour *startRow = bmp->pixels + y * bmp->width;
-//     int width = bmp->width;
-// 
-//     if (y + tr->charHeight < 0 || y > (int)bmp->height)
-//         return 0;
-// 
-//     while (*text != '\0')
-//     {
-//         if (x + tr->maxCharWidth > (int)bmp->width)
-//             break;
-// 
-//         SizedGlyph *glyph = tr->glyphs[(unsigned char)*text]; 
-//         unsigned char *glyphPixel = glyph->m_pixelData;
-// 
-//         for (int y = 0; x < glyph->m_height; y++)
-//         {
-//             RGBAColour *thisRow = startRow + y * glyph->m_width;
-//             
-//             for (int x = 0; x < glyph->m_width; x++)
-//             {
-//                 thisRow[x].r = *glyphPixel;
-//                 thisRow[x].g = *glyphPixel;
-//                 thisRow[x].b = *glyphPixel;
-//                 glyphPixel++;
-//             }
-//         }
-// 
-//         x += glyph->m_width + 25;
-//         text++;
-//     }
-// 
-//     return _x - x;
-    return 0;
+    for (int gy = 0; gy < glyph->m_height; gy++)
+    {
+        int y = y0 + gy;
+        if (y < 0 || y >= (int)bmp->height)
+            continue;
+
+        unsigned char *glyphRow = glyph->m_pixelData + gy * glyph->m_width;
+        RGBAColour *bmpRow = bmp->pixels + y * bmp->width;
+
+        for (int gx = 0; gx < glyph->m_width; gx++)
+        {
+            int x = x0 + gx;
+            if (x < 0 || x >= (int)bmp->width)
+                continue;
+
+            PixelBlend(bmpRow[x], col, glyphRow[gx]);
+        }
+    }
+}
+
+
+static SizedGlyphSet *GetSizedGlyphSet(TextRendererAa *tr, int size)
+{
+    if (!tr->sizedGlyphSets[size])
+        tr->sizedGlyphSets[size] = new SizedGlyphSet(tr->masterGlyphs, size);
+    SizedGlyphSet *sizedGlyphSet = tr->sizedGlyphSets[size];
+    return sizedGlyphSet;
+}
+
+
+static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int x, int y, int size, char const *text)
+{
+    if (x >= (int)bmp->width || y + size < 0 || y >= (int)bmp->height)
+        return 0;
+
+    SizedGlyphSet *sizedGlyphSet = GetSizedGlyphSet(tr, size);
+    int startX = x;
+
+    while (*text != '\0')
+    {
+        SizedGlyph *glyph = sizedGlyphSet->m_sizedGlyphs[(unsigned char)*text];
+        if (!glyph)
+            x += size;
+        else
+            DrawClippedGlyph(glyph, bmp, x, y, col);
+
+        x += glyph->m_kerning[*(text + 1)];
+        text++;
+    }
+
+    return startX - x;
 }
 
 
@@ -224,28 +250,28 @@ DLL_API int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp
     if (size < 1 || size > MAX_FONT_SIZE)
         return -1;
 
-    if (!tr->sizedGlyphSets[size])
-        tr->sizedGlyphSets[size] = new SizedGlyphSet(tr->masterGlyphs, size);
-
-    SizedGlyphSet *sizedGlyphSet = tr->sizedGlyphSets[size];
-
     if (x < 0 || y < 0 || (y + size) > (int)bmp->height)
         return DrawTextSimpleClippedAa(tr, col, bmp, x, y, size, text);
+
+    SizedGlyphSet *sizedGlyphSet = GetSizedGlyphSet(tr, size);
 
     int startX = x;
     int currentX = x;
     while (*text != '\0')
     {
-//         if (x + tr->maxCharWidth > (int)bmp->width)
-//             break;
+        SizedGlyph * __restrict glyph = sizedGlyphSet->m_sizedGlyphs[(unsigned char)*text];
 
-        SizedGlyph * __restrict glyph = sizedGlyphSet->m_sizedGlyphs[(unsigned char)*text]; 
         if (!glyph)
         {   
             currentX += size;
         }
         else
         {
+            if (x + glyph->m_width >= (int)bmp->width) {
+                DrawClippedGlyph(glyph, bmp, x, y, col);
+                break;
+            }
+
             unsigned char * __restrict glyphPixel = glyph->m_pixelData;
             RGBAColour * __restrict thisRow = bmp->pixels + y * bmp->width + currentX;
             RGBAColour * __restrict lastRow = thisRow + glyph->m_height * bmp->width;
@@ -287,7 +313,7 @@ int DrawTextRightAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, in
     va_start (ap, text);
     vsprintf(buf, text, ap);
 
-    int width = GetTextWidthAa(tr, buf);
+    int width = GetTextWidthAa(tr, buf, size);
     return DrawTextSimpleAa(tr, c, bmp, x - width, y, size, buf);
 }
 
@@ -299,31 +325,33 @@ int DrawTextCentreAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, i
     va_start (ap, text);
     vsprintf(buf, text, ap);
 
-    int width = GetTextWidthAa(tr, buf);
+    int width = GetTextWidthAa(tr, buf, size);
     return DrawTextSimpleAa(tr, c, bmp, x - width/2, y, size, buf);
 }
 
 
-int GetTextWidthAa(TextRendererAa *tr, char const *text, int len)
+int GetTextWidthAa(TextRendererAa *tr, char const *text, int size, int len)
 {
-    return 0;
-// 	len = min((int)strlen(text), len);
-// 	if (tr->fixedWidth)
-// 	{
-// 		return len * tr->maxCharWidth;
-// 	}
-// 	else
-// 	{
-//         int width = 0;
-//         for (int i = 0; i < len; i++)
-//         {
-//             SizedGlyph *glyph = tr->glyphs[(int)text[i]];
-//             if (i + 1 < len)
-//                 width += glyph->m_kerning[(int)text[i+1]];
-//             else
-//                 width += glyph->m_width;
-//         }
-// 
-// 		return width;
-// 	}
+    SizedGlyphSet *sizedGlyphSet = GetSizedGlyphSet(tr, size);
+
+    len = min((int)strlen(text), len);
+	if (tr->fixedWidth)
+	{
+        SizedGlyph *glyphA = sizedGlyphSet->m_sizedGlyphs['a'];
+        return len * glyphA->m_kerning['a'];
+	}
+	else
+	{
+        int width = 0;
+        for (int i = 0; i < len; i++)
+        {
+            SizedGlyph *glyph = sizedGlyphSet->m_sizedGlyphs[(unsigned char)text[i]];
+            if (i + 1 < len)
+                width += glyph->m_kerning[(int)text[i+1]];
+            else
+                width += glyph->m_width;
+        }
+
+		return width;
+	}
 }
