@@ -31,6 +31,7 @@ typedef struct
 // Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
 DLL_API TextRendererAa *CreateTextRendererAa(char const *font_name, int weight);
 
+// Size is height in pixels. By height, I mean the pitch between adjacent rows of text.
 DLL_API int DrawTextSimpleAa (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text);      // Returns text length in pixels
 DLL_API int DrawTextLeftAa   (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text, ...);	// Like simple but with variable args
 DLL_API int DrawTextRightAa	 (TextRendererAa *, RGBAColour c, BitmapRGBA *, int x, int y, int size, char const *text, ...);	// Like above but with right justify

@@ -27,21 +27,48 @@ SizedGlyph::SizedGlyph(MasterGlyph *mg, unsigned output_size)
     // (http://www.geisswerks.com/ryan/FAQS/resize.html)
 
     double scale_factor = (double)output_size / (double)MASTER_GLYPH_RESOLUTION;
-    m_height = round(mg->m_height * scale_factor);
+
+    // There's some dodgy looking maths below. The problem is that we can't just
+    // figure out the output size of this glyph from the MasterGlyph size multiplied
+    // by the scale factor. If we do that, we introduce a different amount of 
+    // rounding error for each glyph. For example, say the MasterGlyph for an 'x'
+    // is 50 pixels high and a 'g' is 65 pixels high, output_size is 10 and
+    // MASTER_GLYPH_RESOLUTION is 128:
+    //   scale_factor = 0.0781
+    //   m_height for 'x' is ceil(50 * 0.0781) = ceil(3.906) = 4
+    //   m_height for 'g' is ceil(65 * 0.0781) = ceil(5.078) = 6
+    //   The amount we've scaled 'x' by is 4/50 = 0.0800
+    //   The amount we've scaled 'g' by is 6/65 = 0.0923
+    // That's a 15% difference! If we did it this way, it would be easy to see
+    // the different amounts of scaling in adjacent glyphs - mainly because we
+    // expect all the glyphs to sit evenly on a line, the different scales
+    // makes them different heights and therefore they don't all sit on that
+    // line.
+    //
+    // So, instead, we pretend that all MasterGlyphs are MASTER_GLYPH_RESOLUTION
+    // in height. And therefore in the bitmap scaling code below, we pretend
+    // that the height of the output glyph is output_size. We have to be careful
+    // not to get out-of-bounds errors when reading from the MasterGlyph, but 
+    // that isn't hard to deal with.
+    //
+    // We don't currently worry about the same problem for the horizontal
+    // dimension, because the eye is much less sensitive to errors there.
+
+    m_height = ceil(mg->m_height * scale_factor);
     m_width = round(mg->m_width * scale_factor);
     m_pixelData = new unsigned char[m_width * m_height];
 
     int w1 = mg->m_width;
-    int h1 = mg->m_height;
+    int h1 = MASTER_GLYPH_RESOLUTION;   // Was mg->m_height. See note above.
 
     int w2 = m_width;
-    int h2 = m_height;
+    int h2 = output_size;               // Was m_height. See note above.
 
     float fh = 256*h1 / (float)h2;
     float fw = 256*w1 / (float)w2;
 
     // FOR EVERY OUTPUT PIXEL
-    for (int y2 = 0; y2 < h2; y2++)
+    for (int y2 = 0; y2 < m_height; y2++)
     {   
         // find the y-range of input pixels that will contribute:
         int y1a = (int)((y2  )*fh); 
@@ -75,6 +102,9 @@ SizedGlyph::SizedGlyph(MasterGlyph *mg, unsigned output_size)
                     else if (y == y1d)
                         weight_y = y1b;
                 }
+                
+                if (y >= mg->m_height)
+                    continue;
 
                 unsigned char *line = mg->m_pixelData + y * mg->m_widthBytes;
                 unsigned accumulatedBrightnessX = 0;
