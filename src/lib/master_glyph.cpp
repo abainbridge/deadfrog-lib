@@ -61,7 +61,7 @@ void MasterGlyph::CreateFromGdiPixels(unsigned char *gdiPixels, int gdiPixelsWid
     {
         m_width = maxX - minX + 1;
         m_widthBytes = (int)ceil(m_width / 8.0);
-        m_height = maxY;
+        m_height = maxY + 1;
         m_pixelData = new unsigned char [m_widthBytes * m_height];
         memset(m_pixelData, 0, m_widthBytes * m_height);
 
