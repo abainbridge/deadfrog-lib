@@ -20,7 +20,7 @@ void DebugOut(char *_fmt, ...)
 }
 
 
-void ReleaseAssert(bool condition, char const *_fmt, ...)
+void ReleaseAssert(int condition, char const *_fmt, ...)
 {
 	if (!condition)
 	{
@@ -38,7 +38,7 @@ void ReleaseAssert(bool condition, char const *_fmt, ...)
 }
 
 
-void ReleaseWarn(bool condition, char const *_fmt, ...)
+void ReleaseWarn(int condition, char const *_fmt, ...)
 {
 	if (!condition)
 	{

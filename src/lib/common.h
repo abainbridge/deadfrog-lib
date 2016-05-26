@@ -12,8 +12,8 @@
 
 void DebugOut(char *fmt, ...);
 
-void ReleaseAssert(bool condition, char const *fmt, ...);
-void ReleaseWarn(bool condition, char const *fmt, ...);
+void ReleaseAssert(int condition, char const *fmt, ...);
+void ReleaseWarn(int condition, char const *fmt, ...);
 
 
 #if (_MSC_VER < 1800)
@@ -24,7 +24,7 @@ int snprintf(char *s, size_t n, char const *fmt, ...);
 inline int IntMin(int a, int b) { return (a < b) ? a : b; };
 inline int IntMax(int a, int b) { return (a > b) ? a : b; };
 inline int RoundToInt(double r) {
-    int tmp = static_cast<int> (r);
+    int tmp = (int)(r);
     tmp += (r-tmp>=.5) - (r-tmp<=-.5);
     return tmp;
 }
