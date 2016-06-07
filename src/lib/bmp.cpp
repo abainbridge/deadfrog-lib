@@ -271,6 +271,6 @@ bool SaveBmp(BitmapRGBA *bmp, char const *filename)
     }
     fclose(f);
 
-    delete img;
+    delete [] img;
     return true;
 }

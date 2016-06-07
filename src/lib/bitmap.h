@@ -62,6 +62,8 @@ DLL_API void        QuickBlit       (BitmapRGBA *destBmp, unsigned x, unsigned y
 DLL_API void        ScaleDownBlit   (BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp);
 DLL_API void        ScaleUpBlit     (BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp);
 
+DLL_API void 		BitmapDownsample(BitmapRGBA *src_bmp, BitmapRGBA *dst_bmp);
+
 
 inline void PutPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour c)
 {

@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "deadfrog-lib", "deadfrog-lib.vcxproj", "{06366000-CEA4-4C81-A29F-49E2DF277A93}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "benchmark", "benchmark\benchmark.vcxproj", "{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{06366000-CEA4-4C81-A29F-49E2DF277A93}.Debug|Win32.ActiveCfg = Debug|Win32
+		{06366000-CEA4-4C81-A29F-49E2DF277A93}.Debug|Win32.Build.0 = Debug|Win32
+		{06366000-CEA4-4C81-A29F-49E2DF277A93}.Release|Win32.ActiveCfg = Release|Win32
+		{06366000-CEA4-4C81-A29F-49E2DF277A93}.Release|Win32.Build.0 = Release|Win32
+		{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}.Debug|Win32.Build.0 = Debug|Win32
+		{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}.Release|Win32.ActiveCfg = Release|Win32
+		{7A3A88AF-FB20-45B8-9393-FAB7F9AC7CF8}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

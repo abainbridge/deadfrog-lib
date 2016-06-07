@@ -200,6 +200,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\lib\master_glyph.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\master_glyph.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\lib\message_dialog.cpp"
 			>
 		</File>
@@ -221,6 +229,14 @@
 		</File>
 		<File
 			RelativePath="..\..\src\lib\rgba_colour.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\sized_glyph.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\lib\sized_glyph.h"
 			>
 		</File>
 		<File
