@@ -27,7 +27,7 @@
 #include "triangle.h"
 
 // Deadfrog lib headers
-#include "lib/bitmap.h"
+#include "df_bitmap.h"
 
 // Standard headers
 #include <memory.h>

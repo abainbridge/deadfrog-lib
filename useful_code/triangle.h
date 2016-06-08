@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "lib/bitmap.h"
+#include "df_bitmap.h"
 
 
 void DrawTriangle(BitmapRGBA *bmp,

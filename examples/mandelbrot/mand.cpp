@@ -1,7 +1,7 @@
-#include "lib/hi_res_time.h"
-#include "lib/input.h"
-#include "lib/bitmap.h"
-#include "lib/window_manager.h"
+#include "df_hi_res_time.h"
+#include "df_input.h"
+#include "df_bitmap.h"
+#include "df_window_manager.h"
 #include <windows.h>
 
 
