@@ -35,4 +35,7 @@ DLL_API int DrawTextCentre		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, 
 DLL_API int	GetTextWidth		(TextRenderer *, char const *text, int len=999999);
 
 
+extern TextRenderer *g_defaultTextRenderer;
+
+
 #endif
