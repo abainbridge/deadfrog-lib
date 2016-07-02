@@ -10,6 +10,12 @@
 #endif
 
 
+#if _MSC_VER
+#define NOINLINE __declspec(noinline)
+#else
+#define NOINLINE __attribute__((noinline))
+#endif
+
 void DebugOut(char *fmt, ...);
 
 void ReleaseAssert(int condition, char const *fmt, ...);
