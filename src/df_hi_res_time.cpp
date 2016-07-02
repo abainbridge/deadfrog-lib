@@ -31,7 +31,7 @@ inline double GetLowLevelTime()
 }
 
 
-double GetHighResTime()
+__declspec(noinline) double GetHighResTime()
 {
 	double timeNow = GetLowLevelTime();
     timeNow -= g_timeShift;
