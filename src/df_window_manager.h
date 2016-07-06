@@ -3,8 +3,7 @@
 // captured. It also creates a bitmap the same size as the window to use as
 // the back buffer of a double buffer system.
 
-#ifndef INCLUDED_WINDOW_MANAGER_H
-#define INCLUDED_WINDOW_MANAGER_H
+#pragma once
 
 
 #include "df_bitmap.h"
@@ -21,6 +20,7 @@ typedef struct
     BitmapRGBA          *bmp;
     bool                windowClosed;
     unsigned int	    fps;
+    double              advanceTime;
 } WindowData;
 
 
@@ -45,6 +45,3 @@ DLL_API void UpdateWin();
 
 DLL_API void ShowMouse();
 DLL_API void HideMouse();
-
-
-#endif

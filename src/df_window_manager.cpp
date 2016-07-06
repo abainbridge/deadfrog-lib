@@ -18,6 +18,7 @@ struct WindowDataPrivate
     HINSTANCE			m_hInstance;
     unsigned int	    m_framesThisSecond;
     double			    m_endOfSecond;
+    double              m_lastUpdateTime;
 };
 
 
@@ -111,7 +112,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
         return false;
     WindowData *wd = g_window = new WindowData;
 	memset(wd, 0, sizeof(WindowData));
-    
+
     wd->_private = new WindowDataPrivate;
     memset(wd->_private, 0, sizeof(WindowDataPrivate));
 
@@ -167,17 +168,19 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 		devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
 		ReleaseAssert(ChangeDisplaySettings(&devmode, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL,
             "Couldn't change screen resolution to %i x %i", width, height);
-        
+
 		wd->_private->m_borderWidth = 1;
 		wd->_private->m_titleHeight = 0;
 	}
 
 	// Create main window
-	wd->_private->m_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName, 
+	wd->_private->m_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName,
 		windowStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height,
 		NULL, NULL, 0/*g_hInstance*/, NULL);
 
-    wd->_private->m_endOfSecond = GetHighResTime() + 1.0;
+    double now = GetHighResTime();
+    wd->_private->m_lastUpdateTime = now;
+    wd->_private->m_endOfSecond = now + 1.0;
 
     CreateInputManager();
 	return true;
@@ -234,6 +237,15 @@ void UpdateWin()
     {
         g_window->_private->m_endOfSecond = currentTime + 1.0;
     }
+
+
+    // *** Adance time ***
+
+    g_window->advanceTime = currentTime - g_window->_private->m_lastUpdateTime;
+    g_window->_private->m_lastUpdateTime = currentTime;
+
+
+    // *** Swap buffers ***
 
     BlitBitmapToWindow(g_window, g_window->bmp, 0, 0);
 }
