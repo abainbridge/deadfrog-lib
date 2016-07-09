@@ -10,7 +10,8 @@ It is a little like SDL, but smaller and with useful features like line drawing 
 * Window creation.
 * 32-bit RGBA bitmap creation.
 * Fast software based drawing routines (pixels, lines, polygons, text, blit, masked-blit etc).
-* Some alpha blending support.
+* Alpha blending support.
+* Anti-aliased text and polygon drawing.
 * Mouse and keyboard input.
 * Load and save BMP files.
 
@@ -18,7 +19,7 @@ It is a little like SDL, but smaller and with useful features like line drawing 
 
 * Simple easy to use API.
 * Predictable performance that scales linearly with CPU speed, unlike hardware accelerated drawing whose speed can vary by orders of magnitude due depending on graphics driver version.
-* It's tiny. Less than 3000 lines of code. The DLL is about 8K bytes when dynamically linked against the Visual Studio runtime libraries.
+* It's tiny. Less than 5000 lines of code. The DLL is about 8K bytes when dynamically linked against the Visual Studio runtime libraries.
 * Written in C++ with a C interface (to make it easy to use from other languages).
 * Python bindings provided (not recently updated).
 * Permissive BSD licence.
