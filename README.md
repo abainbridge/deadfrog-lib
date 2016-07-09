@@ -34,9 +34,9 @@ The library does not make use of any hardware acceleration on a graphics acceler
 
 To keep the code simple, Deadfrog Lib makes the following assumptions:
 
-Everyone has enough RAM to hold a 32-bit frame buffer.
-An application can only have one window.
-The display is always double buffered. All rendering occurs to a bitmap in main memory. This can then be blitted to the screen/window very quickly.
+* Everyone has enough RAM to hold a 32-bit frame buffer.
+* An application can only have one window.
+* The display is always double buffered. All rendering occurs to a bitmap in main memory. This can then be blitted to the screen/window very quickly.
 
 ## Performance
 
