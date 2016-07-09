@@ -75,8 +75,9 @@ void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
     RGBAColour * __restrict row = GetLine(bmp, y) + x;
     if (c.a == 255)
     {
-        for (unsigned i = 0; i < len; i++)
-            row[i] = c;
+//         for (unsigned i = 0; i < len; i++)
+//             row[i] = c;
+        __stosd((unsigned long*)row, c.c, len);
     }
     else
     {
@@ -572,8 +573,9 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
     {
         for (int a = y1; a <= y2; a++)
         {
-            for (int b = x1; b <= x2; b++)
-                line[b] = c;
+//             for (int b = x1; b <= x2; b++)
+//                 line[b].c = c_as_uint;
+            __stosd((unsigned long*)line, c.c, w);
             line += bmpWidth;
         }
     }
