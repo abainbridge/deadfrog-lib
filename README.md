@@ -9,7 +9,7 @@ It is a little like SDL, but smaller and with useful features like line drawing 
 
 * Window creation.
 * 32-bit RGBA bitmap creation.
-* Fast software based drawing routines (pixels, lines, polygons, text, blit, masked-blit etc).
+* Fast software based drawing routines (pixels, lines, ellipses, polygons, text, blit, masked-blit etc).
 * Alpha blending support.
 * Anti-aliased text and polygon drawing.
 * Mouse and keyboard input.
