@@ -93,7 +93,7 @@ int main()
         SleepMillisec(10);
     }
 
-  return 0;
+    return 0;
 }
 ~~~~
 
