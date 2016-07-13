@@ -29,6 +29,7 @@ struct InputManagerPrivate
     int			m_mouseOldZ;
 
     signed char	m_keyNewDowns[KEY_MAX];
+    signed char	m_keyNewUps[KEY_MAX];
     char		m_newKeysTyped[MAX_KEYS_TYPED_PER_FRAME];
     int			m_newNumKeysTyped;
 };
@@ -61,8 +62,9 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 		case WM_NCACTIVATE:
 			g_inputManager.windowHasFocus = true;
 			// Clear keyboard state when we regain focus
-			memset(g_inputManager.priv->m_keyNewDowns, 0, KEY_MAX);
-			memset(g_inputManager.keys, 0, KEY_MAX);
+            memset(g_inputManager.priv->m_keyNewDowns, 0, KEY_MAX);
+            memset(g_inputManager.priv->m_keyNewUps, 0, KEY_MAX);
+            memset(g_inputManager.keys, 0, KEY_MAX);
 			return -1;
 		case WM_KILLFOCUS:
 			g_inputManager.windowHasFocus = false;
@@ -163,7 +165,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
                 break;
 
             g_inputManager.keys[wParam] = 0;
-			break;
+            g_inputManager.priv->m_keyNewUps[wParam] = 1;
+            break;
 
 		case WM_SYSKEYDOWN:
 		{
@@ -182,7 +185,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 			// normal KEYUP event for the release of the ALT. Very strange.
 			ReleaseAssert(wParam < KEY_MAX,
 				"Keypress value out of range (WM_KEYUP: wParam = %d)", wParam);
-			g_inputManager.keys[wParam] = 0;
+            g_inputManager.priv->m_keyNewUps[wParam] = 1;
+            g_inputManager.keys[wParam] = 0;
 			break;
 		}
 
@@ -227,7 +231,9 @@ bool InputManagerAdvance()
     } 
 
     memcpy(g_inputManager.keyDowns, g_inputManager.priv->m_keyNewDowns, KEY_MAX);
-	memset(g_inputManager.priv->m_keyNewDowns, 0, KEY_MAX);
+    memset(g_inputManager.priv->m_keyNewDowns, 0, KEY_MAX);
+    memcpy(g_inputManager.keyUps, g_inputManager.priv->m_keyNewUps, KEY_MAX);
+    memset(g_inputManager.priv->m_keyNewUps, 0, KEY_MAX);
 
 	g_inputManager.numKeysTyped = g_inputManager.priv->m_newNumKeysTyped;
 	memcpy(g_inputManager.keysTyped, g_inputManager.priv->m_newKeysTyped, g_inputManager.priv->m_newNumKeysTyped);
@@ -389,4 +395,20 @@ int GetKeyId(char const *name)
 		return atoi(name + 7);
 
 	return -1;
+}
+
+
+bool UntypeKey(char key)
+{
+    for (int i = 0; i < g_inputManager.numKeysTyped; ++i)
+    {
+        if (g_inputManager.keysTyped[i] == key)
+        {
+            g_inputManager.keysTyped[i] = g_inputManager.keysTyped[g_inputManager.numKeysTyped - 1];
+            g_inputManager.numKeysTyped--;
+            return true;
+        }
+    }
+
+    return false;
 }

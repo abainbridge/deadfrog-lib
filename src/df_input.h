@@ -58,6 +58,7 @@ typedef struct
 
     signed char keys[KEY_MAX];		// Is the key currently pressed
     signed char keyDowns[KEY_MAX];	// Was the key pressed this frame (includes key repeats)
+    signed char keyUps[KEY_MAX];	// Was the key released this frame
 } InputManager;
 
 
@@ -70,8 +71,10 @@ DLL_API int	        GetKeyId(char const *name);
 bool	            InputManagerAdvance();  // Returns true if any events occurred since last call
 int 	            EventHandler(unsigned int _eventId, unsigned int wParam, int lParam, bool _isAReplayedEvent = false);
 
+bool                UntypeKey(char key);
 
-DLL_API InputManager g_inputManager;
+
+DLL_API InputManager g_inputManager;    // Rename to g_input since it is POD now.
 
 
 // Defines for indexes into g_inputManager.keys[] and keyDowns[]
