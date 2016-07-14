@@ -15,7 +15,7 @@ struct BitmapRGBA;
 class Glyph;
 
 
-typedef struct
+typedef struct _TextRenderer
 {
 	Glyph       *glyphs[256];
 	bool		fixedWidth;

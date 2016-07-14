@@ -3,6 +3,8 @@
 // captured. It also creates a bitmap the same size as the window to use as
 // the back buffer of a double buffer system.
 
+// TODO - rename module to df_window.
+
 #pragma once
 
 
@@ -21,6 +23,7 @@ typedef struct
     bool                windowClosed;
     unsigned int	    fps;
     double              advanceTime;
+    // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
 } WindowData;
 
 
