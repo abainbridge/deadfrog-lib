@@ -1,11 +1,11 @@
-#include "df_rgba_colour.h"
+#include "df_colour.h"
 
 
-RGBAColour g_colourBlack = { 0xff000000U };
-RGBAColour g_colourWhite = { 0xffffffffU };
+DfColour g_colourBlack = { 0xff000000U };
+DfColour g_colourWhite = { 0xffffffffU };
 
 
-RGBAColour RgbaAddWithSaturate(RGBAColour a, RGBAColour b)
+DfColour RgbaAddWithSaturate(DfColour a, DfColour b)
 {
     int x = a.r + b.r;
     int y = a.g + b.g;

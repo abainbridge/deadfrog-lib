@@ -1,5 +1,5 @@
 #include <windows.h>
-#include "df_window_manager.h"
+#include "df_window.h"
 #include "df_message_dialog.h"
 
 

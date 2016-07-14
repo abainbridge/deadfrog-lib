@@ -26,7 +26,7 @@ typedef struct
 } PointListHeader;
 
 
-int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader *vertexList, RGBAColour col,
+int FillConvexPolygon(DfBitmap *bmp, PointListHeader *vertexList, DfColour col,
                       int xOffset, int yOffset);
 
 

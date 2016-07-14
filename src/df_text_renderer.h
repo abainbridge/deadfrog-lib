@@ -8,34 +8,35 @@
 #define TEXT_RENDERER_H
 
 
-#include "df_rgba_colour.h"
+#include "df_colour.h"
 #include "df_common.h"
 
-struct BitmapRGBA;
+
+struct DfBitmap;
 class Glyph;
 
 
-typedef struct _TextRenderer
+typedef struct _DfFont
 {
 	Glyph       *glyphs[256];
 	bool		fixedWidth;
 	int			maxCharWidth;
 	int			charHeight;	// in pixels
-} TextRenderer;
+} DfFont;
 
 
 // Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
-DLL_API TextRenderer *CreateTextRenderer(char const *fontname, int size, int weight);
+DLL_API DfFont *CreateTextRenderer(char const *fontname, int size, int weight);
 
-DLL_API int DrawTextSimple		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text);       // Returns text length in pixels
-DLL_API int DrawTextLeft		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like simple but with variable args
-DLL_API int DrawTextRight		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like above but with right justify
-DLL_API int DrawTextCentre		(TextRenderer *, RGBAColour c, BitmapRGBA *, int x, int y, char const *text, ...);	// Like above but with centre justify
+DLL_API int DrawTextSimple		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text);       // Returns text length in pixels
+DLL_API int DrawTextLeft		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like simple but with variable args
+DLL_API int DrawTextRight		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like above but with right justify
+DLL_API int DrawTextCentre		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like above but with centre justify
 
-DLL_API int	GetTextWidth		(TextRenderer *, char const *text, int len=999999);
+DLL_API int	GetTextWidth		(DfFont *, char const *text, int len=999999);
 
 
-extern TextRenderer *g_defaultTextRenderer;
+extern DfFont *g_defaultFont;
 
 
 #endif

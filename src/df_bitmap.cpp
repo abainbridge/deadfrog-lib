@@ -1,6 +1,6 @@
 #include "df_bitmap.h"
 
-#include "df_rgba_colour.h"
+#include "df_colour.h"
 #include "df_common.h"
 
 #include <algorithm>
@@ -9,13 +9,13 @@
 #include <stdlib.h>
 
 
-BitmapRGBA *CreateBitmapRGBA(unsigned width, unsigned height)
+DfBitmap *CreateBitmapRGBA(unsigned width, unsigned height)
 {
-	BitmapRGBA *bmp = new BitmapRGBA;
+	DfBitmap *bmp = new DfBitmap;
 	bmp->width = width;
 	bmp->height = height;
-	bmp->pixels = new RGBAColour[width * height];
-	bmp->lines = new RGBAColour *[height];
+	bmp->pixels = new DfColour[width * height];
+	bmp->lines = new DfColour *[height];
 
 	DebugAssert(bmp->pixels && bmp->lines);
 
@@ -26,7 +26,7 @@ BitmapRGBA *CreateBitmapRGBA(unsigned width, unsigned height)
 }
 
 
-void DeleteBitmapRGBA(BitmapRGBA *bmp)
+void DeleteBitmapRGBA(DfBitmap *bmp)
 {
 	bmp->width = -1;
 	bmp->height = -1;
@@ -40,19 +40,19 @@ void DeleteBitmapRGBA(BitmapRGBA *bmp)
 #define GetLine(bmp, y) ((bmp)->pixels + (bmp)->width * (y))
 
 
-void ClearBitmap(BitmapRGBA *bmp, RGBAColour colour)
+void ClearBitmap(DfBitmap *bmp, DfColour colour)
 {
     RectFill(bmp, 0, 0, bmp->width, bmp->height, colour);
 }
 
 
-RGBAColour GetPixUnclipped(BitmapRGBA *bmp, unsigned x, unsigned y)
+DfColour GetPixUnclipped(DfBitmap *bmp, unsigned x, unsigned y)
 {
 	return GetLine(bmp, y)[x];
 }
 
 
-void PutPix(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour colour)
+void PutPix(DfBitmap *bmp, unsigned x, unsigned y, DfColour colour)
 {
 	if (x >= bmp->width || y >= bmp->height)
 		return;
@@ -61,7 +61,7 @@ void PutPix(BitmapRGBA *bmp, unsigned x, unsigned y, RGBAColour colour)
 }
 
 
-RGBAColour GetPix(BitmapRGBA *bmp, unsigned x, unsigned y)
+DfColour GetPix(DfBitmap *bmp, unsigned x, unsigned y)
 {
 	if (x >= bmp->width || y >= bmp->height)
 		return g_colourBlack;
@@ -70,9 +70,9 @@ RGBAColour GetPix(BitmapRGBA *bmp, unsigned x, unsigned y)
 }
 
 
-void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
+void HLineUnclipped(DfBitmap *bmp, int x, int y, unsigned len, DfColour c)
 {
-    RGBAColour * __restrict row = GetLine(bmp, y) + x;
+    DfColour * __restrict row = GetLine(bmp, y) + x;
     if (c.a == 255)
     {
 //         for (unsigned i = 0; i < len; i++)
@@ -84,7 +84,7 @@ void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
         unsigned char invA = 255 - c.a;
         for (unsigned i = 0; i < len; i++)
         {
-            RGBAColour *pixel = row + i;
+            DfColour *pixel = row + i;
             pixel->r = (pixel->r * invA + c.r * c.a) / 255;
             pixel->g = (pixel->g * invA + c.g * c.a) / 255;
             pixel->b = (pixel->b * invA + c.b * c.a) / 255;
@@ -93,7 +93,7 @@ void HLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 }
 
 
-void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
+void HLine(DfBitmap *bmp, int x, int y, unsigned len, DfColour c)
 {
     if (len > (1<<31))
         return;
@@ -127,9 +127,9 @@ void HLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 }
 
 
-void VLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
+void VLineUnclipped(DfBitmap *bmp, int x, int y, unsigned len, DfColour c)
 {
-    RGBAColour * __restrict pixel = GetLine(bmp, y) + x;
+    DfColour * __restrict pixel = GetLine(bmp, y) + x;
     unsigned const bw = bmp->width;
     if (c.a == 255)
     {
@@ -153,7 +153,7 @@ void VLineUnclipped(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 }
 
 
-void VLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
+void VLine(DfBitmap *bmp, int x, int y, unsigned len, DfColour c)
 {
     if (len == 0 || len > (1 << 31))
         return;
@@ -181,7 +181,7 @@ void VLine(BitmapRGBA *bmp, int x, int y, unsigned len, RGBAColour c)
 }
 
 
-void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour)
+void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
 {
     // This implementation is based on that presented in Michael Abrash's Zen of
     // Graphics Programming (2nd Edition), listing 15-1, page 250.
@@ -339,7 +339,7 @@ void DrawLine(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colour
         return;
     }
 
-    RGBAColour * __restrict pixel = GetLine(bmp, y1) + x1;
+    DfColour * __restrict pixel = GetLine(bmp, y1) + x1;
 
     // Is the line X major or y major?
     if (xDelta >= yDelta)
@@ -506,7 +506,7 @@ static double GetLineLen(int const *a, int const *b)
 }
 
 
-void DrawBezier(BitmapRGBA *bmp, int const *a, int const *b, int const *c, int const *d, RGBAColour col)
+void DrawBezier(DfBitmap *bmp, int const *a, int const *b, int const *c, int const *d, DfColour col)
 {
     // Calculate approximate length of a Bezier curve by sampling at a low 
     // resolution and summing distances between samples.
@@ -552,7 +552,7 @@ void DrawBezier(BitmapRGBA *bmp, int const *a, int const *b, int const *c, int c
 }
 
 
-void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c)
+void RectFill(DfBitmap *bmp, int x, int y, unsigned w, unsigned h, DfColour c)
 {
     // Get a constant copy of the bitmap width so the compiler can assume it
     // doesn't get changed by anything (like an aliased pointer).
@@ -568,7 +568,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 
     w = x2 - x1 + 1;
   
-    RGBAColour * __restrict line = GetLine(bmp, y1) + x1;
+    DfColour * __restrict line = GetLine(bmp, y1) + x1;
     if (c.a == 255)
     {
         for (int a = y1; a <= y2; a++)
@@ -587,7 +587,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 }
 
 
-void RectOutline(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour c)
+void RectOutline(DfBitmap *bmp, int x, int y, unsigned w, unsigned h, DfColour c)
 {
     HLine(bmp, x, y,     w, c);
     HLine(bmp, x, y+h-1, w, c);
@@ -596,7 +596,7 @@ void RectOutline(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColo
 }
 
 
-void CircleOutline(BitmapRGBA *bmp, int x0, int y0, unsigned radius, RGBAColour c)
+void CircleOutline(DfBitmap *bmp, int x0, int y0, unsigned radius, DfColour c)
 {
     // This is the standard Bresenham or Mid-point circle algorithm
     int x = radius;
@@ -627,7 +627,7 @@ void CircleOutline(BitmapRGBA *bmp, int x0, int y0, unsigned radius, RGBAColour 
 }
 
 
-void CircleFill(BitmapRGBA *bmp, int x0, int y0, unsigned radius, RGBAColour c)
+void CircleFill(DfBitmap *bmp, int x0, int y0, unsigned radius, DfColour c)
 {
     int x = radius;
     int y = 0;
@@ -656,7 +656,7 @@ void CircleFill(BitmapRGBA *bmp, int x0, int y0, unsigned radius, RGBAColour c)
 }
 
 
-static void EllipsePlotPoints(BitmapRGBA *bmp, int x0, int y0, int x, int y, RGBAColour c)
+static void EllipsePlotPoints(DfBitmap *bmp, int x0, int y0, int x, int y, DfColour c)
 {
     PutPix(bmp, x0 + x, y0 + y, c);
     PutPix(bmp, x0 - x, y0 + y, c);
@@ -665,7 +665,7 @@ static void EllipsePlotPoints(BitmapRGBA *bmp, int x0, int y0, int x, int y, RGB
 }
 
 
-void EllipseOutline(BitmapRGBA *bmp, int x0, int y0, unsigned rx, unsigned ry, RGBAColour c)
+void EllipseOutline(DfBitmap *bmp, int x0, int y0, unsigned rx, unsigned ry, DfColour c)
 {
     int rxSqrd = rx * rx;
     int rySqrd = ry * ry;
@@ -715,14 +715,14 @@ void EllipseOutline(BitmapRGBA *bmp, int x0, int y0, unsigned rx, unsigned ry, R
 }
 
 
-static void EllipsePlotHlines(BitmapRGBA *bmp, int x0, int y0, int x, int y, RGBAColour c)
+static void EllipsePlotHlines(DfBitmap *bmp, int x0, int y0, int x, int y, DfColour c)
 {
     HLine(bmp, x0 - x, y0 + y, x * 2 + 1, c);
     HLine(bmp, x0 - x, y0 - y, x * 2 + 1, c);
 }
 
 
-void EllipseFill(BitmapRGBA *bmp, int x0, int y0, unsigned rx, unsigned ry, RGBAColour c)
+void EllipseFill(DfBitmap *bmp, int x0, int y0, unsigned rx, unsigned ry, DfColour c)
 {
     int rxSqrd = rx * rx;
     int rySqrd = ry * ry;
@@ -772,7 +772,7 @@ void EllipseFill(BitmapRGBA *bmp, int x0, int y0, unsigned rx, unsigned ry, RGBA
 }
 
 
-void MaskedBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
+void MaskedBlit(DfBitmap *destBmp, unsigned x, unsigned y, DfBitmap *srcBmp)
 {
 	if (x > destBmp->width || y > destBmp->height)
 		return;
@@ -788,8 +788,8 @@ void MaskedBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
 
 	for (unsigned sy = 0; sy < h; sy++)
 	{
-		RGBAColour *srcLine = GetLine(srcBmp, sy);
-		RGBAColour *destLine = GetLine(destBmp, y + sy) + x;
+		DfColour *srcLine = GetLine(srcBmp, sy);
+		DfColour *destLine = GetLine(destBmp, y + sy) + x;
 		for (unsigned i = 0; i < w; i++)
 		{
 			if (srcLine[i].a > 0)
@@ -799,7 +799,7 @@ void MaskedBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
 }
 
 
-void QuickBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
+void QuickBlit(DfBitmap *destBmp, unsigned x, unsigned y, DfBitmap *srcBmp)
 {
     if (x > destBmp->width || y > destBmp->height)
         return;
@@ -815,14 +815,14 @@ void QuickBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, BitmapRGBA *srcBmp)
 
     for (unsigned sy = 0; sy < h; sy++)
     {
-        RGBAColour *srcLine = GetLine(srcBmp, sy);
-        RGBAColour *destLine = GetLine(destBmp, y + sy) + x;
-        memcpy(destLine, srcLine, w * sizeof(RGBAColour));
+        DfColour *srcLine = GetLine(srcBmp, sy);
+        DfColour *destLine = GetLine(destBmp, y + sy) + x;
+        memcpy(destLine, srcLine, w * sizeof(DfColour));
     }
 }
 
 
-void ScaleDownBlit(BitmapRGBA *dest, unsigned x, unsigned y, unsigned scale, BitmapRGBA *src)
+void ScaleDownBlit(DfBitmap *dest, unsigned x, unsigned y, unsigned scale, DfBitmap *src)
 {
     unsigned outW = src->width / scale;
     unsigned outH = src->height / scale;
@@ -837,7 +837,7 @@ void ScaleDownBlit(BitmapRGBA *dest, unsigned x, unsigned y, unsigned scale, Bit
             {
                 for (unsigned sx = dx * scale; sx < (dx+1) * scale; sx++)
                 {
-                    RGBAColour srcPix = GetPix(src, sx, sy);
+                    DfColour srcPix = GetPix(src, sx, sy);
                     r += srcPix.r;
                     g += srcPix.g;
                     b += srcPix.b;
@@ -857,14 +857,14 @@ void ScaleDownBlit(BitmapRGBA *dest, unsigned x, unsigned y, unsigned scale, Bit
 
 
 
-void ScaleUpBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, BitmapRGBA *srcBmp)
+void ScaleUpBlit(DfBitmap *destBmp, unsigned x, unsigned y, unsigned scale, DfBitmap *srcBmp)
 {
     for (unsigned sy = 0; sy < srcBmp->height; sy++)
     {
         for (unsigned j = 0; j < scale; j++)
         {
-            RGBAColour *srcPixel = srcBmp->lines[sy];
-            RGBAColour *destPixel = destBmp->lines[y + sy * scale + j] + x * scale;
+            DfColour *srcPixel = srcBmp->lines[sy];
+            DfColour *destPixel = destBmp->lines[y + sy * scale + j] + x * scale;
 
             for (unsigned sx = 0; sx < srcBmp->width; sx++)
             {
@@ -887,7 +887,7 @@ void ScaleUpBlit(BitmapRGBA *destBmp, unsigned x, unsigned y, unsigned scale, Bi
 }
 
 
-void BitmapDownsample(BitmapRGBA *src_bmp, BitmapRGBA *dst_bmp)
+void BitmapDownsample(DfBitmap *src_bmp, DfBitmap *dst_bmp)
 {
     int w1 = src_bmp->width;
     int h1 = src_bmp->height;

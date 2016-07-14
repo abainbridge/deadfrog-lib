@@ -3,7 +3,6 @@
 // captured. It also creates a bitmap the same size as the window to use as
 // the back buffer of a double buffer system.
 
-// TODO - rename module to df_window.
 
 #pragma once
 
@@ -16,15 +15,15 @@
 struct WindowDataPrivate;
 
 
-typedef struct
+typedef struct _DfWindow
 {
     WindowDataPrivate   *_private;
-    BitmapRGBA          *bmp;
+    DfBitmap          *bmp;
     bool                windowClosed;
     unsigned int	    fps;
     double              advanceTime;
     // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
-} WindowData;
+} DfWindow;
 
 
 enum WindowType
@@ -34,7 +33,7 @@ enum WindowType
 };
 
 
-DLL_API WindowData *g_window;
+DLL_API DfWindow *g_window;
 
 DLL_API bool GetDesktopRes(int *width, int *height);
 

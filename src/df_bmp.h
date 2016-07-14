@@ -2,11 +2,11 @@
 #define INCLUDED_BMP_H
 
 
-struct BitmapRGBA;
+struct DfBitmap;
 
 
-BitmapRGBA *LoadBmp(char const *filename);
-bool SaveBmp(BitmapRGBA *bitmap, char const *filename);
+DfBitmap *LoadBmp(char const *filename);
+bool SaveBmp(DfBitmap *bitmap, char const *filename);
 
 
 #endif

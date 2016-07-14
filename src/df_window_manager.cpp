@@ -1,4 +1,4 @@
-#include "df_window_manager.h"
+#include "df_window.h"
 
 #include "df_hi_res_time.h"
 #include "df_input.h"
@@ -22,7 +22,7 @@ struct WindowDataPrivate
 };
 
 
-WindowData *g_window = NULL;
+DfWindow *g_window = NULL;
 
 
 // ****************************************************************************
@@ -31,7 +31,7 @@ WindowData *g_window = NULL;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    WindowData *win = g_window;
+    DfWindow *win = g_window;
 
     if (message == WM_SYSKEYDOWN && wParam == 115)
         SendMessage(hWnd, WM_CLOSE, 0, 0);
@@ -110,8 +110,8 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 {
 	if (g_window)
         return false;
-    WindowData *wd = g_window = new WindowData;
-	memset(wd, 0, sizeof(WindowData));
+    DfWindow *wd = g_window = new DfWindow;
+	memset(wd, 0, sizeof(DfWindow));
 
     wd->_private = new WindowDataPrivate;
     memset(wd->_private, 0, sizeof(WindowDataPrivate));
@@ -189,7 +189,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 
 // This function copies a BitmapRGBA to the window, so you can actually see it.
 // SetBIBitsToDevice seems to be the fastest way to achieve this on most hardware.
-static void BlitBitmapToWindow(WindowData *wd, BitmapRGBA *bmp, int x, int y)
+static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp, int x, int y)
 {
     BITMAPINFO binfo;
     binfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);

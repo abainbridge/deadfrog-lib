@@ -1,4 +1,4 @@
-#include "df_text_renderer.h"
+#include "df_font.h"
 
 #include "df_bitmap.h"
 #include "df_common.h"
@@ -42,7 +42,7 @@ public:
 // Global variables
 // ****************************************************************************
 
-TextRenderer *g_defaultTextRenderer = NULL;
+DfFont *g_defaultFont = NULL;
 
 
 // ****************************************************************************
@@ -55,13 +55,13 @@ static bool GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
 }
 
 
-TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
+DfFont *CreateTextRenderer(char const *fontName, int size, int weight)
 {
     if (size < 4 || size > 1000 || weight < 1 || weight > 9)
         return NULL;
 
-    TextRenderer *tr = new TextRenderer;
-    memset(tr, 0, sizeof(TextRenderer));
+    DfFont *tr = new DfFont;
+    memset(tr, 0, sizeof(DfFont));
 
     // Get the font from GDI
     HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
@@ -188,10 +188,10 @@ TextRenderer *CreateTextRenderer(char const *fontName, int size, int weight)
 }
 
 
-static int DrawTextSimpleClipped(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
+static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text)
 {
     int x = _x;
-    RGBAColour *startRow = bmp->pixels + y * bmp->width;
+    DfColour *startRow = bmp->pixels + y * bmp->width;
     int width = bmp->width;
 
     if (y + tr->charHeight < 0 || y > (int)bmp->height)
@@ -210,7 +210,7 @@ static int DrawTextSimpleClipped(TextRenderer *tr, RGBAColour col, BitmapRGBA *b
             int y3 = y + rleBuf->startY;
             if (y3 >= 0 && y3 < (int)bmp->height)
             {
-                RGBAColour *thisRow = startRow + rleBuf->startY * width;
+                DfColour *thisRow = startRow + rleBuf->startY * width;
                 for (unsigned i = 0; i < rleBuf->runLen; i++)
                 {
                     int x3 = x + rleBuf->startX + i;
@@ -229,7 +229,7 @@ static int DrawTextSimpleClipped(TextRenderer *tr, RGBAColour col, BitmapRGBA *b
 }
 
 
-int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, int y, char const *text)
+int DrawTextSimple(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text)
 {
     int x = _x;
     int width = bmp->width;
@@ -237,7 +237,7 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
 
-    RGBAColour *startRow = bmp->pixels + y * bmp->width;
+    DfColour *startRow = bmp->pixels + y * bmp->width;
     while (*text != '\0')
     {
         unsigned char c = *((unsigned char const *)text);
@@ -250,7 +250,7 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
         EncodedRun *rleBuf = glyph.m_pixelRuns;
         for (int i = 0; i < glyph.m_numRuns; i++)
         {
-            RGBAColour *startPixel = startRow + rleBuf->startY * width + rleBuf->startX + x;
+            DfColour *startPixel = startRow + rleBuf->startY * width + rleBuf->startX + x;
 
             // Loop unrolled for speed
             switch (rleBuf->runLen)
@@ -279,7 +279,7 @@ int DrawTextSimple(TextRenderer *tr, RGBAColour col, BitmapRGBA *bmp, int _x, in
 }
 
 
-int DrawTextLeft(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+int DrawTextLeft(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
@@ -289,7 +289,7 @@ int DrawTextLeft(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, 
 }
 
 
-int DrawTextRight(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+int DrawTextRight(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
@@ -301,7 +301,7 @@ int DrawTextRight(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y,
 }
 
 
-int DrawTextCentre(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, char const *text, ...)
+int DrawTextCentre(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
@@ -313,7 +313,7 @@ int DrawTextCentre(TextRenderer *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y
 }
 
 
-int GetTextWidth(TextRenderer *tr, char const *text, int len)
+int GetTextWidth(DfFont *tr, char const *text, int len)
 {
 	len = min((int)strlen(text), len);
 	if (tr->fixedWidth)

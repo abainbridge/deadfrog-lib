@@ -107,7 +107,7 @@ void ReadWinBmpInfoHeader(FILE *f, BitmapInfoHeader *infoheader)
 }
 
 
-void ReadBmpPalette(int ncols, RGBAColour pal[256], FILE *f)
+void ReadBmpPalette(int ncols, DfColour pal[256], FILE *f)
 {
 	for (int i = 0; i < ncols; i++) 
 	{
@@ -121,7 +121,7 @@ void ReadBmpPalette(int ncols, RGBAColour pal[256], FILE *f)
 
 
 // Support function for reading the 4 bit bitmap file format.
-void Read4BitLine(BitmapRGBA *bitmap, int length, FILE *f, RGBAColour pal[256], int y)
+void Read4BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
 {
 	for (int x = 0; x < length; x += 2) 
 	{
@@ -135,7 +135,7 @@ void Read4BitLine(BitmapRGBA *bitmap, int length, FILE *f, RGBAColour pal[256], 
 
 
 // Support function for reading the 8 bit bitmap file format.
-void Read8BitLine(BitmapRGBA *bitmap, int length, FILE *f, RGBAColour pal[256], int y)
+void Read8BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
 {
 	for (int x = 0; x < length; ++x) 
 	{
@@ -148,9 +148,9 @@ void Read8BitLine(BitmapRGBA *bitmap, int length, FILE *f, RGBAColour pal[256], 
 
 
 // Support function for reading the 24 bit bitmap file format
-void Read24BitLine(BitmapRGBA *bitmap, int length, FILE *f, int y)
+void Read24BitLine(DfBitmap *bitmap, int length, FILE *f, int y)
 {
-	RGBAColour c;
+	DfColour c;
 	int nbytes = 0;
 	c.a = 255;
 
@@ -172,7 +172,7 @@ void Read24BitLine(BitmapRGBA *bitmap, int length, FILE *f, int y)
 // Public Functions
 // ****************************************************************************
 
-BitmapRGBA *LoadBmp(char const *filename)
+DfBitmap *LoadBmp(char const *filename)
 {
     FILE *f = fopen(filename, "rb");
     if (!f)
@@ -184,7 +184,7 @@ BitmapRGBA *LoadBmp(char const *filename)
     unsigned long biSize = ReadS32(f);
 
     BitmapInfoHeader infoheader;
-    RGBAColour palette[256];
+    DfColour palette[256];
     if (biSize == WININFOHEADERSIZE) 
     {
         ReadWinBmpInfoHeader(f, &infoheader);
@@ -194,7 +194,7 @@ BitmapRGBA *LoadBmp(char const *filename)
     ReleaseAssert(biSize != OS2INFOHEADERSIZE, "Bitmap loader does not support OS/2 format bitmaps");
     ReleaseAssert(infoheader.biCompression == BMP_RGB, "Bitmap loader does not support RLE compressed bitmaps"); 
 
-    BitmapRGBA *bitmap = CreateBitmapRGBA(infoheader.biWidth, infoheader.biHeight);
+    DfBitmap *bitmap = CreateBitmapRGBA(infoheader.biWidth, infoheader.biHeight);
 
     // Read the image
     for (int i = 0; i < (int)infoheader.biHeight; ++i) 
@@ -222,7 +222,7 @@ BitmapRGBA *LoadBmp(char const *filename)
 }
 
 
-bool SaveBmp(BitmapRGBA *bmp, char const *filename)
+bool SaveBmp(DfBitmap *bmp, char const *filename)
 {
     int w = bmp->width;
     int h = bmp->height;
@@ -235,7 +235,7 @@ bool SaveBmp(BitmapRGBA *bmp, char const *filename)
         for(int j = 0; j < h; j++)
         {
             int y = (h-1) - j;
-            RGBAColour c = GetPix(bmp, x, y);
+            DfColour c = GetPix(bmp, x, y);
             img[(x+y*w)*3+2] = c.r;
             img[(x+y*w)*3+1] = c.g;
             img[(x+y*w)*3+0] = c.b;

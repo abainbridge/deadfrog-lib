@@ -1,11 +1,11 @@
-#include "df_text_renderer_aa.h"
+#include "df_font_aa.h"
 
 // Project headers
 #include "df_bitmap.h"
 #include "df_common.h"
 #include "df_master_glyph.h"
 #include "df_sized_glyph.h"
-#include "df_text_renderer_aa_internals.h"
+#include "df_font_aa_internals.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -69,13 +69,13 @@ static unsigned GetKerningDist(MasterGlyph *a, MasterGlyph *b, int avgCharWidth)
 }
 
 
-TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
+DfFontAa *CreateTextRendererAa(char const *fontName, int weight)
 {
     if (weight < 1 || weight > 9)
         return NULL;
 
-    TextRendererAa *tr = new TextRendererAa;
-    memset(tr, 0, sizeof(TextRendererAa));
+    DfFontAa *tr = new DfFontAa;
+    memset(tr, 0, sizeof(DfFontAa));
 
     // Get the font from GDI
     HDC winDC = CreateDC("DISPLAY", NULL, NULL, NULL);
@@ -166,7 +166,7 @@ TextRendererAa *CreateTextRendererAa(char const *fontName, int weight)
 
 
 // Alpha is 0 to 255.
-static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned char glyphPixel)
+static inline void PixelBlend(DfColour &d, const DfColour s, unsigned char glyphPixel)
 {
     const unsigned a = ((glyphPixel * s.a) >> 8) + 1;
 
@@ -189,7 +189,7 @@ static inline void PixelBlend(RGBAColour &d, const RGBAColour s, unsigned char g
 }
 
 
-static void DrawClippedGlyph(SizedGlyph *glyph, BitmapRGBA *bmp, int x0, int y0, RGBAColour col)
+static void DrawClippedGlyph(SizedGlyph *glyph, DfBitmap *bmp, int x0, int y0, DfColour col)
 {
     for (int gy = 0; gy < glyph->m_height; gy++)
     {
@@ -198,7 +198,7 @@ static void DrawClippedGlyph(SizedGlyph *glyph, BitmapRGBA *bmp, int x0, int y0,
             continue;
 
         unsigned char *glyphRow = glyph->m_pixelData + gy * glyph->m_width;
-        RGBAColour *bmpRow = bmp->pixels + y * bmp->width;
+        DfColour *bmpRow = bmp->pixels + y * bmp->width;
 
         for (int gx = 0; gx < glyph->m_width; gx++)
         {
@@ -212,7 +212,7 @@ static void DrawClippedGlyph(SizedGlyph *glyph, BitmapRGBA *bmp, int x0, int y0,
 }
 
 
-static SizedGlyphSet *GetSizedGlyphSet(TextRendererAa *tr, int size)
+static SizedGlyphSet *GetSizedGlyphSet(DfFontAa *tr, int size)
 {
     if (!tr->sizedGlyphSets[size])
         tr->sizedGlyphSets[size] = new SizedGlyphSet(tr->masterGlyphs, size);
@@ -221,7 +221,7 @@ static SizedGlyphSet *GetSizedGlyphSet(TextRendererAa *tr, int size)
 }
 
 
-static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int x, int y, int size, char const *text)
+static int DrawTextSimpleClippedAa(DfFontAa *tr, DfColour col, DfBitmap *bmp, int x, int y, int size, char const *text)
 {
     if (x >= (int)bmp->width || y + size < 0 || y >= (int)bmp->height)
         return 0;
@@ -245,7 +245,7 @@ static int DrawTextSimpleClippedAa(TextRendererAa *tr, RGBAColour col, BitmapRGB
 }
 
 
-DLL_API int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp, int x, int y, int size, char const *text)
+DLL_API int DrawTextSimpleAa(DfFontAa *tr, DfColour col, DfBitmap *bmp, int x, int y, int size, char const *text)
 {
     if (size < 1 || size > MAX_FONT_SIZE)
         return -1;
@@ -273,8 +273,8 @@ DLL_API int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp
             }
 
             unsigned char * __restrict glyphPixel = glyph->m_pixelData;
-            RGBAColour * __restrict thisRow = bmp->pixels + y * bmp->width + currentX;
-            RGBAColour * __restrict lastRow = thisRow + glyph->m_height * bmp->width;
+            DfColour * __restrict thisRow = bmp->pixels + y * bmp->width + currentX;
+            DfColour * __restrict lastRow = thisRow + glyph->m_height * bmp->width;
             while (thisRow < lastRow)
             {
                 for (int x = 0; x < glyph->m_width; x++)
@@ -296,7 +296,7 @@ DLL_API int DrawTextSimpleAa(TextRendererAa *tr, RGBAColour col, BitmapRGBA *bmp
 }
 
 
-int DrawTextLeftAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, int size, char const *text, ...)
+int DrawTextLeftAa(DfFontAa *tr, DfColour c, DfBitmap *bmp, int x, int y, int size, char const *text, ...)
 {
     char buf[512];
     va_list ap;
@@ -306,7 +306,7 @@ int DrawTextLeftAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int
 }
 
 
-int DrawTextRightAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, int size, char const *text, ...)
+int DrawTextRightAa(DfFontAa *tr, DfColour c, DfBitmap *bmp, int x, int y, int size, char const *text, ...)
 {
     char buf[512];
     va_list ap;
@@ -318,7 +318,7 @@ int DrawTextRightAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, in
 }
 
 
-int DrawTextCentreAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, int y, int size, char const *text, ...)
+int DrawTextCentreAa(DfFontAa *tr, DfColour c, DfBitmap *bmp, int x, int y, int size, char const *text, ...)
 {
     char buf[512];
     va_list ap;
@@ -330,7 +330,7 @@ int DrawTextCentreAa(TextRendererAa *tr, RGBAColour c, BitmapRGBA *bmp, int x, i
 }
 
 
-int GetTextWidthAa(TextRendererAa *tr, char const *text, int size, int len)
+int GetTextWidthAa(DfFontAa *tr, char const *text, int size, int len)
 {
     SizedGlyphSet *sizedGlyphSet = GetSizedGlyphSet(tr, size);
 

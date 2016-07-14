@@ -3,7 +3,7 @@
 
 // Project headers
 #include "df_master_glyph.h"
-#include "df_text_renderer_aa_internals.h"
+#include "df_font_aa_internals.h"
 
 // Standard headers
 #include <algorithm>

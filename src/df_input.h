@@ -20,12 +20,12 @@
 #define MAX_KEYS_TYPED_PER_FRAME	128
 
 
-struct InputManagerPrivate;
+struct InputPrivate;
 
 
 typedef struct
 {
-    InputManagerPrivate *priv;
+    InputPrivate *priv;
 
     bool		windowHasFocus;
     bool        eventSinceAdvance;  // True if we've seen any events since the last advance
@@ -61,7 +61,7 @@ typedef struct
     signed char keys[KEY_MAX];		// Is the key currently pressed
     signed char keyDowns[KEY_MAX];	// Was the key pressed this frame (includes key repeats)
     signed char keyUps[KEY_MAX];	// Was the key released this frame
-} InputManager;
+} DfInput;
 
 
 // Public API functions
@@ -76,7 +76,7 @@ int 	            EventHandler(unsigned int _eventId, unsigned int wParam, int lP
 bool                UntypeKey(char key);
 
 
-DLL_API InputManager g_inputManager;    // Rename to g_input since it is POD now.
+DLL_API DfInput g_inputManager;    // Rename to g_input since it is POD now.
 
 
 // Defines for indexes into g_inputManager.keys[] and keyDowns[]

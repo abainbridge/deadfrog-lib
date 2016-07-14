@@ -195,7 +195,7 @@ static void ScanEdge(int x1, int y1, int x2, int y2, int setXStart,
 }
 
 
-static void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList *hLines, RGBAColour col)
+static void DrawHorizontalLineList(DfBitmap *bmp, HLineList *hLines, DfColour col)
 {
     int startY = hLines->startY;
     int len = hLines->numLines;
@@ -234,7 +234,7 @@ static void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList *hLines, RGBAColou
     else
     {
         // Solid colour path...
-        RGBAColour * __restrict row = bmp->pixels + bmp->width * hLines->startY;
+        DfColour * __restrict row = bmp->pixels + bmp->width * hLines->startY;
         for (HLineData * __restrict line = firstLine; line < lastLine; line++) 
         {
             // Clip against sides of bitmap
@@ -251,7 +251,7 @@ static void DrawHorizontalLineList(BitmapRGBA *bmp, HLineList *hLines, RGBAColou
 }
 
 
-int FillConvexPolygon(BitmapRGBA *bmp, PointListHeader *vertexList, RGBAColour col,
+int FillConvexPolygon(DfBitmap *bmp, PointListHeader *vertexList, DfColour col,
                       int xOffset, int yOffset)
 {
     // Point to the vertex list 

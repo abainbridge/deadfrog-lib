@@ -1,7 +1,7 @@
 #include "df_input.h"
 
 #include "df_hi_res_time.h"
-#include "df_window_manager.h"
+#include "df_window.h"
 
 #include <ctype.h>
 #include <memory.h>
@@ -10,10 +10,10 @@
 #include <windows.h>
 
 
-InputManager g_inputManager;
+DfInput g_inputManager;
 
 
-struct InputManagerPrivate
+struct InputPrivate
 {
     bool        m_lmbPrivate;
     bool		m_lmbOld;				// Mouse button states from last frame. Only
@@ -37,10 +37,10 @@ struct InputManagerPrivate
 
 void CreateInputManager()
 {
-    memset(&g_inputManager, 0, sizeof(InputManager));
+    memset(&g_inputManager, 0, sizeof(DfInput));
 
-    g_inputManager.priv = new InputManagerPrivate;
-    memset(g_inputManager.priv, 0, sizeof(InputManagerPrivate));
+    g_inputManager.priv = new InputPrivate;
+    memset(g_inputManager.priv, 0, sizeof(InputPrivate));
 	g_inputManager.priv->m_lastClickTime = 0.0;
 
     g_inputManager.eventSinceAdvance = true;
