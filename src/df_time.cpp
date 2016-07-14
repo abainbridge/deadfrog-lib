@@ -1,4 +1,4 @@
-#include "df_hi_res_time.h"
+#include "df_time.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>

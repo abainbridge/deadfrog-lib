@@ -1,6 +1,6 @@
 #include "df_input.h"
 
-#include "df_hi_res_time.h"
+#include "df_time.h"
 #include "df_window.h"
 
 #include <ctype.h>

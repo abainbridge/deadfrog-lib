@@ -4,7 +4,6 @@
     <ClCompile Include="..\..\src\df_bitmap.cpp" />
     <ClCompile Include="..\..\src\df_bmp.cpp" />
     <ClCompile Include="..\..\src\df_common.cpp" />
-    <ClCompile Include="..\..\src\df_hi_res_time.cpp" />
     <ClCompile Include="..\..\src\df_input.cpp" />
     <ClCompile Include="..\..\src\df_master_glyph.cpp" />
     <ClCompile Include="..\..\src\df_message_dialog.cpp" />
@@ -14,12 +13,12 @@
     <ClCompile Include="..\..\src\df_colour.cpp" />
     <ClCompile Include="..\..\src\df_font.cpp" />
     <ClCompile Include="..\..\src\df_font_aa.cpp" />
+    <ClCompile Include="..\..\src\df_time.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\df_bitmap.h" />
     <ClInclude Include="..\..\src\df_bmp.h" />
     <ClInclude Include="..\..\src\df_common.h" />
-    <ClInclude Include="..\..\src\df_hi_res_time.h" />
     <ClInclude Include="..\..\src\df_input.h" />
     <ClInclude Include="..\..\src\df_master_glyph.h" />
     <ClInclude Include="..\..\src\df_message_dialog.h" />
@@ -30,5 +29,6 @@
     <ClInclude Include="..\..\src\df_font.h" />
     <ClInclude Include="..\..\src\df_font_aa.h" />
     <ClInclude Include="..\..\src\df_font_aa_internals.h" />
+    <ClInclude Include="..\..\src\df_time.h" />
   </ItemGroup>
 </Project>
