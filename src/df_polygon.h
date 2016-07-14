@@ -1,8 +1,8 @@
 // This code originally came from Michael Abrash's Zen of Graphics, 
 // 2nd edition, chapter 23.
 
-#ifndef INCLUDED_POLYGON_H
-#define INCLUDED_POLYGON_H
+#pragma once
+
 
 #include "df_bitmap.h"
 
@@ -29,5 +29,3 @@ typedef struct
 int FillConvexPolygon(DfBitmap *bmp, PointListHeader *vertexList, DfColour col,
                       int xOffset, int yOffset);
 
-
-#endif

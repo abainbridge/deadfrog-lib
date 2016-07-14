@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COMMON_INCLUDE_H
-#define INCLUDED_COMMON_INCLUDE_H
+#pragma once
 
 
 #ifdef DLL_EXPORTS
@@ -69,7 +68,4 @@ inline double ClampDouble(double val, double min, double max)
  #endif
 #else
  #define DebugAssert(x)
-#endif
-
-
 #endif

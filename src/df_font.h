@@ -4,8 +4,7 @@
 // Variable width fonts are supported.
 // The renderer currently does not attempt any form of anti-aliasing.
 
-#ifndef TEXT_RENDERER_H
-#define TEXT_RENDERER_H
+#pragma once
 
 
 #include "df_colour.h"
@@ -38,5 +37,3 @@ DLL_API int	GetTextWidth		(DfFont *, char const *text, int len=999999);
 
 extern DfFont *g_defaultFont;
 
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RGB_COLOUR_H
-#define INCLUDED_RGB_COLOUR_H
+#pragma once
 
 
 #include "df_common.h"
@@ -68,5 +67,3 @@ inline DfColour operator*(DfColour col, float x)
 DLL_API DfColour g_colourBlack;
 DLL_API DfColour g_colourWhite;
 
-
-#endif

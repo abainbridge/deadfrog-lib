@@ -3,8 +3,7 @@
 // the point size you want. The font's glyphs will be pre-calculated.
 // Variable width fonts are supported.
 
-#ifndef TEXT_RENDERER_AA_H
-#define TEXT_RENDERER_AA_H
+#pragma once
 
 
 #include "df_colour.h"
@@ -38,6 +37,3 @@ DLL_API int DrawTextRightAa	 (DfFontAa *, DfColour c, DfBitmap *, int x, int y, 
 DLL_API int DrawTextCentreAa (DfFontAa *, DfColour c, DfBitmap *, int x, int y, int size, char const *text, ...);	// Like above but with centre justify
 
 DLL_API int	GetTextWidthAa   (DfFontAa *, char const *text, int size, int len=999999);
-
-
-#endif

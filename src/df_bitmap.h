@@ -2,8 +2,7 @@
 // The bitmap lives entirely in main memory, rather than on the graphics card
 // and all the drawing is done by the CPU. It's still reasonably quick though.
 
-#ifndef INCLUDED_BITMAP_H
-#define INCLUDED_BITMAP_H
+#pragma once
 
 
 #include "df_colour.h"
@@ -79,6 +78,3 @@ inline void PutPixUnclipped(DfBitmap *bmp, unsigned x, unsigned y, DfColour c)
         pixel->b = (pixel->b * invA + c.b * c.a) / 255;
     }
 }
-
-
-#endif

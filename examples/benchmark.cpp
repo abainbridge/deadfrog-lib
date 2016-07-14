@@ -85,13 +85,13 @@ double CalcMillionVLinePixelsPerSec(BitmapRGBA *bmp)
 
 double CalcBillionRectFillPixelsPerSec(BitmapRGBA *bmp)
 {
-    unsigned iterations = 1000 * 200;
+    unsigned iterations = 1000 * 100;
     double startTime = GetHighResTime();
     for (unsigned i = 0; i < iterations; i++)
-        RectFill(bmp, 10, 10, 100, 100, g_colourWhite);
+        RectFill(bmp, 0, 0, 300, 300, g_colourWhite);
     double endTime = GetHighResTime();
     double duration = endTime - startTime;
-    double numPixels = 100.0 * 100.0 * (double)iterations;
+    double numPixels = 300.0 * 300.0 * (double)iterations;
     return (numPixels / duration) / 1e9;
 }
 
@@ -235,7 +235,7 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
         "Font creation took %.2f sec", aaFontCreationTime);
     textY += 15;
 
-    DrawTextSimpleAa(fontAa, g_colourWhite, g_window->bmp, 10, textY, 10, "Here's some interesting text. See! What?");
+//     DrawTextSimpleAa(fontAa, g_colourWhite, g_window->bmp, 10, textY, 10, "Here's some interesting text. See! What?");
 //     textY += 20;
 //     DrawTextSimpleAa(fontAa2, g_colourWhite, g_window->bmp, 10, textY, "Here's some interesting text. See! What?");
 //     textY += 20;
@@ -247,18 +247,18 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 //     textY += 20;
 
     // Put pixel
-//     score = CalcMillionPixelsPerSec(backBmp);
-//     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
-//         "Million putpixels per sec = %.1f", score);
-//     END_TEST;
-// 
-//     // HLine draw
-//     ClearBitmap(backBmp, g_colourBlack);
-//     score = CalcMillionHLinePixelsPerSec(backBmp);
-//     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
-//         "Million Hline pixels per sec = %.2f", score);
-//     END_TEST;
-// 
+    double score = CalcMillionPixelsPerSec(backBmp);
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
+        "Million putpixels per sec = %.1f", score);
+    END_TEST;
+
+    // HLine draw
+    ClearBitmap(backBmp, g_colourBlack);
+    score = CalcMillionHLinePixelsPerSec(backBmp);
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
+        "Million Hline pixels per sec = %.2f", score);
+    END_TEST;
+
 //     // VLine draw
 //     ClearBitmap(backBmp, g_colourBlack);
 //     score = CalcMillionVLinePixelsPerSec(backBmp);
@@ -273,13 +273,13 @@ int WINAPI WinMain(HINSTANCE _hInstance, HINSTANCE, LPSTR cmdLine, int)
 //         "Million line pixels per sec = %.2f", score);
 //     END_TEST;
 // 
-//     // Rect fill
-//     ClearBitmap(backBmp, g_colourBlack);
-//     score = CalcBillionRectFillPixelsPerSec(backBmp);
-//     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
-//         "Rectfill billion pixels per sec = %.2f", score);
-//     END_TEST;
-// 
+    // Rect fill
+    ClearBitmap(backBmp, g_colourBlack);
+    score = CalcBillionRectFillPixelsPerSec(backBmp);
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
+        "Rectfill billion pixels per sec = %.2f", score);
+    END_TEST;
+
 //     // Text render
 //     ClearBitmap(backBmp, g_colourBlack);
 //     score = CalcMillionCharsPerSec(backBmp, font);
