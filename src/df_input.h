@@ -3,14 +3,13 @@
 // manager every frame (ie every time AdvanceWin() is called). 
 
 // You can test if any specific key has been pressed this frame using 
-// g_inputManager.keyDowns[KEY_ESC].
+// g_input.keyDowns[KEY_ESC].
 
 // You can see how much the mouse has moved along the X axis this frame using 
 // g_inputManger.mouseVelX.
 
 
-#ifndef INCLUDED_INPUT_H
-#define INCLUDED_INPUT_H
+#pragma once
 
 
 #include "df_common.h"
@@ -76,10 +75,10 @@ int 	            EventHandler(unsigned int _eventId, unsigned int wParam, int lP
 bool                UntypeKey(char key);
 
 
-DLL_API DfInput g_inputManager;    // Rename to g_input since it is POD now.
+DLL_API DfInput g_input;
 
 
-// Defines for indexes into g_inputManager.keys[] and keyDowns[]
+// Defines for indexes into g_input.keys[] and keyDowns[]
 #define KEY_A                 65
 #define KEY_B                 66
 #define KEY_C                 67
@@ -178,5 +177,3 @@ DLL_API DfInput g_inputManager;    // Rename to g_input since it is POD now.
 #define KEY_CAPSLOCK          20
 #define KEY_SHIFT			  16
 #define KEY_CONTROL			  17
-
-#endif

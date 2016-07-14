@@ -10,7 +10,7 @@
 #include <windows.h>
 
 
-DfInput g_inputManager;
+DfInput g_input;
 
 
 struct InputPrivate
@@ -37,21 +37,21 @@ struct InputPrivate
 
 void CreateInputManager()
 {
-    memset(&g_inputManager, 0, sizeof(DfInput));
+    memset(&g_input, 0, sizeof(DfInput));
 
-    g_inputManager.priv = new InputPrivate;
-    memset(g_inputManager.priv, 0, sizeof(InputPrivate));
-	g_inputManager.priv->m_lastClickTime = 0.0;
+    g_input.priv = new InputPrivate;
+    memset(g_input.priv, 0, sizeof(InputPrivate));
+	g_input.priv->m_lastClickTime = 0.0;
 
-    g_inputManager.eventSinceAdvance = true;
-    g_inputManager.windowHasFocus = true;
+    g_input.eventSinceAdvance = true;
+    g_input.windowHasFocus = true;
 }
 
 
 // Returns 0 if the event is handled here, -1 otherwise
 int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_isAReplayedEvent*/)
 {
-	if (!g_inputManager.priv)
+	if (!g_input.priv)
 		return -1;
 
 	switch (message)
@@ -60,56 +60,56 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
             break;
 		case WM_SETFOCUS:
 		case WM_NCACTIVATE:
-			g_inputManager.windowHasFocus = true;
+			g_input.windowHasFocus = true;
 			// Clear keyboard state when we regain focus
-            memset(g_inputManager.priv->m_keyNewDowns, 0, KEY_MAX);
-            memset(g_inputManager.priv->m_keyNewUps, 0, KEY_MAX);
-            memset(g_inputManager.keys, 0, KEY_MAX);
+            memset(g_input.priv->m_keyNewDowns, 0, KEY_MAX);
+            memset(g_input.priv->m_keyNewUps, 0, KEY_MAX);
+            memset(g_input.keys, 0, KEY_MAX);
 			return -1;
 		case WM_KILLFOCUS:
-			g_inputManager.windowHasFocus = false;
-            g_inputManager.mouseX = -1;
-            g_inputManager.mouseY = -1;
+			g_input.windowHasFocus = false;
+            g_input.mouseX = -1;
+            g_input.mouseY = -1;
 			break;
 
         case WM_SYSCHAR:
             break;
 
 		case WM_CHAR:
-			if (g_inputManager.numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
-				!g_inputManager.keys[KEY_CONTROL] &&
-				!g_inputManager.keys[KEY_ALT] &&
+			if (g_input.numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
+				!g_input.keys[KEY_CONTROL] &&
+				!g_input.keys[KEY_ALT] &&
 				wParam != KEY_ESC)
 			{
 				ReleaseAssert(wParam < KEY_MAX,
 					"Keypress value out of range (WM_CHAR: wParam = %d)", wParam);
-				g_inputManager.priv->m_newKeysTyped[g_inputManager.priv->m_newNumKeysTyped] = wParam;
-				g_inputManager.priv->m_newNumKeysTyped++;
+				g_input.priv->m_newKeysTyped[g_input.priv->m_newNumKeysTyped] = wParam;
+				g_input.priv->m_newNumKeysTyped++;
 			}
 			break;
 
 		case WM_LBUTTONDOWN:
-			g_inputManager.priv->m_lmbPrivate = true;
+			g_input.priv->m_lmbPrivate = true;
 //			g_windowManager->CaptureMouse();
 			break;
 		case WM_LBUTTONUP:
-			g_inputManager.priv->m_lmbPrivate = false;
+			g_input.priv->m_lmbPrivate = false;
 //			g_windowManager->UncaptureMouse();
 			break;
 		case WM_MBUTTONDOWN:
-			g_inputManager.mmb = true;
+			g_input.mmb = true;
 //			g_windowManager->CaptureMouse();
 			break;
 		case WM_MBUTTONUP:
-			g_inputManager.mmb = false;
+			g_input.mmb = false;
 //			g_windowManager->UncaptureMouse();
 			break;
 		case WM_RBUTTONDOWN:
-			g_inputManager.rmb = true;
+			g_input.rmb = true;
 //			g_windowManager->CaptureMouse();
 			break;
 		case WM_RBUTTONUP:
-			g_inputManager.rmb = false;
+			g_input.rmb = false;
 //			g_windowManager->UncaptureMouse();
 			break;
 
@@ -119,39 +119,39 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 		   never sends us the button up event. I've chosen the second option and fix some of
 		   the brokenness by generating a fake up event one frame after the down event. */
 		case WM_NCLBUTTONDOWN:
-			g_inputManager.priv->m_lmbPrivate = true;
-			g_inputManager.priv->m_lastClickWasNC = true;
+			g_input.priv->m_lmbPrivate = true;
+			g_input.priv->m_lastClickWasNC = true;
 			return -1;
 			break;
 		case WM_NCMBUTTONDOWN:
-			g_inputManager.mmb = true;
-			g_inputManager.priv->m_lastClickWasNC = true;
+			g_input.mmb = true;
+			g_input.priv->m_lastClickWasNC = true;
 			return -1;
 			break;
 		case WM_NCRBUTTONDOWN:
-			g_inputManager.rmb = true;
-			g_inputManager.priv->m_lastClickWasNC = true;
+			g_input.rmb = true;
+			g_input.priv->m_lastClickWasNC = true;
 			return -1;
 			break;
 
 		case WM_MOUSEWHEEL:
 		{
 			int move = (short)HIWORD(wParam) / 120;
-			g_inputManager.mouseZ += move;
+			g_input.mouseZ += move;
 			break;
 		}
 
 		case WM_NCMOUSEMOVE:
-			g_inputManager.mouseX = -1;
-			g_inputManager.mouseY = -1;
+			g_input.mouseX = -1;
+			g_input.mouseY = -1;
 			break;
 
 		case WM_MOUSEMOVE:
 		{
 			short newPosX = lParam & 0xFFFF;
 			short newPosY = short(lParam >> 16);
-			g_inputManager.mouseX = newPosX;
-			g_inputManager.mouseY = newPosY;
+			g_input.mouseX = newPosX;
+			g_input.mouseY = newPosY;
 			break;
 		}
 
@@ -164,8 +164,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
             if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
                 break;
 
-            g_inputManager.keys[wParam] = 0;
-            g_inputManager.priv->m_keyNewUps[wParam] = 1;
+            g_input.keys[wParam] = 0;
+            g_input.priv->m_keyNewUps[wParam] = 1;
             break;
 
 		case WM_SYSKEYDOWN:
@@ -173,8 +173,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 			ReleaseAssert(wParam < KEY_MAX,
 				"Keypress value out of range (WM_SYSKEYDOWN: wParam = %d)", wParam);
 			//int flags = (short)HIWORD(lParam);
-			g_inputManager.keys[wParam] = 1;
-			g_inputManager.priv->m_keyNewDowns[wParam] = 1;
+			g_input.keys[wParam] = 1;
+			g_input.priv->m_keyNewDowns[wParam] = 1;
 			break;
 		}
 
@@ -185,8 +185,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 			// normal KEYUP event for the release of the ALT. Very strange.
 			ReleaseAssert(wParam < KEY_MAX,
 				"Keypress value out of range (WM_KEYUP: wParam = %d)", wParam);
-            g_inputManager.priv->m_keyNewUps[wParam] = 1;
-            g_inputManager.keys[wParam] = 0;
+            g_input.priv->m_keyNewUps[wParam] = 1;
+            g_input.keys[wParam] = 0;
 			break;
 		}
 
@@ -196,8 +196,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 				"Keypress value out of range (WM_KEYDOWN: wParam = %d)", wParam);
 			if (wParam == KEY_DEL)
 			{
-				g_inputManager.priv->m_newKeysTyped[g_inputManager.numKeysTyped] = 127;
-				g_inputManager.priv->m_newNumKeysTyped++;
+				g_input.priv->m_newKeysTyped[g_input.numKeysTyped] = 127;
+				g_input.priv->m_newNumKeysTyped++;
 			}
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
             {
@@ -206,8 +206,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
                 // will be an event for the alt part too.
                 break;
             }
-			g_inputManager.priv->m_keyNewDowns[wParam] = 1;
-			g_inputManager.keys[wParam] = 1;
+			g_input.priv->m_keyNewDowns[wParam] = 1;
+			g_input.keys[wParam] = 1;
 			break;
 		}
 
@@ -215,7 +215,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 			return -1;
 	}
 
-    g_inputManager.eventSinceAdvance = true;
+    g_input.eventSinceAdvance = true;
 	return 0;
 }
 
@@ -230,71 +230,71 @@ bool InputManagerAdvance()
         DispatchMessage(&msg);
     } 
 
-    memcpy(g_inputManager.keyDowns, g_inputManager.priv->m_keyNewDowns, KEY_MAX);
-    memset(g_inputManager.priv->m_keyNewDowns, 0, KEY_MAX);
-    memcpy(g_inputManager.keyUps, g_inputManager.priv->m_keyNewUps, KEY_MAX);
-    memset(g_inputManager.priv->m_keyNewUps, 0, KEY_MAX);
+    memcpy(g_input.keyDowns, g_input.priv->m_keyNewDowns, KEY_MAX);
+    memset(g_input.priv->m_keyNewDowns, 0, KEY_MAX);
+    memcpy(g_input.keyUps, g_input.priv->m_keyNewUps, KEY_MAX);
+    memset(g_input.priv->m_keyNewUps, 0, KEY_MAX);
 
-	g_inputManager.numKeysTyped = g_inputManager.priv->m_newNumKeysTyped;
-	memcpy(g_inputManager.keysTyped, g_inputManager.priv->m_newKeysTyped, g_inputManager.priv->m_newNumKeysTyped);
-	g_inputManager.priv->m_newNumKeysTyped = 0;
+	g_input.numKeysTyped = g_input.priv->m_newNumKeysTyped;
+	memcpy(g_input.keysTyped, g_input.priv->m_newKeysTyped, g_input.priv->m_newNumKeysTyped);
+	g_input.priv->m_newNumKeysTyped = 0;
 
     // Count the number of key ups and downs this frame
-    g_inputManager.numKeyDowns = 0;
-    g_inputManager.numKeyUps = 0;
+    g_input.numKeyDowns = 0;
+    g_input.numKeyUps = 0;
     for (int i = 0; i < KEY_MAX; ++i)
     {
-        if (g_inputManager.keyUps[i]) g_inputManager.numKeyUps++;
-        if (g_inputManager.keyDowns[i]) g_inputManager.numKeyDowns++;
+        if (g_input.keyUps[i]) g_input.numKeyUps++;
+        if (g_input.keyDowns[i]) g_input.numKeyDowns++;
     }
 
-    g_inputManager.lmb = g_inputManager.priv->m_lmbPrivate;
-    if (g_inputManager.priv->m_lastClickWasNC)
-        g_inputManager.lmbClicked = false;
+    g_input.lmb = g_input.priv->m_lmbPrivate;
+    if (g_input.priv->m_lastClickWasNC)
+        g_input.lmbClicked = false;
 	else
-        g_inputManager.lmbClicked = g_inputManager.lmb == true && g_inputManager.priv->m_lmbOld == false;
-	g_inputManager.mmbClicked = g_inputManager.mmb == true && g_inputManager.priv->m_mmbOld == false;
-	g_inputManager.rmbClicked = g_inputManager.rmb == true && g_inputManager.priv->m_rmbOld == false;
-	g_inputManager.lmbUnClicked = g_inputManager.lmb == false && g_inputManager.priv->m_lmbOld == true;
-	g_inputManager.mmbUnClicked = g_inputManager.mmb == false && g_inputManager.priv->m_mmbOld == true;
-	g_inputManager.rmbUnClicked = g_inputManager.rmb == false && g_inputManager.priv->m_rmbOld == true;
-	g_inputManager.priv->m_lmbOld = g_inputManager.lmb;
-	g_inputManager.priv->m_mmbOld = g_inputManager.mmb;
-	g_inputManager.priv->m_rmbOld = g_inputManager.rmb;
+        g_input.lmbClicked = g_input.lmb == true && g_input.priv->m_lmbOld == false;
+	g_input.mmbClicked = g_input.mmb == true && g_input.priv->m_mmbOld == false;
+	g_input.rmbClicked = g_input.rmb == true && g_input.priv->m_rmbOld == false;
+	g_input.lmbUnClicked = g_input.lmb == false && g_input.priv->m_lmbOld == true;
+	g_input.mmbUnClicked = g_input.mmb == false && g_input.priv->m_mmbOld == true;
+	g_input.rmbUnClicked = g_input.rmb == false && g_input.priv->m_rmbOld == true;
+	g_input.priv->m_lmbOld = g_input.lmb;
+	g_input.priv->m_mmbOld = g_input.mmb;
+	g_input.priv->m_rmbOld = g_input.rmb;
 
-	g_inputManager.lmbDoubleClicked = false;
-	if (g_inputManager.lmbClicked)
+	g_input.lmbDoubleClicked = false;
+	if (g_input.lmbClicked)
 	{
  		double timeNow = DfGetTime();
-		double delta = timeNow - g_inputManager.priv->m_lastClickTime;
+		double delta = timeNow - g_input.priv->m_lastClickTime;
 		if (delta < 0.25)
 		{
-			g_inputManager.lmbDoubleClicked = true;
-			g_inputManager.lmbClicked = false;
+			g_input.lmbDoubleClicked = true;
+			g_input.lmbClicked = false;
 		}
-		g_inputManager.priv->m_lastClickTime = timeNow;
-		g_inputManager.priv->m_lmbRepeatsSoFar = 0;
+		g_input.priv->m_lastClickTime = timeNow;
+		g_input.priv->m_lmbRepeatsSoFar = 0;
 	}
 
 	// Generate fake mouse up event(s) to compensate for the fact that Windows won't send
 	// them if the last mouse down event was in the client area.
-	if (g_inputManager.priv->m_lastClickWasNC)
+	if (g_input.priv->m_lastClickWasNC)
 	{
-		g_inputManager.priv->m_lastClickWasNC = false;
-		g_inputManager.priv->m_lmbPrivate = false;
-		g_inputManager.mmb = false;
-		g_inputManager.rmb = false;
+		g_input.priv->m_lastClickWasNC = false;
+		g_input.priv->m_lmbPrivate = false;
+		g_input.mmb = false;
+		g_input.rmb = false;
 	}
 
-	g_inputManager.mouseVelX = g_inputManager.mouseX - g_inputManager.priv->m_mouseOldX;
-	g_inputManager.mouseVelY = g_inputManager.mouseY - g_inputManager.priv->m_mouseOldY;
-	g_inputManager.mouseVelZ = g_inputManager.mouseZ - g_inputManager.priv->m_mouseOldZ;
-	g_inputManager.priv->m_mouseOldX = g_inputManager.mouseX;
-	g_inputManager.priv->m_mouseOldY = g_inputManager.mouseY;
-	g_inputManager.priv->m_mouseOldZ = g_inputManager.mouseZ;
+	g_input.mouseVelX = g_input.mouseX - g_input.priv->m_mouseOldX;
+	g_input.mouseVelY = g_input.mouseY - g_input.priv->m_mouseOldY;
+	g_input.mouseVelZ = g_input.mouseZ - g_input.priv->m_mouseOldZ;
+	g_input.priv->m_mouseOldX = g_input.mouseX;
+	g_input.priv->m_mouseOldY = g_input.mouseY;
+	g_input.priv->m_mouseOldZ = g_input.mouseZ;
 
-    bool rv = g_inputManager.eventSinceAdvance;
-    g_inputManager.eventSinceAdvance = false;
+    bool rv = g_input.eventSinceAdvance;
+    g_input.eventSinceAdvance = false;
     return rv;
 }
 
@@ -408,12 +408,12 @@ int GetKeyId(char const *name)
 
 bool UntypeKey(char key)
 {
-    for (int i = 0; i < g_inputManager.numKeysTyped; ++i)
+    for (int i = 0; i < g_input.numKeysTyped; ++i)
     {
-        if (g_inputManager.keysTyped[i] == key)
+        if (g_input.keysTyped[i] == key)
         {
-            g_inputManager.keysTyped[i] = g_inputManager.keysTyped[g_inputManager.numKeysTyped - 1];
-            g_inputManager.numKeysTyped--;
+            g_input.keysTyped[i] = g_input.keysTyped[g_input.numKeysTyped - 1];
+            g_input.numKeysTyped--;
             return true;
         }
     }
