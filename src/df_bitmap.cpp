@@ -568,7 +568,7 @@ void RectFill(BitmapRGBA *bmp, int x, int y, unsigned w, unsigned h, RGBAColour 
 
     w = x2 - x1 + 1;
   
-    RGBAColour * __restrict line = GetLine(bmp, y1);
+    RGBAColour * __restrict line = GetLine(bmp, y1) + x1;
     if (c.a == 255)
     {
         for (int a = y1; a <= y2; a++)
