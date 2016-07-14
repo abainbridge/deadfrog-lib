@@ -27,11 +27,11 @@
     <ClCompile Include="..\..\src\df_master_glyph.cpp" />
     <ClCompile Include="..\..\src\df_message_dialog.cpp" />
     <ClCompile Include="..\..\src\df_polygon.cpp" />
-    <ClCompile Include="..\..\src\df_rgba_colour.cpp" />
+    <ClCompile Include="..\..\src\df_colour.cpp" />
     <ClCompile Include="..\..\src\df_sized_glyph.cpp" />
-    <ClCompile Include="..\..\src\df_text_renderer.cpp" />
-    <ClCompile Include="..\..\src\df_text_renderer_aa.cpp" />
-    <ClCompile Include="..\..\src\df_window_manager.cpp" />
+    <ClCompile Include="..\..\src\df_font.cpp" />
+    <ClCompile Include="..\..\src\df_font_aa.cpp" />
+    <ClCompile Include="..\..\src\df_window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\df_bitmap.h" />
@@ -42,12 +42,12 @@
     <ClInclude Include="..\..\src\df_master_glyph.h" />
     <ClInclude Include="..\..\src\df_message_dialog.h" />
     <ClInclude Include="..\..\src\df_polygon.h" />
-    <ClInclude Include="..\..\src\df_rgba_colour.h" />
+    <ClInclude Include="..\..\src\df_colour.h" />
     <ClInclude Include="..\..\src\df_sized_glyph.h" />
-    <ClInclude Include="..\..\src\df_text_renderer.h" />
-    <ClInclude Include="..\..\src\df_text_renderer_aa.h" />
-    <ClInclude Include="..\..\src\df_text_renderer_aa_internals.h" />
-    <ClInclude Include="..\..\src\df_window_manager.h" />
+    <ClInclude Include="..\..\src\df_font.h" />
+    <ClInclude Include="..\..\src\df_font_aa.h" />
+    <ClInclude Include="..\..\src\df_font_aa_internals.h" />
+    <ClInclude Include="..\..\src\df_window.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0DD52A68-E8AA-418A-A4A1-D09E74C6934C}</ProjectGuid>
