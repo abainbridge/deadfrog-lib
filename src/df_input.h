@@ -56,6 +56,8 @@ typedef struct
 	char		keysTyped[MAX_KEYS_TYPED_PER_FRAME];
 	int			numKeysTyped;
 
+    int         numKeyDowns;
+    int         numKeyUps;
     signed char keys[KEY_MAX];		// Is the key currently pressed
     signed char keyDowns[KEY_MAX];	// Was the key pressed this frame (includes key repeats)
     signed char keyUps[KEY_MAX];	// Was the key released this frame

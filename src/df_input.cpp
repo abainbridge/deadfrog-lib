@@ -239,6 +239,14 @@ bool InputManagerAdvance()
 	memcpy(g_inputManager.keysTyped, g_inputManager.priv->m_newKeysTyped, g_inputManager.priv->m_newNumKeysTyped);
 	g_inputManager.priv->m_newNumKeysTyped = 0;
 
+    // Count the number of key ups and downs this frame
+    g_inputManager.numKeyDowns = 0;
+    g_inputManager.numKeyUps = 0;
+    for (int i = 0; i < KEY_MAX; ++i)
+    {
+        if (g_inputManager.keyUps[i]) g_inputManager.numKeyUps++;
+        if (g_inputManager.keyDowns[i]) g_inputManager.numKeyDowns++;
+    }
 
     g_inputManager.lmb = g_inputManager.priv->m_lmbPrivate;
     if (g_inputManager.priv->m_lastClickWasNC)
