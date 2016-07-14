@@ -178,7 +178,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 		windowStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height,
 		NULL, NULL, 0/*g_hInstance*/, NULL);
 
-    double now = GetHighResTime();
+    double now = DfGetTime();
     wd->_private->m_lastUpdateTime = now;
     wd->_private->m_endOfSecond = now + 1.0;
 
@@ -222,7 +222,7 @@ void UpdateWin()
 
     g_window->_private->m_framesThisSecond++;
 
-    double currentTime = GetHighResTime();
+    double currentTime = DfGetTime();
     if (currentTime > g_window->_private->m_endOfSecond)
     {
         // If program has been paused by a debugger, skip the seconds we missed
