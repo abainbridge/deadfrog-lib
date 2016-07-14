@@ -36,6 +36,16 @@ inline int RoundToInt(double r) {
 }
 
 
+inline int ClampInt(int val, int min, int max)
+{
+    if (val < min)
+        return min;
+    if (val > max)
+        return max;
+    return val;
+}
+
+
 inline double ClampDouble(double val, double min, double max)
 {
     if (val < min)
