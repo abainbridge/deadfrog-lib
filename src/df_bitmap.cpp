@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 
-DfBitmap *CreateBitmapRGBA(unsigned width, unsigned height)
+DfBitmap *DfCreateBitmap(unsigned width, unsigned height)
 {
 	DfBitmap *bmp = new DfBitmap;
 	bmp->width = width;
@@ -26,7 +26,7 @@ DfBitmap *CreateBitmapRGBA(unsigned width, unsigned height)
 }
 
 
-void DeleteBitmapRGBA(DfBitmap *bmp)
+void DfDeleteBitmap(DfBitmap *bmp)
 {
 	bmp->width = -1;
 	bmp->height = -1;

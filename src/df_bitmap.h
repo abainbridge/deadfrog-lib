@@ -18,8 +18,8 @@ struct DfBitmap
 };
 
 
-DLL_API DfBitmap   *CreateBitmapRGBA(unsigned width, unsigned height);
-DLL_API void        DeleteBitmapRGBA(DfBitmap *bmp);
+DLL_API DfBitmap   *DfCreateBitmap(unsigned width, unsigned height);
+DLL_API void        DfDeleteBitmap(DfBitmap *bmp);
 
 DLL_API void        ClearBitmap     (DfBitmap *bmp, DfColour c);
 

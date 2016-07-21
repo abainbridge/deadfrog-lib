@@ -58,8 +58,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             int h = (lParam & 0xffff0000) >> 16;
             if (w != win->bmp->width || h != win->bmp->height)
             {
-                DeleteBitmapRGBA(win->bmp);
-                win->bmp = CreateBitmapRGBA(w, h);
+                DfDeleteBitmap(win->bmp);
+                win->bmp = DfCreateBitmap(w, h);
             }
             break;
         }
@@ -137,7 +137,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 	wc.lpszClassName = winName;
 	RegisterClass(&wc);
 
-    wd->bmp = CreateBitmapRGBA(width, height);
+    wd->bmp = DfCreateBitmap(width, height);
 
     unsigned int windowStyle = WS_VISIBLE;
 	if (winType == WT_WINDOWED)

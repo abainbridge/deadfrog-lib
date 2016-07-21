@@ -1,11 +1,11 @@
-#include "df_hi_res_time.h"
+#include "df_time.h"
 #include "df_input.h"
 #include "df_bitmap.h"
-#include "df_window_manager.h"
+#include "df_window.h"
 #include <windows.h>
 
 
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+void MandlebrotMain()
 {
     // Setup the window
     int width, height;
@@ -44,18 +44,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         if ((y & 7) == 7)
         {
             // Abort drawing the set if the user presses escape or clicks the close icon
-            if (g_window->windowClosed || g_inputManager.keys[KEY_ESC])
-                return 0;
+            if (g_window->windowClosed || g_input.keys[KEY_ESC])
+                return;
             UpdateWin();
         }
     }
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         InputManagerAdvance();
-        SleepMillisec(100);
+        DfSleepMillisec(100);
     }
-
-    return 0;
 }

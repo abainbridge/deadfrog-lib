@@ -1,21 +1,18 @@
-#include "df_hi_res_time.h"
+#include "df_time.h"
 #include "df_input.h"
 #include "df_bitmap.h"
-#include "df_text_renderer.h"
-#include "df_window_manager.h"
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include "df_font.h"
+#include "df_window.h"
 
 
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+void HelloWorldMain()
 {
 	CreateWin(800, 600, WT_WINDOWED, "Hello World Example");
-    TextRenderer *font = CreateTextRenderer("Courier New", 12, 4);
+    DfFont *font = DfCreateFont("Courier New", 12, 4);
 
     unsigned x = 100;
     unsigned y = 100;
-    while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         ClearBitmap(g_window->bmp, g_colourBlack);
         InputManagerAdvance();
@@ -27,15 +24,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         if (y > g_window->bmp->height)
             y = 0;
 
-        RGBAColour col = Colour(x & 255, y & 255, (x*y) & 255);
+        DfColour col = Colour(x & 255, y & 255, (x*y) & 255);
         DrawTextSimple(font, col, g_window->bmp, x, y, "Hello World!");
 
         // Draw frames per second counter
         DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
         UpdateWin();
-        SleepMillisec(10);
+        DfSleepMillisec(10);
     }
-
-    return 0;
 }

@@ -6,5 +6,6 @@
     <ClCompile Include="..\..\harmonograph.cpp" />
     <ClCompile Include="..\..\hello_world.cpp" />
     <ClCompile Include="..\..\mandlebrot.cpp" />
+    <ClCompile Include="..\..\all.cpp" />
   </ItemGroup>
 </Project>

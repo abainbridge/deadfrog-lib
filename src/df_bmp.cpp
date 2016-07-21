@@ -194,7 +194,7 @@ DfBitmap *LoadBmp(char const *filename)
     ReleaseAssert(biSize != OS2INFOHEADERSIZE, "Bitmap loader does not support OS/2 format bitmaps");
     ReleaseAssert(infoheader.biCompression == BMP_RGB, "Bitmap loader does not support RLE compressed bitmaps"); 
 
-    DfBitmap *bitmap = CreateBitmapRGBA(infoheader.biWidth, infoheader.biHeight);
+    DfBitmap *bitmap = DfCreateBitmap(infoheader.biWidth, infoheader.biHeight);
 
     // Read the image
     for (int i = 0; i < (int)infoheader.biHeight; ++i) 

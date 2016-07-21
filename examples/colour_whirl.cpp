@@ -1,10 +1,9 @@
-#include "df_hi_res_time.h"
+#include "df_time.h"
 #include "df_input.h"
-#include "df_text_renderer.h"
-#include "df_window_manager.h"
+#include "df_font.h"
+#include "df_window.h"
 #include <limits.h>
-#include <time.h>
-#include <windows.h>
+#include <stdlib.h>
 
 
 unsigned available[10000];
@@ -17,7 +16,7 @@ inline unsigned Coord(unsigned x, unsigned y)
 }
 
 
-inline unsigned ColourDiff(RGBAColour a, RGBAColour b)
+inline unsigned ColourDiff(DfColour a, DfColour b)
 {
     int r = (a.r - b.r)/2;
     r *= r;
@@ -30,11 +29,11 @@ inline unsigned ColourDiff(RGBAColour a, RGBAColour b)
 
 
 // Calculate diff between specified colour and neighbours of specified location
-unsigned CalcDiff(unsigned x, unsigned y, RGBAColour target_colour)
+unsigned CalcDiff(unsigned x, unsigned y, DfColour target_colour)
 {
     unsigned min_diff = UINT_MAX;
 
-    RGBAColour *row = g_window->bmp->pixels + (y-1) * g_window->bmp->width + x;
+    DfColour *row = g_window->bmp->pixels + (y-1) * g_window->bmp->width + x;
 
     unsigned diff = ColourDiff(row[0], target_colour);
     if (diff < min_diff)
@@ -60,7 +59,7 @@ unsigned CalcDiff(unsigned x, unsigned y, RGBAColour target_colour)
 }
 
 
-unsigned FindBest(RGBAColour c)
+unsigned FindBest(DfColour c)
 {
     unsigned best = 0;
 
@@ -81,7 +80,7 @@ unsigned FindBest(RGBAColour c)
 }
 
 
-RGBAColour alreadyAddedCol = g_colourBlack;
+DfColour alreadyAddedCol = g_colourBlack;
 
 
 inline void AddIfNew(unsigned x, unsigned y)
@@ -99,7 +98,7 @@ inline void AddIfNew(unsigned x, unsigned y)
 }
 
 
-void PlaceColour(unsigned x, unsigned y, RGBAColour colour)
+void PlaceColour(unsigned x, unsigned y, DfColour colour)
 {
     PutPix(g_window->bmp, x, y, colour);
 
@@ -114,20 +113,19 @@ void PlaceColour(unsigned x, unsigned y, RGBAColour colour)
 }
 
 
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+void ColourWhirlMain()
 {
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
 //    CreateWin(width, height, false, "Colour Whirl Example");
     CreateWin(1200, 900, WT_WINDOWED, "Colour Whirl Example");
-    HideMouse();
     ClearBitmap(g_window->bmp, g_colourBlack);
 
     // Create an array of colours
     int const max_component = 100;
     double const scale = 256.0 / max_component;
-    RGBAColour *colours = new RGBAColour [max_component * max_component * max_component];
+    DfColour *colours = new DfColour [max_component * max_component * max_component];
     int n = 0;
     {
         for (int r = 0; r < max_component; r++)
@@ -137,16 +135,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     }
 
     // Shuffle the array
-    srand(clock());
+    srand((unsigned)(DfGetTime() * 1000.0));
     for (int i = 0; i < n - 1; i++) 
     {
         int j = i + rand() / (RAND_MAX / (n - i) + 1);
-        RGBAColour t = colours[j];
+        DfColour t = colours[j];
         colours[j] = colours[i];
         colours[i] = t;
     }
 
-    double start_time = GetHighResTime();
+    double start_time = DfGetTime();
 
     alreadyAddedCol.b = 1;
     PlaceColour(100, 100, colours[n++]);
@@ -171,22 +169,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         {
             // Abort drawing the set if the user presses escape or clicks the close icon
             InputManagerAdvance();
-            if (g_window->windowClosed || g_inputManager.keyDowns[KEY_ESC])
-                return 0;
+            if (g_window->windowClosed || g_input.keyDowns[KEY_ESC])
+                return;
             UpdateWin();
         }
     }
 
-    double endTime = GetHighResTime();
-    TextRenderer *font = CreateTextRenderer("Courier New", 10, 4);
+    double endTime = DfGetTime();
+    DfFont *font = DfCreateFont("Courier New", 10, 4);
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         InputManagerAdvance();
-        SleepMillisec(100);
+        DfSleepMillisec(100);
     }
-
-    return 0;
 }

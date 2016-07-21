@@ -1,12 +1,12 @@
 #include "df_bitmap.h"
 #include "df_bmp.h"
-#include "df_hi_res_time.h"
+#include "df_time.h"
 #include "df_input.h"
-#include "df_text_renderer.h"
-#include "df_window_manager.h"
+#include "df_font.h"
+#include "df_window.h"
 #include <math.h>
 #include <stdio.h>
-#include <windows.h>
+#include <stdlib.h>
 
 
 struct Point
@@ -31,7 +31,7 @@ struct Pendulum
 double g_advanceTime;
 Pendulum g_pendula[6];
 Point g_stickIntersectionPos = { 0, 0 };
-BitmapRGBA *g_bigBmp;
+DfBitmap *g_bigBmp;
 
 
 // Find the points where the two circles intersect.
@@ -97,7 +97,7 @@ void AdvancePendula()
 }
 
 
-void DrawCircle(BitmapRGBA *bmp, int x, int y, int r)
+void DrawCircle(DfBitmap *bmp, int x, int y, int r)
 {
     float const twopi = 3.14159265f * 2.0f;
     for (float t = 0; t < twopi; t += 0.003f)
@@ -188,7 +188,7 @@ void RunSim()
             i1.x = (i1.x + xOffset) * zoom;
             i1.y = (i1.y + yOffset) * zoom;
 
-            RGBAColour c = GetPix(g_bigBmp, i1.x, i1.y);
+            DfColour c = GetPix(g_bigBmp, i1.x, i1.y);
             c.b *= 48/64.0;
             c.g *= 63/64.0;
             c.r *= 60/64.0;
@@ -203,7 +203,7 @@ void RunSim()
 }
 
 
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+void HarmonographMain()
 {
     // Setup the window
     int width = 1024;
@@ -211,8 +211,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     GetDesktopRes(&width, &height);
     CreateWin(width, height, WT_WINDOWED, "Harmonograph");
 
-    g_bigBmp = CreateBitmapRGBA(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
-    TextRenderer *font = CreateTextRenderer("Lucida Console", 10, 4);
+    g_bigBmp = DfCreateBitmap(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
+    DfFont *font = DfCreateFont("Lucida Console", 10, 4);
 
     ClearBitmap(g_window->bmp, g_colourBlack);
     ClearBitmap(g_bigBmp, g_colourBlack);
@@ -222,17 +222,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     InitPendula();
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         InputManagerAdvance();
         
-        if (g_inputManager.keyDowns[KEY_SPACE])
+        if (g_input.keyDowns[KEY_SPACE])
         {
             InitPendula();
             ClearBitmap(g_window->bmp, g_colourBlack);
             ClearBitmap(g_bigBmp, g_colourBlack);
         }
-        if (g_inputManager.keyDowns[KEY_S])
+        if (g_input.keyDowns[KEY_S])
         {
             SaveBmp(g_bigBmp, "foo.bmp");
         }
@@ -242,8 +242,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         DrawTextSimple(font, g_colourWhite, g_window->bmp, 5, height - 20, "Keys: Space to restart  S to save");
 
         UpdateWin();
-        SleepMillisec(1);
+        DfSleepMillisec(1);
     }
-
-    return 0;
 }
