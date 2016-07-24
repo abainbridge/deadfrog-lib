@@ -249,10 +249,7 @@ bool InputManagerAdvance()
     }
 
     g_input.lmb = g_input.priv->m_lmbPrivate;
-    if (g_input.priv->m_lastClickWasNC)
-        g_input.lmbClicked = false;
-	else
-        g_input.lmbClicked = g_input.lmb == true && g_input.priv->m_lmbOld == false;
+    g_input.lmbClicked = g_input.lmb == true && g_input.priv->m_lmbOld == false;
 	g_input.mmbClicked = g_input.mmb == true && g_input.priv->m_mmbOld == false;
 	g_input.rmbClicked = g_input.rmb == true && g_input.priv->m_rmbOld == false;
 	g_input.lmbUnClicked = g_input.lmb == false && g_input.priv->m_lmbOld == true;
