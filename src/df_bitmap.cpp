@@ -82,12 +82,15 @@ void HLineUnclipped(DfBitmap *bmp, int x, int y, unsigned len, DfColour c)
     else
     {
         unsigned char invA = 255 - c.a;
+        unsigned cr = c.r * c.a;
+        unsigned cg = c.g * c.a;
+        unsigned cb = c.b * c.a;
         for (unsigned i = 0; i < len; i++)
         {
             DfColour *pixel = row + i;
-            pixel->r = (pixel->r * invA + c.r * c.a) / 255;
-            pixel->g = (pixel->g * invA + c.g * c.a) / 255;
-            pixel->b = (pixel->b * invA + c.b * c.a) / 255;
+            pixel->r = (pixel->r * invA + cr) >> 8;
+            pixel->g = (pixel->g * invA + cg) >> 8;
+            pixel->b = (pixel->b * invA + cb) >> 8;
         }
     }
 }
@@ -142,11 +145,15 @@ void VLineUnclipped(DfBitmap *bmp, int x, int y, unsigned len, DfColour c)
     else
     {
         unsigned char invA = 255 - c.a;
+        unsigned cr = c.r * c.a;
+        unsigned cg = c.g * c.a;
+        unsigned cb = c.b * c.a;
+
         for (unsigned i = 0; i < len; i++)
         {
-            pixel->r = (pixel->r * invA + c.r * c.a) / 255;
-            pixel->g = (pixel->g * invA + c.g * c.a) / 255;
-            pixel->b = (pixel->b * invA + c.b * c.a) / 255;
+            pixel->r = (pixel->r * invA + cr) >> 8;
+            pixel->g = (pixel->g * invA + cg) >> 8;
+            pixel->b = (pixel->b * invA + cb) >> 8;
             pixel += bw;
         }
     }
@@ -558,6 +565,9 @@ void RectFill(DfBitmap *bmp, int x, int y, unsigned w, unsigned h, DfColour c)
     // doesn't get changed by anything (like an aliased pointer).
     unsigned bmpWidth = bmp->width;
 
+    if (w > bmpWidth)
+        w = bmpWidth;
+
     int x1 = IntMax(x, 0);
     int x2 = IntMin(x + w, bmp->width) - 1;
     int y1 = IntMax(y, 0);
@@ -772,7 +782,7 @@ void EllipseFill(DfBitmap *bmp, int x0, int y0, unsigned rx, unsigned ry, DfColo
 }
 
 
-void MaskedBlit(DfBitmap *destBmp, unsigned x, unsigned y, DfBitmap *srcBmp)
+void MaskedBlit(DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp)
 {
 	if (x > destBmp->width || y > destBmp->height)
 		return;
