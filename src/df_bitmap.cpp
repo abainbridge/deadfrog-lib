@@ -75,22 +75,24 @@ void HLineUnclipped(DfBitmap *bmp, int x, int y, unsigned len, DfColour c)
     DfColour * __restrict row = GetLine(bmp, y) + x;
     if (c.a == 255)
     {
-//         for (unsigned i = 0; i < len; i++)
-//             row[i] = c;
+        //         for (unsigned i = 0; i < len; i++)
+        //             row[i] = c;
         __stosd((unsigned long*)row, c.c, len);
     }
     else
     {
-        unsigned char invA = 255 - c.a;
-        unsigned cr = c.r * c.a;
+        unsigned crb = (c.c & 0xff00ff) * c.a;
         unsigned cg = c.g * c.a;
-        unsigned cb = c.b * c.a;
+
+        unsigned char invA = 255 - c.a;
         for (unsigned i = 0; i < len; i++)
         {
             DfColour *pixel = row + i;
-            pixel->r = (pixel->r * invA + cr) >> 8;
-            pixel->g = (pixel->g * invA + cg) >> 8;
-            pixel->b = (pixel->b * invA + cb) >> 8;
+            unsigned rb = (pixel->c & 0xff00ff) * invA + crb;
+            unsigned g = pixel->g * invA + cg;
+
+            pixel->c = rb >> 8;
+            pixel->g = g >> 8;
         }
     }
 }
@@ -784,7 +786,7 @@ void EllipseFill(DfBitmap *bmp, int x0, int y0, unsigned rx, unsigned ry, DfColo
 
 void MaskedBlit(DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp)
 {
-	if (x > destBmp->width || y > destBmp->height)
+	if ((unsigned)x > destBmp->width || (unsigned)y > destBmp->height)
 		return;
 
 	// Reduce the amount of the src bitmap to copy, if it would go 
