@@ -18,13 +18,14 @@ It is a little like SDL, but smaller and with useful features like line drawing 
 ## Advantages
 
 * Simple easy to use API.
-* Predictable performance that scales linearly with CPU speed, unlike hardware accelerated drawing whose speed can vary by orders of magnitude due depending on graphics driver version.
-* It's tiny. Less than 5000 lines of code. The DLL is about 8K bytes when dynamically linked against the Visual Studio runtime libraries.
+* Reliable results - unlike hardware accelerated drawing where output can change depending on the graphics card or even the driver version.
+* It's tiny. Less than 5000 lines of code. The DLL is about 15K bytes when dynamically linked against the Visual Studio runtime libraries.
+* Easy to debug. Unlike OpenGl/DirectX etc, you can step through all the code in the debugger to see why your rendering code isn't working.
 * Written in C++ with a C interface (to make it easy to use from other languages).
 * Python bindings provided (not recently updated).
 * Permissive BSD licence.
-* Depends on NO third-party libraries.
-* Easy to port to other platforms (Currently code is limited to Win32).
+* Depends on no third-party libraries.
+* Easy to port to other platforms (but currently limited to Windows).
 
 ## Design Details
 
@@ -68,30 +69,30 @@ Running on Windows XP on a single core of an Intel i5-2430M @ 3.0 GHz:
 int main() 
 { 
     bool windowed = true; 
-    CreateWin(800, 600, windowed, "Hello World Example"); 
-    TextRenderer *font = CreateTextRenderer("Courier New", 12);
+    DfCreateWin(800, 600, windowed, "Hello World Example"); 
+    DfFont *font = DfCreateFont("Courier New", 12);
 
-    while (!g_window->windowClosed && !g_inputManager.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         // Get mouse and keyboard events from OS
-        InputManagerAdvance();
+        DfInputManagerAdvance();
 
         // Clear the back buffer
-        ClearBitmap(g_window->bmp, g_colourBlack);
+        DfClearBitmap(g_window->bmp, g_colourBlack);
 
         // Print "Hello World!"
-        RGBAColour col = Colour(255, 128, 0);
+        DfColour col = Colour(255, 128, 0);
         unsigned x = 100;
         unsigned y = 100;
-        DrawTextSimple(font, col, g_window->bmp, x, y, "Hello World!");
+        DfDrawTextSimple(font, col, g_window->bmp, x, y, "Hello World!");
 
         // Draw frames per second counter
-        DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
+        DfDrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
         // Blit back buffer to screen
-        UpdateWin();
+        DfUpdateWin();
 
-        SleepMillisec(10);
+        DfSleepMillisec(10);
     }
 
     return 0;
