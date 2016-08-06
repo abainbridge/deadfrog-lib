@@ -18,7 +18,7 @@ struct WindowDataPrivate;
 typedef struct _DfWindow
 {
     WindowDataPrivate   *_private;
-    DfBitmap          *bmp;
+    DfBitmap            *bmp;
     bool                windowClosed;
     unsigned int	    fps;
     double              advanceTime;
