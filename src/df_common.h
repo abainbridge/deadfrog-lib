@@ -1,6 +1,11 @@
 #pragma once
 
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
+
 #ifdef DLL_EXPORTS
  #define DLL_API extern "C" __declspec(dllexport)
 #elif DLL_IMPORTS
@@ -18,8 +23,8 @@
 
 void DebugOut(char *fmt, ...);
 
-void ReleaseAssert(int condition, char const *fmt, ...);
-void ReleaseWarn(int condition, char const *fmt, ...);
+void ReleaseAssert(bool condition, char const *fmt, ...);
+void ReleaseWarn(bool condition, char const *fmt, ...);
 
 
 #if (_MSC_VER < 1800)
