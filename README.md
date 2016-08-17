@@ -1,9 +1,9 @@
 # deadfrog-lib
-A simple graphics, keyboard and mouse library with a C interface
+A simple graphics, keyboard and mouse library with a C interface.
 
 Deadfrog Lib is a collection of simple portable functions to create a window, get keyboard and mouse input and provide various 2D drawing primitives. It was created due to the frustration I found in just getting a simple interactive program up and running on a PC. The PC should be as easy to program as my ZX Spectrum was in 1982.
 
-It is a little like SDL, but smaller and with useful features like line drawing and text rendering that are oddly missing from SDL.
+It is a little like SDL, but smaller and with useful features like text rendering oddly missing from SDL.
 
 ## Functions include
 
