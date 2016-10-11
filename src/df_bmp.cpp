@@ -224,6 +224,10 @@ DfBitmap *LoadBmp(char const *filename)
 
 bool SaveBmp(DfBitmap *bmp, char const *filename)
 {
+    FILE *f = fopen(filename, "wb");
+    if (!f)
+        return false;
+
     int w = bmp->width;
     int h = bmp->height;
     int filesize = 54 + 3*w*h;  //w is your image width, h is image height, both int
@@ -260,7 +264,6 @@ bool SaveBmp(DfBitmap *bmp, char const *filename)
     bmpinfoheader[10] = (unsigned char)(       h>>16);
     bmpinfoheader[11] = (unsigned char)(       h>>24);
 
-    FILE *f = fopen(filename, "wb");
     fwrite(bmpfileheader, 1, 14, f);
     fwrite(bmpinfoheader, 1, 40, f);
     for(int i=0; i<h; i++)
