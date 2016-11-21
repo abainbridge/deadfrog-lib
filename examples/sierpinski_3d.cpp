@@ -5,10 +5,10 @@
 #include <stdlib.h>
 
 
-typedef struct _Point
+struct Point
 {
     float x, y, z;
-} Point;
+};
 
 
 #define NUM_POINTS 1000000
@@ -18,7 +18,7 @@ Point g_cameraPos = { 0.0f, 0.0f, -100.0f };
 float g_rotationX = 0.0f;
 
 
-void CreateSierpinski3D()
+static void CreateSierpinski3D()
 {
 	float size = 20.0f;
     Point corners[5] = {
@@ -43,7 +43,7 @@ void CreateSierpinski3D()
 }
 
 
-void Render()
+static void Render()
 {
     float scale = 1.0f * g_window->bmp->width;
 

@@ -8,5 +8,6 @@
     <ClCompile Include="..\..\mandlebrot.cpp" />
     <ClCompile Include="..\..\all.cpp" />
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
+    <ClCompile Include="..\..\gas.cpp" />
   </ItemGroup>
 </Project>

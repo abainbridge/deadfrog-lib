@@ -170,6 +170,7 @@
     <ClCompile Include="..\..\all.cpp" />
     <ClCompile Include="..\..\benchmark.cpp" />
     <ClCompile Include="..\..\colour_whirl.cpp" />
+    <ClCompile Include="..\..\gas.cpp" />
     <ClCompile Include="..\..\harmonograph.cpp" />
     <ClCompile Include="..\..\hello_world.cpp" />
     <ClCompile Include="..\..\mandlebrot.cpp" />
