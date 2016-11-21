@@ -20,15 +20,12 @@ struct Particle
 };
 
 
+
 static const unsigned NUM_PARTICLES = 1000;
 static Particle g_points[NUM_PARTICLES];
 
 static const unsigned SPEED_HISTOGRAM_NUM_BINS = 20;
 static unsigned g_speedHistogram[SPEED_HISTOGRAM_NUM_BINS];
-
-static unsigned const GRID_ROWS = 20;
-static unsigned const GRID_LINES = 20;
-static unsigned g_grid[GRID_LINES * GRID_ROWS];
 
 static float const MAX_INITIAL_SPEED = 50.0f;
 static float const RADIUS = 3.0f;
