@@ -20,9 +20,8 @@ struct Particle
 };
 
 
-
 static const unsigned NUM_PARTICLES = 1000;
-static Particle g_points[NUM_PARTICLES];
+static Particle g_particles[NUM_PARTICLES];
 
 static const unsigned SPEED_HISTOGRAM_NUM_BINS = 20;
 static unsigned g_speedHistogram[SPEED_HISTOGRAM_NUM_BINS];
@@ -41,10 +40,10 @@ static void InitParticles()
 {
     for (unsigned i = 0; i < NUM_PARTICLES; i++)
     {
-        g_points[i].x = frand(g_window->bmp->width);
-        g_points[i].y = frand(g_window->bmp->height);
-        g_points[i].vx = MAX_INITIAL_SPEED;
-        g_points[i].vy = MAX_INITIAL_SPEED;
+        g_particles[i].x = frand(g_window->bmp->width);
+        g_particles[i].y = frand(g_window->bmp->height);
+        g_particles[i].vx = MAX_INITIAL_SPEED;
+        g_particles[i].vy = MAX_INITIAL_SPEED;
     }
 }
 
@@ -75,7 +74,7 @@ static void Advance()
 
     for (unsigned i = 0; i < NUM_PARTICLES; i++)
     {
-        Particle *p = g_points + i;
+        Particle *p = g_particles + i;
         p->x += p->vx * advanceTime;
         if ((p->x < 0.0f && p->vx < 0.0f) || (p->x > WORLD_SIZE_X && p->vx > 0.0f))
             p->vx = -p->vx;
@@ -90,10 +89,10 @@ static void Advance()
     float const RADIUS2 = RADIUS * 2;
     for (unsigned i = 0; i < NUM_PARTICLES; i++)
     {
-        Particle *p1 = g_points + i;
+        Particle *p1 = g_particles + i;
         for (unsigned j = 0; j < i; j++)
         {
-            Particle *p2 = g_points + j;
+            Particle *p2 = g_particles + j;
             float deltaX = p2->x - p1->x;
             if (deltaX > RADIUS2)
                 continue;
@@ -177,7 +176,7 @@ static void Render()
 {
     for (unsigned i = 0; i < NUM_PARTICLES; i++)
     {
-        Particle *p = g_points + i;
+        Particle *p = g_particles + i;
         CircleFill(g_window->bmp, p->x, p->y, RADIUS, g_colourWhite);
     }
 
@@ -211,6 +210,6 @@ void GasMain()
         DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
         UpdateWin();
-        DfSleepMillisec(10);
+//        DfSleepMillisec(10);
     }
 }
