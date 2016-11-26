@@ -390,7 +390,7 @@ int GetKeyId(char const *name)
 	for (int i = 0; i < KEY_MAX; ++i)
 	{
 		char const *keyName = GetKeyName(i);
-		if (keyName && stricmp(name, keyName) == 0)
+		if (keyName && strcasecmp(name, keyName) == 0)
 		{
 			return i;
 		}

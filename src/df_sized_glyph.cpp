@@ -7,6 +7,7 @@
 
 // Standard headers
 #include <algorithm>
+#include <math.h>
 #include <stdlib.h>
 
 

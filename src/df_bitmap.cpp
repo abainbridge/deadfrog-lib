@@ -75,9 +75,12 @@ void HLineUnclipped(DfBitmap *bmp, int x, int y, unsigned len, DfColour c)
     DfColour * __restrict row = GetLine(bmp, y) + x;
     if (c.a == 255)
     {
-        //         for (unsigned i = 0; i < len; i++)
-        //             row[i] = c;
+#ifdef _MSC_VER
         __stosd((unsigned long*)row, c.c, len);
+#else
+        for (unsigned i = 0; i < len; i++)
+            row[i] = c;
+#endif
     }
     else
     {
@@ -585,9 +588,12 @@ void RectFill(DfBitmap *bmp, int x, int y, unsigned w, unsigned h, DfColour c)
     {
         for (int a = y1; a <= y2; a++)
         {
-//             for (int b = x1; b <= x2; b++)
-//                 line[b].c = c_as_uint;
+#ifdef _MSC_VER
             __stosd((unsigned long*)line, c.c, w);
+#else
+            for (int b = x1; b <= x2; b++)
+                line[b].c = c.c;
+#endif            
             line += bmpWidth;
         }
     }

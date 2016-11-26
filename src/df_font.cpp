@@ -84,7 +84,7 @@ DfFont *DfCreateFont(char const *fontName, int size, int weight)
     // Ask GDI about the name of the font
     char nameOfFontWeGot[256];
     GetTextFace(memDC, 256, nameOfFontWeGot);
-    ReleaseWarn(strnicmp(nameOfFontWeGot, fontName, 255) == 0,
+    ReleaseWarn(strncasecmp(nameOfFontWeGot, fontName, 255) == 0,
         "Attempt to load font '%s' failed.\n"
         "'%s' will be used instead.", 
         fontName, nameOfFontWeGot);
@@ -315,7 +315,7 @@ int DrawTextCentre(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char con
 
 int GetTextWidth(DfFont *tr, char const *text, int len)
 {
-	len = min((int)strlen(text), len);
+	len = IntMin((int)strlen(text), len);
 	if (tr->fixedWidth)
 	{
 		return len * tr->maxCharWidth;

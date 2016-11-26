@@ -21,14 +21,21 @@
 #define NOINLINE __attribute__((noinline))
 #endif
 
+
 void DebugOut(char *fmt, ...);
 
 void ReleaseAssert(bool condition, char const *fmt, ...);
 void ReleaseWarn(bool condition, char const *fmt, ...);
 
 
-#if (_MSC_VER < 1800)
-int snprintf(char *s, size_t n, char const *fmt, ...);
+#ifdef _MSC_VER
+    #define strcasecmp stricmp
+    #define strncasecmp strnicmp
+    #define __func__ __FUNCTION__
+    #define vnsprintf _vnsprintf_s
+    #if _MSC_VER < 1800
+        int snprintf(char *s, size_t n, char const *fmt, ...);
+    #endif
 #endif
 
 

@@ -1,16 +1,24 @@
-srcdir=../../src/lib
+src_dir=../../src
+obj_dir=obj
+inc_dirs=
 
-srcs=$(wildcard $(srcdir)/*.cpp)
-hdrs=$(wildcard $(srcdir)/*.h)
-objs=$(subst .cpp,.o,$(srcs))
+cxxflags=-MMD -O2 -march=native
 
-cflags=-DSTATIC_LIB -Wall -I../../src -O2 -s
-#cflags=-DDLL_EXPORTS -Wall -I../../src -O2 -s
-#lflags=-lgdi32 -shared -Wl,--out-implib,deadfrog_dll.a
-lflags=-lgdi32
+c_files=$(wildcard $(src_dir)/*.cpp)
+o_files=$(patsubst $(src_dir)/%.cpp,$(obj_dir)/%.o,$(c_files))
+d_files=$(patsubst %.o,%.d,$(o_files))
 
-deadfrog.a: $(objs) $(hdrs) Makefile
-	ar rvs $(objs) -o deadfrog.a $(cflags) $(lflags)
+deadfrog.a: $(obj_dir) $(o_files)
+	ar cr $@ $(o_files)
+
+# This magic line makes g++ pay attention to the dependency files
+-include $(d_files)
+
+$(obj_dir)/%.o: $(src_dir)/%.cpp
+	g++ $(cxxflags) $(inc_dirs) $< -c -o $@
+
+$(obj_dir):
+	mkdir -p $(obj_dir)
 
 clean:
-	rm -f $(objs) deadfrog.dll deadfrog_dll.a
+	rm -f $(o_files) $(d_files)

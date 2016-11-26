@@ -54,7 +54,7 @@ void ReleaseWarn(bool condition, char const *_fmt, ...)
 }
 
 
-#if (_MSC_VER < 1800)
+#if (defined _MSC_VER && _MSC_VER < 1800)
 int c99_vsnprintf(char *str, size_t size, char const *fmt, va_list ap)
 {
     int count = -1;

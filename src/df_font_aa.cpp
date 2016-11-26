@@ -40,7 +40,7 @@ static unsigned GetKerningDist(MasterGlyph *a, MasterGlyph *b, int avgCharWidth)
         return avgCharWidth + 1;
 
     // Calculate the vertical extent of overlap between the two glyphs.
-    int yOverlap = min(a->m_height, b->m_height);
+    int yOverlap = IntMin(a->m_height, b->m_height);
 
     int maxI = avgCharWidth / 3;
     int minI = -avgCharWidth / 2;
@@ -96,7 +96,7 @@ DfFontAa *CreateFontAa(char const *fontName, int weight)
     // Ask GDI about the name of the font
     char nameOfFontWeGot[256];
     GetTextFace(memDC, 256, nameOfFontWeGot);
-    ReleaseWarn(strnicmp(nameOfFontWeGot, fontName, 255) == 0,
+    ReleaseWarn(strncasecmp(nameOfFontWeGot, fontName, 255) == 0,
         "Attempt to load font '%s' failed.\n"
         "'%s' will be used instead.", 
         fontName, nameOfFontWeGot);
@@ -110,7 +110,7 @@ DfFontAa *CreateFontAa(char const *fontName, int weight)
     bmpInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     unsigned char *gdiPixels = 0;
     HBITMAP memBmp = CreateDIBSection(memDC, (BITMAPINFO *)&bmpInfo, DIB_RGB_COLORS, (void **)&gdiPixels, NULL, 0);
-	ReleaseAssert(memBmp != NULL, "In " __FUNCTION__ " CreateDIBSection failed");
+	ReleaseAssert(memBmp != NULL, "In '%s' CreateDIBSection failed", __func__);
     HBITMAP prevBmp = (HBITMAP)SelectObject(memDC, memBmp);
 
     // Setup stuff needed to render text with GDI
@@ -334,7 +334,7 @@ int GetTextWidthAa(DfFontAa *tr, char const *text, int size, int len)
 {
     SizedGlyphSet *sizedGlyphSet = GetSizedGlyphSet(tr, size);
 
-    len = min((int)strlen(text), len);
+    len = IntMin((int)strlen(text), len);
 	if (tr->fixedWidth)
 	{
         SizedGlyph *glyphA = sizedGlyphSet->m_sizedGlyphs['a'];
