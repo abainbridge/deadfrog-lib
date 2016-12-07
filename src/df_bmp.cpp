@@ -142,8 +142,13 @@ void Read8BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int 
 		unsigned char i = ReadU8(f);
 		PutPix(bitmap, x, y, pal[i]);
 	}
-    ReadS16(f);
-    ReadU8(f);
+
+    // Skip any padding until we've read a multiple of 4 bytes.
+    while (length & 3)
+    {
+        ReadU8(f);
+        length++;
+    }
 }
 
 
