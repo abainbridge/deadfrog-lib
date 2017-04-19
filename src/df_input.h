@@ -19,6 +19,12 @@
 #define MAX_KEYS_TYPED_PER_FRAME	128
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 struct InputPrivate;
 
 
@@ -177,3 +183,8 @@ DLL_API DfInput g_input;
 #define KEY_CAPSLOCK          20
 #define KEY_SHIFT			  16
 #define KEY_CONTROL			  17
+
+
+#ifdef __cplusplus
+}
+#endif

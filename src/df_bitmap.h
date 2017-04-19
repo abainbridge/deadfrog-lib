@@ -9,6 +9,12 @@
 #include "df_common.h"
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 struct DfBitmap
 {
 	unsigned width;
@@ -78,3 +84,8 @@ inline void PutPixUnclipped(DfBitmap *bmp, unsigned x, unsigned y, DfColour c)
         pixel->b = (pixel->b * invA + c.b * c.a) / 255;
     }
 }
+
+
+#ifdef __cplusplus
+}
+#endif

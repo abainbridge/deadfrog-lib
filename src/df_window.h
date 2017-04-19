@@ -12,6 +12,12 @@
 #include "df_input.h"
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 struct WindowDataPrivate;
 
 
@@ -47,3 +53,8 @@ DLL_API void UpdateWin();
 
 DLL_API void ShowMouse();
 DLL_API void HideMouse();
+
+
+#ifdef __cplusplus
+}
+#endif

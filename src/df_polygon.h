@@ -7,6 +7,12 @@
 #include "df_bitmap.h"
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 // Describes a single point (used for a single vertex)
 typedef struct 
 {
@@ -29,3 +35,7 @@ typedef struct
 int FillConvexPolygon(DfBitmap *bmp, PointListHeader *vertexList, DfColour col,
                       int xOffset, int yOffset);
 
+
+#ifdef __cplusplus
+}
+#endif

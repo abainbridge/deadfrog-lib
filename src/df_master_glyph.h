@@ -1,6 +1,12 @@
 #pragma once
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 // Coordinate space:
 //
 // -------------
@@ -45,3 +51,8 @@ public:
 // left as part of the glyph, which is wasteful of memory and cycles when 
 // rendering.
 // TODO. Store pixel data run-length encoded.
+
+
+#ifdef __cplusplus
+}
+#endif

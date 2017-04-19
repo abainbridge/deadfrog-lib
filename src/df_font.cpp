@@ -191,7 +191,7 @@ DfFont *DfCreateFont(char const *fontName, int size, int weight)
 static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text)
 {
     int x = _x;
-    DfColour *startRow = bmp->pixels + y * bmp->width;
+    DfColour *startRow = bmp->pixels + y * (int)bmp->width;
     int width = bmp->width;
 
     if (y + tr->charHeight < 0 || y > (int)bmp->height)

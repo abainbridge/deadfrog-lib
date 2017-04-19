@@ -6,6 +6,12 @@
 #endif
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 #ifdef DLL_EXPORTS
  #define DLL_API extern "C" __declspec(dllexport)
 #elif DLL_IMPORTS
@@ -80,4 +86,9 @@ inline double ClampDouble(double val, double min, double max)
  #endif
 #else
  #define DebugAssert(x)
+#endif
+
+
+#ifdef __cplusplus
+}
 #endif

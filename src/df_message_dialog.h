@@ -4,6 +4,12 @@
 #pragma once
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 enum MessageDialogType
 {
 	MsgDlgTypeYesNo,
@@ -27,3 +33,7 @@ enum MessageDialogReturnCode
 
 int MessageDialog(char const *title, char const *message, MessageDialogType type);
 
+
+#ifdef __cplusplus
+}
+#endif

@@ -4,6 +4,13 @@
 #include "df_common.h"
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
+
 typedef union
 {
     unsigned c;
@@ -67,3 +74,7 @@ inline DfColour operator*(DfColour col, float x)
 DLL_API DfColour g_colourBlack;
 DLL_API DfColour g_colourWhite;
 
+
+#ifdef __cplusplus
+}
+#endif

@@ -11,6 +11,12 @@
 #include "df_common.h"
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 struct DfBitmap;
 class Glyph;
 
@@ -37,3 +43,7 @@ DLL_API int	GetTextWidth		(DfFont *, char const *text, int len=999999);
 
 extern DfFont *g_defaultFont;
 
+
+#ifdef __cplusplus
+}
+#endif

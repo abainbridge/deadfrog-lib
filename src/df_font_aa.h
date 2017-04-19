@@ -12,6 +12,12 @@
 #include "df_sized_glyph.h"
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
 const int MAX_FONT_SIZE = 40;
 
 
@@ -37,3 +43,8 @@ DLL_API int DrawTextRightAa	 (DfFontAa *, DfColour c, DfBitmap *, int x, int y, 
 DLL_API int DrawTextCentreAa (DfFontAa *, DfColour c, DfBitmap *, int x, int y, int size, char const *text, ...);	// Like above but with centre justify
 
 DLL_API int	GetTextWidthAa   (DfFontAa *, char const *text, int size, int len=999999);
+
+
+#ifdef __cplusplus
+}
+#endif

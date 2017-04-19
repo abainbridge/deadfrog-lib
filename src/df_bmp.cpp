@@ -1,3 +1,5 @@
+#include "df_bmp.h"
+
 #include "df_bitmap.h"
 
 #include <memory.h>
