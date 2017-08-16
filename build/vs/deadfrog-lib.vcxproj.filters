@@ -14,6 +14,7 @@
     <ClCompile Include="..\..\src\df_font.cpp" />
     <ClCompile Include="..\..\src\df_font_aa.cpp" />
     <ClCompile Include="..\..\src\df_time.cpp" />
+    <ClCompile Include="..\..\src\df_stdlib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\df_bitmap.h" />

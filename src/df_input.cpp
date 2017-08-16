@@ -380,7 +380,10 @@ char const *GetKeyName(int i)
 	}
 
 	// Unnamed keys just use the ASCII value, printed in decimal
-	sprintf(name, "unnamed%d", i);
+    strcpy(name, "unnamed");
+    char *e = itoa(i, name + 7, 10);
+    *e = '\0';
+
 	return name;
 }
 

@@ -10,6 +10,13 @@
 #include <stdlib.h>
 
 
+#ifdef _MSC_VER
+// Don't use msvcrt's vsprintf. Use the one in the core Windows system instead 
+// to allow us to replace libc with a cut down one to reduce executable sizes.
+#define vsprintf wvsprintf
+#endif
+
+
 void DebugOut(char *_fmt, ...)
 {
     char buf[512];

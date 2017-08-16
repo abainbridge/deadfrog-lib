@@ -1,13 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\benchmark.cpp" />
-    <ClCompile Include="..\..\colour_whirl.cpp" />
-    <ClCompile Include="..\..\harmonograph.cpp" />
+    <ClCompile Include="..\..\all.cpp" />
     <ClCompile Include="..\..\hello_world.cpp" />
     <ClCompile Include="..\..\mandlebrot.cpp" />
-    <ClCompile Include="..\..\all.cpp" />
-    <ClCompile Include="..\..\sierpinski_3d.cpp" />
+    <ClCompile Include="..\..\car_physics.cpp" />
+    <ClCompile Include="..\..\colour_whirl.cpp" />
     <ClCompile Include="..\..\gas.cpp" />
+    <ClCompile Include="..\..\sierpinski_3d.cpp" />
   </ItemGroup>
 </Project>
