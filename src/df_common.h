@@ -33,10 +33,20 @@ void DebugOut(char *fmt, ...);
 void ReleaseAssert(bool condition, char const *fmt, ...);
 void ReleaseWarn(bool condition, char const *fmt, ...);
 
+
 #ifdef _MSC_VER
     #define strcasecmp stricmp
     #define strncasecmp strnicmp
     #define __func__ __FUNCTION__
+#endif
+
+
+#ifdef _MSC_VER
+    // Don't use msvcrt's vsprintf. Use the one in the core Windows system instead 
+    // to allow us to replace libc with a cut down one to reduce executable sizes.
+    //
+    // The problem is that wvsprintf() doesn't support %f and %g formatting.
+//    #define vsprintf wvsprintf
 #endif
 
 

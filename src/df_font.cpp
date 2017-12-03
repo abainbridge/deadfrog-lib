@@ -12,13 +12,6 @@
 #include <stdlib.h>
 
 
-#ifdef _MSC_VER
-    // Don't use msvcrt's vsprintf. Use the one in the core Windows system instead 
-    // to allow us to replace libc with a cut down one to reduce executable sizes.
-    #define vsprintf wvsprintf
-#endif
-
-
 // ****************************************************************************
 // Glyph
 // ****************************************************************************
@@ -290,7 +283,7 @@ int DrawTextLeft(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char const
 {
     char buf[512];
     va_list ap;
-    va_start (ap, text);
+    va_start(ap, text);
     vsprintf(buf, text, ap);
     return DrawTextSimple(tr, c, bmp, x, y, buf);
 }
@@ -300,7 +293,7 @@ int DrawTextRight(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char cons
 {
     char buf[512];
     va_list ap;
-    va_start (ap, text);
+    va_start(ap, text);
     vsprintf(buf, text, ap);
 
     int width = GetTextWidth(tr, buf);
@@ -312,7 +305,7 @@ int DrawTextCentre(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char con
 {
     char buf[512];
     va_list ap;
-    va_start (ap, text);
+    va_start(ap, text);
     vsprintf(buf, text, ap);
 
     int width = GetTextWidth(tr, buf);
