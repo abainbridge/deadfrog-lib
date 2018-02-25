@@ -4,9 +4,9 @@
     <ClCompile Include="..\..\all.cpp" />
     <ClCompile Include="..\..\hello_world.cpp" />
     <ClCompile Include="..\..\mandlebrot.cpp" />
-    <ClCompile Include="..\..\car_physics.cpp" />
     <ClCompile Include="..\..\colour_whirl.cpp" />
     <ClCompile Include="..\..\gas.cpp" />
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
+    <ClCompile Include="..\..\fractal_fern.cpp" />
   </ItemGroup>
 </Project>

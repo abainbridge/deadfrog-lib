@@ -3,6 +3,7 @@
 
 void BenchmarkMain();
 void ColourWhirlMain();
+void FractalFernMain();
 void GasMain();
 void HarmonographMain();
 void HelloWorldMain();
@@ -14,11 +15,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 //     BenchmarkMain();
 //     ColourWhirlMain();
-    GasMain();
+    FractalFernMain();
+//     GasMain();
 //     HarmonographMain();
 //     HelloWorldMain();
 //     MandlebrotMain();
-//     Sierpinski3DMain();
+//    Sierpinski3DMain();
 
     return 0;
 }
