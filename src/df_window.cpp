@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include <shellapi.h>
+#include <ShellScalingAPI.h>
 #include <stdlib.h>
 
 
@@ -96,6 +97,8 @@ bool GetDesktopRes(int *width, int *height)
 {
     HWND desktopWindow = GetDesktopWindow();
     RECT desktopRect;
+
+    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     if (GetWindowRect(desktopWindow, &desktopRect) == 0)
         return false;
     if (width)
@@ -110,6 +113,9 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 {
 	if (g_window)
         return false;
+
+    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
 
