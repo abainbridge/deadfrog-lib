@@ -51,6 +51,8 @@ void CreateInputManager()
 // Returns 0 if the event is handled here, -1 otherwise
 int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_isAReplayedEvent*/)
 {
+    static char const *s_keypressOutOfRangeMsg = "Keypress value out of range (%s: wParam = %d)";
+
 	if (!g_input.priv)
 		return -1;
 
@@ -65,7 +67,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
             memset(g_input.priv->m_keyNewDowns, 0, KEY_MAX);
             memset(g_input.priv->m_keyNewUps, 0, KEY_MAX);
             memset(g_input.keys, 0, KEY_MAX);
-			return -1;
+            return -1;
 		case WM_KILLFOCUS:
 			g_input.windowHasFocus = false;
             g_input.mouseX = -1;
@@ -81,8 +83,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 				!g_input.keys[KEY_ALT] &&
 				wParam != KEY_ESC)
 			{
-				ReleaseAssert(wParam < KEY_MAX,
-					"Keypress value out of range (WM_CHAR: wParam = %d)", wParam);
+                ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_CHAR", wParam);
 				g_input.priv->m_newKeysTyped[g_input.priv->m_newNumKeysTyped] = wParam;
 				g_input.priv->m_newNumKeysTyped++;
 			}
@@ -156,8 +157,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 		}
 
 		case WM_SYSKEYUP:
-			ReleaseAssert(wParam < KEY_MAX,
-				"Keypress value out of range (WM_SYSKEYUP: wParam = %d)", wParam);
+            ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYUP", wParam);
 
             // If the key event is the Control part of Alt_Gr, throw it away. There
             // will be an event for the alt part too.
@@ -170,8 +170,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 
 		case WM_SYSKEYDOWN:
 		{
-			ReleaseAssert(wParam < KEY_MAX,
-				"Keypress value out of range (WM_SYSKEYDOWN: wParam = %d)", wParam);
+			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
 			//int flags = (short)HIWORD(lParam);
 			g_input.keys[wParam] = 1;
 			g_input.priv->m_keyNewDowns[wParam] = 1;
@@ -183,8 +182,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 			// Alt key ups are presented here when the user keys, for example, Alt+F.
 			// Windows will generate a SYSKEYUP event for the release of F, and a
 			// normal KEYUP event for the release of the ALT. Very strange.
-			ReleaseAssert(wParam < KEY_MAX,
-				"Keypress value out of range (WM_KEYUP: wParam = %d)", wParam);
+			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYUP", wParam);
             g_input.priv->m_keyNewUps[wParam] = 1;
             g_input.keys[wParam] = 0;
 			break;
@@ -192,8 +190,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 
 		case WM_KEYDOWN:
 		{
-			ReleaseAssert(wParam < KEY_MAX,
-				"Keypress value out of range (WM_KEYDOWN: wParam = %d)", wParam);
+			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYDOWN", wParam);
 			if (wParam == KEY_DEL)
 			{
 				g_input.priv->m_newKeysTyped[g_input.numKeysTyped] = 127;
