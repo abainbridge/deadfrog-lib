@@ -16,7 +16,6 @@ struct WindowDataPrivate
     HWND				m_hWnd;
     int					m_borderWidth;
     int					m_titleHeight;
-    HINSTANCE			m_hInstance;
     unsigned int	    m_framesThisSecond;
     double			    m_endOfSecond;
     double              m_lastUpdateTime;
@@ -127,15 +126,13 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 	width = clamp(width, minWidth, 3000);
 	height = clamp(height, minHeight, 2300);
 
-	wd->_private->m_hInstance = GetModuleHandle(0);
-
 	// Register window class
 	WNDCLASS wc;
 	wc.style = CS_OWNDC;
 	wc.lpfnWndProc = WndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
-	wc.hInstance = wd->_private->m_hInstance;
+	wc.hInstance = GetModuleHandle(0);
 	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
