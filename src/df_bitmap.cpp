@@ -844,31 +844,33 @@ void ScaleDownBlit(DfBitmap *dest, unsigned x, unsigned y, unsigned scale, DfBit
 {
     unsigned outW = src->width / scale;
     unsigned outH = src->height / scale;
-    unsigned scaleSqrd = scale * scale;
+    float scaleSqrd = 1.0 / (scale * scale);
 
     for (unsigned dy = 0; dy < outH; dy++)
     {
+        DfColour *pixel = dest->pixels + (y + dy) * dest->width;
         for (unsigned dx = 0; dx < outW; dx++)
         {
-            int r = 0, g = 0, b = 0, a = 0;
+            int r = 0, g = 0, b = 0;
             for (unsigned sy = dy * scale; sy < (dy+1) * scale; sy++)
             {
-                for (unsigned sx = dx * scale; sx < (dx+1) * scale; sx++)
+                DfColour *srcPix = GetLine(src, sy);
+                DfColour *lastPix = srcPix + (dx + 1) * scale;
+                srcPix += dx * scale;
+                while (srcPix < lastPix)
                 {
-                    DfColour srcPix = GetPix(src, sx, sy);
-                    r += srcPix.r;
-                    g += srcPix.g;
-                    b += srcPix.b;
-                    a += srcPix.a;
+                    r += srcPix->r;
+                    g += srcPix->g;
+                    b += srcPix->b;
+                    srcPix++;
                 }
             }
 
-            r /= scaleSqrd;
-            g /= scaleSqrd;
-            b /= scaleSqrd;
-            a /= scaleSqrd;
+            r *= scaleSqrd;
+            g *= scaleSqrd;
+            b *= scaleSqrd;
 
-            PutPix(dest, x + dx, y + dy, Colour(r,g,b,a));
+            *(pixel + x + dx) = Colour(r, g, b);
         }
     }
 }
