@@ -14,10 +14,11 @@ void FractalFernMain()
     CreateWin(width, height, WT_FULLSCREEN, "Fractal Fern");
     HideMouse();
 
-    double scale = 3.0;
-    DfBitmap *bmp = DfCreateBitmap(g_window->bmp->width * scale, g_window->bmp->height * scale);
+    int antialiasFactor = 3;
+    unsigned bw = g_window->bmp->width * antialiasFactor;
+    DfBitmap *bmp = DfCreateBitmap(bw, g_window->bmp->height * antialiasFactor);
     ClearBitmap(bmp, g_colourBlack);
-    scale = bmp->width * 0.09;
+    double scale = bmp->width * 0.09;
     double x = 0;
     double y = 0;
 
@@ -28,6 +29,7 @@ void FractalFernMain()
 
         for (int i = 0; i < 400000; i++) {
             int rnd = rand() % 100;
+
             if (rnd < 1) {
                 x = 0;
                 y *= 0.16;
@@ -48,10 +50,10 @@ void FractalFernMain()
                 x = t;
             }
 
-            PutPix(bmp, scale * (y + 0.56), scale * (x + 3.3), Colour(60, 255, 20, 10));
+            PutPixUnclipped(bmp, scale * (y + 0.56), scale * (x + 3.3), Colour(60, 255, 20, 10));
         }
 
-        BitmapDownsample(bmp, g_window->bmp);
+        ScaleDownBlit(g_window->bmp, 0, 0, antialiasFactor, bmp);
         UpdateWin();
     }
 }
