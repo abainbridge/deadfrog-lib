@@ -14,8 +14,6 @@
 struct WindowDataPrivate
 {
     HWND				m_hWnd;
-    int					m_borderWidth;
-    int					m_titleHeight;
     unsigned int	    m_framesThisSecond;
     double			    m_endOfSecond;
     double              m_lastUpdateTime;
@@ -82,16 +80,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 
-static int clamp(int val, int min, int max)
-{
-	if (val < min)
-		return min;
-	if (val > max)
-		return max;
-	return val;
-}
-
-
 bool GetDesktopRes(int *width, int *height)
 {
     HWND desktopWindow = GetDesktopWindow();
@@ -121,42 +109,30 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
     wd->_private = new WindowDataPrivate;
     memset(wd->_private, 0, sizeof(WindowDataPrivate));
 
-    static int const minWidth = 160;
-    static int const minHeight = 120;
-	width = clamp(width, minWidth, 3000);
-	height = clamp(height, minHeight, 2300);
+	width = ClampInt(width, 100, 4000);
+	height = ClampInt(height, 100, 4000);
 
 	// Register window class
-	WNDCLASS wc;
-	wc.style = CS_OWNDC;
+    WNDCLASS wc = { 0 };
 	wc.lpfnWndProc = WndProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
 	wc.hInstance = GetModuleHandle(0);
-	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-	wc.lpszMenuName = NULL;
 	wc.lpszClassName = winName;
 	RegisterClass(&wc);
 
     wd->bmp = DfCreateBitmap(width, height);
 
-    unsigned int windowStyle = WS_VISIBLE;
+    unsigned windowStyle = WS_VISIBLE;
 	if (winType == WT_WINDOWED)
 	{
 		windowStyle |= WS_OVERLAPPEDWINDOW;
 
 		RECT windowRect = { 0, 0, width, height };
 		AdjustWindowRect(&windowRect, windowStyle, false);
-		wd->_private->m_borderWidth = ((windowRect.right - windowRect.left) - width) / 2;
-		wd->_private->m_titleHeight = ((windowRect.bottom - windowRect.top) - height) - wd->_private->m_borderWidth * 2;
-		width += wd->_private->m_borderWidth * 2;
-		height += wd->_private->m_borderWidth * 2 + wd->_private->m_titleHeight;
-
-		HWND desktopWindow = GetDesktopWindow();
-		RECT desktopRect;
-		GetWindowRect(desktopWindow, &desktopRect);
+		int borderWidth = (windowRect.right - windowRect.left) - width;
+		int titleHeight = ((windowRect.bottom - windowRect.top) - height) - borderWidth;
+		width += borderWidth;
+		height += borderWidth + titleHeight;
 	}
 	else
 	{
@@ -171,9 +147,6 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 		devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
 		ReleaseAssert(ChangeDisplaySettings(&devmode, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL,
             "Couldn't change screen resolution to %i x %i", width, height);
-
-		wd->_private->m_borderWidth = 1;
-		wd->_private->m_titleHeight = 0;
 	}
 
 	// Create main window
@@ -190,7 +163,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 }
 
 
-// This function copies a BitmapRGBA to the window, so you can actually see it.
+// This function copies a DfBitmap to the window, so you can actually see it.
 // SetBIBitsToDevice seems to be the fastest way to achieve this on most hardware.
 static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp, int x, int y)
 {
