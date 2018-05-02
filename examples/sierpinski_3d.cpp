@@ -90,7 +90,7 @@ void Sierpinski3DMain()
 
     CreateSierpinski3D();
 
-    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
     {
         ClearBitmap(g_window->bmp, g_colourBlack);
         InputManagerAdvance();
