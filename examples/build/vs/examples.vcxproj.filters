@@ -2,10 +2,12 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\all.cpp" />
-    <ClCompile Include="..\..\hello_world.cpp" />
-    <ClCompile Include="..\..\mandlebrot.cpp" />
+    <ClCompile Include="..\..\benchmark.cpp" />
     <ClCompile Include="..\..\colour_whirl.cpp" />
     <ClCompile Include="..\..\gas.cpp" />
+    <ClCompile Include="..\..\harmonograph.cpp" />
+    <ClCompile Include="..\..\hello_world.cpp" />
+    <ClCompile Include="..\..\mandlebrot.cpp" />
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
     <ClCompile Include="..\..\fractal_fern.cpp" />
   </ItemGroup>
