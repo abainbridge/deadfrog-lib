@@ -17,6 +17,20 @@ inline unsigned GetRand()
 }
 
 
+double CalcWindowUpdatesPerSecond()
+{
+    unsigned iterations = 1000;
+    double startTime = DfGetTime();
+    for (unsigned i = 0; i < iterations; i++)
+    {
+        UpdateWin();
+    }
+    double endTime = DfGetTime();
+    double duration = endTime - startTime;
+    return iterations / duration;
+}
+
+
 double CalcMillionPixelsPerSec(DfBitmap *bmp)
 {
     unsigned iterations = 1000 * 1000 * 10;
@@ -299,6 +313,12 @@ void BenchmarkMain()
 //     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
 //         "Polyfill billion pixels per sec = %.2f", score);
 //     END_TEST;
+
+    // Window updates
+    score = CalcWindowUpdatesPerSecond();
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
+        "Window updates per sec = %.0f", score);
+    END_TEST;
 
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Press ESC to quit");
