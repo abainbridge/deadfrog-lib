@@ -8,13 +8,13 @@
 void HelloWorldMain()
 {
 	CreateWin(800, 600, WT_WINDOWED, "Hello World Example");
-    DfFont *font = DfCreateFont("Courier New", 12, 4);
+    DfFont *font = FontCreate("Courier New", 12, 4);
 
     unsigned x = 100;
     unsigned y = 100;
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
-        ClearBitmap(g_window->bmp, g_colourBlack);
+        BitmapClear(g_window->bmp, g_colourBlack);
         InputManagerAdvance();
 
         x += 1;
@@ -31,6 +31,6 @@ void HelloWorldMain()
         DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
         UpdateWin();
-        DfSleepMillisec(10);
+        SleepMillisec(10);
     }
 }

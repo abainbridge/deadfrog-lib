@@ -86,13 +86,13 @@ static void Render()
 void Sierpinski3DMain()
 {
     CreateWin(800, 600, WT_WINDOWED, "Sierpinski Gasket Example");
-    DfFont *font = DfCreateFont("Courier New", 12, 4);
+    DfFont *font = FontCreate("Courier New", 12, 4);
 
     CreateSierpinski3D();
 
     while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
     {
-        ClearBitmap(g_window->bmp, g_colourBlack);
+        BitmapClear(g_window->bmp, g_colourBlack);
         InputManagerAdvance();
 
         if (g_input.keys[KEY_UP])

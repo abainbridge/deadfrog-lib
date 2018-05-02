@@ -259,7 +259,7 @@ bool InputManagerAdvance()
 	g_input.lmbDoubleClicked = false;
 	if (g_input.lmbClicked)
 	{
- 		double timeNow = DfGetTime();
+ 		double timeNow = GetRealTime();
 		double delta = timeNow - g_input.priv->m_lastClickTime;
 		if (delta < 0.25)
 		{

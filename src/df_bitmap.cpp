@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 
-DfBitmap *DfCreateBitmap(unsigned width, unsigned height)
+DfBitmap *BitmapCreate(unsigned width, unsigned height)
 {
 	DfBitmap *bmp = new DfBitmap;
 	bmp->width = width;
@@ -26,7 +26,7 @@ DfBitmap *DfCreateBitmap(unsigned width, unsigned height)
 }
 
 
-void DfDeleteBitmap(DfBitmap *bmp)
+void BitmapDelete(DfBitmap *bmp)
 {
 	bmp->width = -1;
 	bmp->height = -1;
@@ -40,7 +40,7 @@ void DfDeleteBitmap(DfBitmap *bmp)
 #define GetLine(bmp, y) ((bmp)->pixels + (bmp)->width * (y))
 
 
-void ClearBitmap(DfBitmap *bmp, DfColour colour)
+void BitmapClear(DfBitmap *bmp, DfColour colour)
 {
     RectFill(bmp, 0, 0, bmp->width, bmp->height, colour);
 }

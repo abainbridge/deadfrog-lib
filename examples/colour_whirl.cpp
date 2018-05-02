@@ -120,7 +120,7 @@ void ColourWhirlMain()
     GetDesktopRes(&width, &height);
 //    CreateWin(width, height, false, "Colour Whirl Example");
     CreateWin(1200, 900, WT_WINDOWED, "Colour Whirl Example");
-    ClearBitmap(g_window->bmp, g_colourBlack);
+    BitmapClear(g_window->bmp, g_colourBlack);
 
     // Create an array of colours
     int const max_component = 100;
@@ -135,7 +135,7 @@ void ColourWhirlMain()
     }
 
     // Shuffle the array
-    srand((unsigned)(DfGetTime() * 1000.0));
+    srand((unsigned)(GetRealTime() * 1000.0));
     for (int i = 0; i < n - 1; i++) 
     {
         int j = i + rand() / (RAND_MAX / (n - i) + 1);
@@ -144,7 +144,7 @@ void ColourWhirlMain()
         colours[i] = t;
     }
 
-    double start_time = DfGetTime();
+    double start_time = GetRealTime();
 
     alreadyAddedCol.b = 1;
     PlaceColour(100, 100, colours[n++]);
@@ -175,14 +175,14 @@ void ColourWhirlMain()
         }
     }
 
-    double endTime = DfGetTime();
-    DfFont *font = DfCreateFont("Courier New", 10, 4);
+    double endTime = GetRealTime();
+    DfFont *font = FontCreate("Courier New", 10, 4);
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
     // Continue to display the window until the user presses escape or clicks the close icon
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         InputManagerAdvance();
-        DfSleepMillisec(100);
+        SleepMillisec(100);
     }
 }

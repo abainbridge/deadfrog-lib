@@ -62,8 +62,8 @@ static inline bool isPositive(float x)
 
 static void Advance()
 {
-    static double prevTime = DfGetTime();
-    double now = DfGetTime();
+    static double prevTime = GetRealTime();
+    double now = GetRealTime();
     float advanceTime = now - prevTime;
     if (advanceTime > 0.1f)
         advanceTime = 0.1f;
@@ -193,14 +193,14 @@ static void Render()
 void GasMain()
 {
     CreateWin(800, 600, WT_WINDOWED, "Ideal Gas Simulation Example");
-    DfFont *font = DfCreateFont("Courier New", 12, 4);
+    DfFont *font = FontCreate("Courier New", 12, 4);
 
     InitParticles();
 
     unsigned frameNum = 0;
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
-        ClearBitmap(g_window->bmp, g_colourBlack);
+        BitmapClear(g_window->bmp, g_colourBlack);
         InputManagerAdvance();
 
         Advance();

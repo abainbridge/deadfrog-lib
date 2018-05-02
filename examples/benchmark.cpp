@@ -20,12 +20,12 @@ inline unsigned GetRand()
 double CalcWindowUpdatesPerSecond()
 {
     unsigned iterations = 1000;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     for (unsigned i = 0; i < iterations; i++)
     {
         UpdateWin();
     }
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
     double duration = endTime - startTime;
     return iterations / duration;
 }
@@ -34,7 +34,7 @@ double CalcWindowUpdatesPerSecond()
 double CalcMillionPixelsPerSec(DfBitmap *bmp)
 {
     unsigned iterations = 1000 * 1000 * 10;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     for (unsigned i = 0; i < iterations; i++)
     {
         unsigned r = GetRand();
@@ -45,7 +45,7 @@ double CalcMillionPixelsPerSec(DfBitmap *bmp)
         c.a = 128;
         PutPixUnclipped(bmp, r & 255, (r >> 8) & 255, c);
     }
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
     double duration = endTime - startTime;
     double numPixels = (double)iterations;
     return (numPixels / duration) / 1e6;
@@ -55,7 +55,7 @@ double CalcMillionPixelsPerSec(DfBitmap *bmp)
 double CalcMillionHLinePixelsPerSec(DfBitmap *bmp)
 {
     unsigned iterations = 1000 * 1000 * 10;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     unsigned lineLen = 20;
     for (unsigned i = 0; i < iterations; i++)
     {
@@ -67,7 +67,7 @@ double CalcMillionHLinePixelsPerSec(DfBitmap *bmp)
         c.a = 255;
         HLine(bmp, r & 255, (r >> 8) & 255, lineLen, c);
     }
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
     double duration = endTime - startTime;
     double numPixels = (double)iterations * lineLen;
     return (numPixels / duration) / 1e6;
@@ -77,7 +77,7 @@ double CalcMillionHLinePixelsPerSec(DfBitmap *bmp)
 double CalcMillionVLinePixelsPerSec(DfBitmap *bmp)
 {
     unsigned iterations = 1000 * 1000 * 10;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     unsigned lineLen = 20;
     for (unsigned i = 0; i < iterations; i++)
     {
@@ -89,7 +89,7 @@ double CalcMillionVLinePixelsPerSec(DfBitmap *bmp)
         c.a = 255;
         VLine(bmp, r & 255, (r >> 8) & 255, lineLen, c);
     }
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
     double duration = endTime - startTime;
     double numPixels = (double)iterations * lineLen;
     return (numPixels / duration) / 1e6;
@@ -99,10 +99,10 @@ double CalcMillionVLinePixelsPerSec(DfBitmap *bmp)
 double CalcBillionRectFillPixelsPerSec(DfBitmap *bmp)
 {
     unsigned iterations = 1000 * 100;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     for (unsigned i = 0; i < iterations; i++)
         RectFill(bmp, 0, 0, 300, 300, g_colourWhite);
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
     double duration = endTime - startTime;
     double numPixels = 300.0 * 300.0 * (double)iterations;
     return (numPixels / duration) / 1e9;
@@ -112,7 +112,7 @@ double CalcBillionRectFillPixelsPerSec(DfBitmap *bmp)
 double CalcMillionLinePixelsPerSec(DfBitmap *bmp)
 {
     unsigned iterations = 1000 * 600;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     for (unsigned i = 0; i < iterations; ++i)
     {
         DrawLine(bmp, 0, 0, 20,  300, g_colourWhite);   // 320 long, nice slope
@@ -122,7 +122,7 @@ double CalcMillionLinePixelsPerSec(DfBitmap *bmp)
         DrawLine(bmp, 0, 0, 150, 151, g_colourWhite);   // 151 long, annoying slope
         DrawLine(bmp, 0, 0, 151, 150, g_colourWhite);
     }
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
     double duration = endTime - startTime;
     double numPixels = (320 + 16 + 151) * 2 * iterations;
     return (numPixels / duration) / 1e6;
@@ -133,10 +133,10 @@ double CalcMillionCharsPerSec(DfBitmap *bmp, DfFont *font)
 {
     static char const *str = "Here's some interesting text []£# !";
     unsigned iterations = 1000 * 100;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     for (unsigned i = 0; i < iterations; i++)
         DrawTextSimple(font, g_colourWhite, bmp, 10, 10, str);
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
     double duration = endTime - startTime;
     double numChars = iterations * (double)strlen(str);
     return (numChars / duration) / 1000000.0;
@@ -147,10 +147,10 @@ double CalcMillionAaCharsPerSec(DfBitmap *bmp, DfFontAa *font)
 {
     static char const *str = "Here's some interesting text []£# !";
     unsigned iterations = 1000 * 1;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     for (unsigned i = 0; i < iterations; i++)
         DrawTextSimpleAa(font, Colour(255,255,255,60), bmp, 10, 10, 10, str);
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
 
 //    RectFill(bmp, 10, 10, 500, font->charHeight, g_colourBlack);
     DrawTextSimpleAa(font, Colour(255,255,255,255), bmp, 10, 10, 10, str);
@@ -170,7 +170,7 @@ double CalcMillionAaCharsPerSec(DfBitmap *bmp, DfFontAa *font)
 double CalcBillionPolyFillPixelsPerSec(DfBitmap *bmp)
 {
     unsigned iterations = 100 * 20;
-    double startTime = DfGetTime();
+    double startTime = GetRealTime();
     for (unsigned k = 0; k < iterations; k++)
     {
         PointListHeader Polygon;
@@ -208,7 +208,7 @@ double CalcBillionPolyFillPixelsPerSec(DfBitmap *bmp)
         DRAW_POLYGON(Hexagon, i, 0, 0);
     }
     
-    double endTime = DfGetTime();
+    double endTime = GetRealTime();
     double duration = endTime - startTime;
     double numPixels = 87000.0 * (double)iterations;
     return (numPixels / duration) / 1e9;
@@ -221,25 +221,25 @@ double CalcBillionPolyFillPixelsPerSec(DfBitmap *bmp)
     UpdateWin(); \
     InputManagerAdvance(); \
     if (g_window->windowClosed || g_input.keyDowns[KEY_ESC]) return; \
-    ClearBitmap(backBmp, g_colourBlack);
+    BitmapClear(backBmp, g_colourBlack);
 
 
 void BenchmarkMain()
 {
 	CreateWin(1024, 768, WT_WINDOWED, "Benchmark");
-    DfFont *font = DfCreateFont("Courier New", 10, 4);
+    DfFont *font = FontCreate("Courier New", 10, 4);
 
-    ClearBitmap(g_window->bmp, g_colourBlack);
+    BitmapClear(g_window->bmp, g_colourBlack);
 
-    double startTime = DfGetTime();
-    DfFontAa *fontAa = CreateFontAa("Lucida Console", 4);
+    double startTime = GetRealTime();
+    DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
 //     DfFontAa *fontAa2 = CreateDfFontAa("Lucida Console", 4);
 //     DfFontAa *fontAa3 = CreateDfFontAa("Lucida Console", 4);
 //     DfFontAa *fontAa4 = CreateDfFontAa("Courier New", 4);
 //     DfFontAa *fontAa5 = CreateDfFontAa("Times New Roman", 4);
-    double aaFontCreationTime = DfGetTime() - startTime;
+    double aaFontCreationTime = GetRealTime() - startTime;
 
-    DfBitmap *backBmp = DfCreateBitmap(800, 600);
+    DfBitmap *backBmp = BitmapCreate(800, 600);
 
     int textY = 10;
     int yInc = font->charHeight * 3;
@@ -266,49 +266,49 @@ void BenchmarkMain()
     END_TEST;
 
     // HLine draw
-    ClearBitmap(backBmp, g_colourBlack);
+    BitmapClear(backBmp, g_colourBlack);
     score = CalcMillionHLinePixelsPerSec(backBmp);
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
         "Million Hline pixels per sec = %.2f", score);
     END_TEST;
 
 //     // VLine draw
-//     ClearBitmap(backBmp, g_colourBlack);
+//     BitmapClear(backBmp, g_colourBlack);
 //     score = CalcMillionVLinePixelsPerSec(backBmp);
 //     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
 //         "Million Vline pixels per sec = %.2f", score);
 //     END_TEST;
 // 
 //     // Line draw
-//     ClearBitmap(backBmp, g_colourBlack);
+//     BitmapClear(backBmp, g_colourBlack);
 //     score = CalcMillionLinePixelsPerSec(backBmp);
 //     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
 //         "Million line pixels per sec = %.2f", score);
 //     END_TEST;
 // 
     // Rect fill
-    ClearBitmap(backBmp, g_colourBlack);
+    BitmapClear(backBmp, g_colourBlack);
     score = CalcBillionRectFillPixelsPerSec(backBmp);
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
         "Rectfill billion pixels per sec = %.2f", score);
     END_TEST;
 
 //     // Text render
-//     ClearBitmap(backBmp, g_colourBlack);
+//     BitmapClear(backBmp, g_colourBlack);
 //     score = CalcMillionCharsPerSec(backBmp, font);
 //     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
 //         "Million chars per sec = %.2f", score);
 //     END_TEST;
 // 
 //     // Text render AA
-//     ClearBitmap(backBmp, g_colourBlack);
+//     BitmapClear(backBmp, g_colourBlack);
 //     score = CalcMillionAaCharsPerSec(backBmp, fontAa);
 //     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
 //         "Million Anti-aliased chars per sec = %.2f", score);
 //     END_TEST;
 // 
 //     // Polygon fill
-//     ClearBitmap(backBmp, g_colourBlack);
+//     BitmapClear(backBmp, g_colourBlack);
 //     score = CalcBillionPolyFillPixelsPerSec(backBmp);
 //     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, 
 //         "Polyfill billion pixels per sec = %.2f", score);
@@ -338,6 +338,6 @@ void BenchmarkMain()
     while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
     {
 		InputManagerAdvance();
-        DfSleepMillisec(100);
+        SleepMillisec(100);
     }
 }

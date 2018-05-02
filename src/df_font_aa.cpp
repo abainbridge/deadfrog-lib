@@ -69,7 +69,7 @@ static unsigned GetKerningDist(MasterGlyph *a, MasterGlyph *b, int avgCharWidth)
 }
 
 
-DfFontAa *CreateFontAa(char const *fontName, int weight)
+DfFontAa *FontAaCreate(char const *fontName, int weight)
 {
     if (weight < 1 || weight > 9)
         return NULL;

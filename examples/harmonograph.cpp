@@ -152,7 +152,7 @@ void RunSim()
 
     int y = g_window->bmp->height - 220;
     //        RectFill(g_window->backBuffer, 0, y, g_window->width, g_window->height - y, g_colourBlack);
-    //        ClearBitmap(g_window->backBuffer, g_colourBlack);
+    //        BitmapClear(g_window->backBuffer, g_colourBlack);
 
     for (int i = 0; i < 4000; i++)
     {
@@ -211,11 +211,11 @@ void HarmonographMain()
     GetDesktopRes(&width, &height);
     CreateWin(width, height, WT_WINDOWED, "Harmonograph");
 
-    g_bigBmp = DfCreateBitmap(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
-    DfFont *font = DfCreateFont("Lucida Console", 10, 4);
+    g_bigBmp = BitmapCreate(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
+    DfFont *font = FontCreate("Lucida Console", 10, 4);
 
-    ClearBitmap(g_window->bmp, g_colourBlack);
-    ClearBitmap(g_bigBmp, g_colourBlack);
+    BitmapClear(g_window->bmp, g_colourBlack);
+    BitmapClear(g_bigBmp, g_colourBlack);
 
     g_advanceTime = 0.004 / (double)BIG_BITMAP_MULTIPLE;
 
@@ -229,8 +229,8 @@ void HarmonographMain()
         if (g_input.keyDowns[KEY_SPACE])
         {
             InitPendula();
-            ClearBitmap(g_window->bmp, g_colourBlack);
-            ClearBitmap(g_bigBmp, g_colourBlack);
+            BitmapClear(g_window->bmp, g_colourBlack);
+            BitmapClear(g_bigBmp, g_colourBlack);
         }
         if (g_input.keyDowns[KEY_S])
         {
@@ -242,6 +242,6 @@ void HarmonographMain()
         DrawTextSimple(font, g_colourWhite, g_window->bmp, 5, height - 20, "Keys: Space to restart  S to save");
 
         UpdateWin();
-        DfSleepMillisec(1);
+        SleepMillisec(1);
     }
 }

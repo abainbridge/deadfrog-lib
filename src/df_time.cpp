@@ -31,7 +31,7 @@ inline double GetLowLevelTime()
 }
 
 
-NOINLINE double DfGetTime()
+NOINLINE double GetRealTime()
 {
 	double timeNow = GetLowLevelTime();
     timeNow -= g_timeShift;
@@ -39,7 +39,7 @@ NOINLINE double DfGetTime()
 }
 
 
-void DfSleepMillisec(int milliseconds)
+void SleepMillisec(int milliseconds)
 {
 	Sleep(milliseconds);
 }

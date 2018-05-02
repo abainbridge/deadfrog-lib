@@ -54,6 +54,6 @@ void MandlebrotMain()
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         InputManagerAdvance();
-        DfSleepMillisec(100);
+        SleepMillisec(100);
     }
 }

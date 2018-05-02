@@ -24,10 +24,10 @@ struct DfBitmap
 };
 
 
-DLL_API DfBitmap   *DfCreateBitmap(unsigned width, unsigned height);
-DLL_API void        DfDeleteBitmap(DfBitmap *bmp);
+DLL_API DfBitmap   *BitmapCreate(unsigned width, unsigned height);
+DLL_API void        BitmapDelete(DfBitmap *bmp);
 
-DLL_API void        ClearBitmap     (DfBitmap *bmp, DfColour c);
+DLL_API void        BitmapClear     (DfBitmap *bmp, DfColour c);
 
 DLL_API void        PutPixUnclipped (DfBitmap *bmp, unsigned x, unsigned y, DfColour c);
 DLL_API void        PutPix          (DfBitmap *bmp, unsigned x, unsigned y, DfColour c);

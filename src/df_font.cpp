@@ -55,7 +55,7 @@ static bool GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
 }
 
 
-DfFont *DfCreateFont(char const *fontName, int size, int weight)
+DfFont *FontCreate(char const *fontName, int size, int weight)
 {
     if (size < 4 || size > 1000 || weight < 1 || weight > 9)
         return NULL;

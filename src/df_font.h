@@ -31,7 +31,7 @@ typedef struct _DfFont
 
 
 // Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
-DLL_API DfFont *DfCreateFont    (char const *fontname, int size, int weight);
+DLL_API DfFont *FontCreate    (char const *fontname, int size, int weight);
 
 DLL_API int DrawTextSimple		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text);       // Returns text length in pixels
 DLL_API int DrawTextLeft		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like simple but with variable args

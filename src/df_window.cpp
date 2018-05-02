@@ -56,8 +56,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             int h = (lParam & 0xffff0000) >> 16;
             if (w != win->bmp->width || h != win->bmp->height)
             {
-                DfDeleteBitmap(win->bmp);
-                win->bmp = DfCreateBitmap(w, h);
+                BitmapDelete(win->bmp);
+                win->bmp = BitmapCreate(w, h);
             }
             break;
         }
@@ -120,7 +120,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 	wc.lpszClassName = winName;
 	RegisterClass(&wc);
 
-    wd->bmp = DfCreateBitmap(width, height);
+    wd->bmp = BitmapCreate(width, height);
 
     unsigned windowStyle = WS_VISIBLE;
 	if (winType == WT_WINDOWED)
@@ -154,7 +154,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 		windowStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height,
 		NULL, NULL, 0/*g_hInstance*/, NULL);
 
-    double now = DfGetTime();
+    double now = GetRealTime();
     wd->_private->m_lastUpdateTime = now;
     wd->_private->m_endOfSecond = now + 1.0;
 
@@ -198,7 +198,7 @@ void UpdateWin()
 
     g_window->_private->m_framesThisSecond++;
 
-    double currentTime = DfGetTime();
+    double currentTime = GetRealTime();
     if (currentTime > g_window->_private->m_endOfSecond)
     {
         // If program has been paused by a debugger, skip the seconds we missed

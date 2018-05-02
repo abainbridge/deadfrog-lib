@@ -34,7 +34,7 @@ typedef struct _DfFontAa
 
 
 // Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
-DLL_API DfFontAa *CreateFontAa(char const *font_name, int weight);
+DLL_API DfFontAa *FontAaCreate(char const *font_name, int weight);
 
 // Size is height in pixels. By height, I mean the pitch between adjacent rows of text.
 DLL_API int DrawTextSimpleAa (DfFontAa *, DfColour c, DfBitmap *, int x, int y, int size, char const *text);      // Returns text length in pixels

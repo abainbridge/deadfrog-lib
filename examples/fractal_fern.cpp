@@ -16,8 +16,8 @@ void FractalFernMain()
 
     int antialiasFactor = 3;
     unsigned bw = g_window->bmp->width * antialiasFactor;
-    DfBitmap *bmp = DfCreateBitmap(bw, g_window->bmp->height * antialiasFactor);
-    ClearBitmap(bmp, g_colourBlack);
+    DfBitmap *bmp = BitmapCreate(bw, g_window->bmp->height * antialiasFactor);
+    BitmapClear(bmp, g_colourBlack);
     double scale = bmp->width * 0.09;
     double x = 0;
     double y = 0;
