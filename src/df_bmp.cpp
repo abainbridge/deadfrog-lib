@@ -3,6 +3,7 @@
 #include "df_bitmap.h"
 
 #include <memory.h>
+#include <stdint.h>
 #include <stdio.h>
 
 
@@ -13,35 +14,35 @@
 
 struct BitmapFileHeader
 {
-	unsigned short bfType;
-	unsigned long  bfSize;
-	unsigned short bfReserved1;
-	unsigned short bfReserved2;
-	unsigned long  bfOffBits;
+	uint16_t type;
+	uint32_t size;
+	uint16_t reserved1;
+	uint16_t reserved2;
+	uint32_t offBits;
 };
 
 
 struct BitmapInfoHeader
 {
-	unsigned long  biWidth;
-	unsigned long  biHeight;
-	unsigned short biBitCount;
-	unsigned long  biCompression;
+	uint32_t width;
+	uint32_t height;
+	uint16_t bitCount;
+	uint32_t compression;
 };
 
 
 struct WinBmpInfoHeader
 {
-	unsigned long  biWidth;
-	unsigned long  biHeight;
-	unsigned short biPlanes;
-	unsigned short biBitCount;
-	unsigned long  biCompression;
-	unsigned long  biSizeImage;
-	unsigned long  biXPelsPerMeter;
-	unsigned long  biYPelsPerMeter;
-	unsigned long  biClrUsed;
-	unsigned long  biClrImportant;
+	uint32_t width;
+	uint32_t height;
+	uint16_t planes;
+	uint16_t bitCount;
+	uint32_t compression;
+	uint32_t sizeImage;
+	uint32_t xPelsPerMeter;
+	uint32_t biYPelsPerMeter;
+	uint32_t biClrUsed;
+	uint32_t biClrImportant;
 };
 
 
@@ -49,7 +50,7 @@ struct WinBmpInfoHeader
 // Private Functions
 // ****************************************************************************
 
-static unsigned char ReadU8(FILE *file)
+static uint8_t ReadU8(FILE *file)
 {
     return fgetc(file);
 }
@@ -76,40 +77,40 @@ static int ReadS32(FILE *file)
 // Reads a BMP file header and check that it has the BMP magic number.
 static void ReadBmpFileHeader(FILE *f, BitmapFileHeader *fileheader)
 {
-	fileheader->bfType = ReadS16(f);
-	fileheader->bfSize = ReadS32(f);
-	fileheader->bfReserved1 = ReadS16(f);
-	fileheader->bfReserved2 = ReadS16(f);
-	fileheader->bfOffBits = ReadS32(f);
+	fileheader->type = ReadS16(f);
+	fileheader->size = ReadS32(f);
+	fileheader->reserved1 = ReadS16(f);
+	fileheader->reserved2 = ReadS16(f);
+	fileheader->offBits = ReadS32(f);
 
-	ReleaseAssert(fileheader->bfType == 19778, "BMP file seems corrupt");
+	ReleaseAssert(fileheader->type == 19778, "BMP file seems corrupt");
 }
 
 
 // Reads information from a BMP file header.
-void ReadWinBmpInfoHeader(FILE *f, BitmapInfoHeader *infoheader)
+static void ReadWinBmpInfoHeader(FILE *f, BitmapInfoHeader *infoheader)
 {
 	WinBmpInfoHeader win_infoheader;
 
-	win_infoheader.biWidth = ReadS32(f);
-	win_infoheader.biHeight = ReadS32(f);
-	win_infoheader.biPlanes = ReadS16(f);
-	win_infoheader.biBitCount = ReadS16(f);
-	win_infoheader.biCompression = ReadS32(f);
-	win_infoheader.biSizeImage = ReadS32(f);
-	win_infoheader.biXPelsPerMeter = ReadS32(f);
+	win_infoheader.width = ReadS32(f);
+	win_infoheader.height = ReadS32(f);
+	win_infoheader.planes = ReadS16(f);
+	win_infoheader.bitCount = ReadS16(f);
+	win_infoheader.compression = ReadS32(f);
+	win_infoheader.sizeImage = ReadS32(f);
+	win_infoheader.xPelsPerMeter = ReadS32(f);
 	win_infoheader.biYPelsPerMeter = ReadS32(f);
 	win_infoheader.biClrUsed = ReadS32(f);
 	win_infoheader.biClrImportant = ReadS32(f);
 
-	infoheader->biWidth = win_infoheader.biWidth;
-	infoheader->biHeight = win_infoheader.biHeight;
-	infoheader->biBitCount = win_infoheader.biBitCount;
-	infoheader->biCompression = win_infoheader.biCompression;
+	infoheader->width = win_infoheader.width;
+	infoheader->height = win_infoheader.height;
+	infoheader->bitCount = win_infoheader.bitCount;
+	infoheader->compression = win_infoheader.compression;
 }
 
 
-void ReadBmpPalette(int ncols, DfColour pal[256], FILE *f)
+static void ReadBmpPalette(int ncols, DfColour pal[256], FILE *f)
 {
 	for (int i = 0; i < ncols; i++) 
 	{
@@ -123,11 +124,11 @@ void ReadBmpPalette(int ncols, DfColour pal[256], FILE *f)
 
 
 // Support function for reading the 4 bit bitmap file format.
-void Read4BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
+static void Read4BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
 {
 	for (int x = 0; x < length; x += 2) 
 	{
-		unsigned char i = ReadU8(f);
+		uint8_t i = ReadU8(f);
 		unsigned idx1 = i & 15;
 		unsigned idx2 = (i >> 4) & 15;
 		PutPix(bitmap, x+1, y, pal[idx1]);
@@ -137,11 +138,11 @@ void Read4BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int 
 
 
 // Support function for reading the 8 bit bitmap file format.
-void Read8BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
+static void Read8BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
 {
 	for (int x = 0; x < length; ++x) 
 	{
-		unsigned char i = ReadU8(f);
+		uint8_t i = ReadU8(f);
 		PutPix(bitmap, x, y, pal[i]);
 	}
 
@@ -155,13 +156,13 @@ void Read8BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int 
 
 
 // Support function for reading the 24 bit bitmap file format
-void Read24BitLine(DfBitmap *bitmap, int length, FILE *f, int y)
+static void Read24BitLine(DfBitmap *bitmap, int length, FILE *f, int y)
 {
 	DfColour c;
 	int nbytes = 0;
 	c.a = 255;
 
-	for (int i=0; i<length; i++) 
+	for (int i = 0; i < length; i++) 
 	{
 		c.b = ReadU8(f);
 		c.g = ReadU8(f);
@@ -188,35 +189,33 @@ DfBitmap *LoadBmp(char const *filename)
     BitmapFileHeader fileheader;
     ReadBmpFileHeader(f, &fileheader);
 
-    unsigned long biSize = ReadS32(f);
+    uint32_t infoHeaderSize = ReadS32(f);
+    ReleaseAssert(infoHeaderSize == WININFOHEADERSIZE, "Bitmap header size invalid (%i bytes). Is it a Windows BMP?", infoHeaderSize); 
 
     BitmapInfoHeader infoheader;
-    DfColour palette[256];
-    if (biSize == WININFOHEADERSIZE) 
-    {
-        ReadWinBmpInfoHeader(f, &infoheader);
-        int ncol = (fileheader.bfOffBits - 54) / 4; // compute number of colors recorded
-        ReadBmpPalette(ncol, palette, f);
-    }
-    ReleaseAssert(biSize != OS2INFOHEADERSIZE, "Bitmap loader does not support OS/2 format bitmaps");
-    ReleaseAssert(infoheader.biCompression == BMP_RGB, "Bitmap loader does not support RLE compressed bitmaps"); 
+    ReadWinBmpInfoHeader(f, &infoheader);
+    ReleaseAssert(infoheader.compression == BMP_RGB, "Bitmap loader does not support RLE compressed bitmaps"); 
 
-    DfBitmap *bitmap = BitmapCreate(infoheader.biWidth, infoheader.biHeight);
+    int ncol = (fileheader.offBits - 54) / 4; // Calc num colours in palette.
+    DfColour palette[256];
+    ReadBmpPalette(ncol, palette, f);
+
+    DfBitmap *bitmap = BitmapCreate(infoheader.width, infoheader.height);
 
     // Read the image
-    for (int i = 0; i < (int)infoheader.biHeight; ++i) 
+    for (int i = 0; i < (int)infoheader.height; ++i) 
     {
         int y = bitmap->height - i - 1;
-        switch (infoheader.biBitCount)
+        switch (infoheader.bitCount)
         {
         case 4:
-            Read4BitLine(bitmap, infoheader.biWidth, f, palette, y);
+            Read4BitLine(bitmap, infoheader.width, f, palette, y);
             break;
         case 8:
-            Read8BitLine(bitmap, infoheader.biWidth, f, palette, y);
+            Read8BitLine(bitmap, infoheader.width, f, palette, y);
             break;
         case 24:
-            Read24BitLine(bitmap, infoheader.biWidth, f, y);
+            Read24BitLine(bitmap, infoheader.width, f, y);
             break;
         default:
             DebugAssert(0);
@@ -237,13 +236,13 @@ bool SaveBmp(DfBitmap *bmp, char const *filename)
 
     int w = bmp->width;
     int h = bmp->height;
-    int filesize = 54 + 3*w*h;  //w is your image width, h is image height, both int
-    unsigned char *img = new unsigned char [3*w*h];
+    int fileSize = 54 + 3*w*h;  //w is your image width, h is image height, both int
+    uint8_t *img = new uint8_t [3*w*h];
     memset(img, 0, sizeof(img));
 
-    for(int x = 0; x < w; x++)
+    for (int x = 0; x < w; x++)
     {
-        for(int j = 0; j < h; j++)
+        for (int j = 0; j < h; j++)
         {
             int y = (h-1) - j;
             DfColour c = GetPix(bmp, x, y);
@@ -253,27 +252,27 @@ bool SaveBmp(DfBitmap *bmp, char const *filename)
         }
     }
 
-    unsigned char bmpfileheader[14] = {'B','M', 0,0,0,0, 0,0, 0,0, 54,0,0,0};
-    unsigned char bmpinfoheader[40] = {40,0,0,0, 0,0,0,0, 0,0,0,0, 1,0, 24,0};
-    unsigned char bmppad[3] = {0,0,0};
+    uint8_t fileHeader[14] = {'B','M', 0,0,0,0, 0,0, 0,0, 54,0,0,0};
+    uint8_t infoHeader[40] = {40,0,0,0, 0,0,0,0, 0,0,0,0, 1,0, 24,0};
+    uint8_t bmppad[3] = {0,0,0};
 
-    bmpfileheader[ 2] = (unsigned char)(filesize    );
-    bmpfileheader[ 3] = (unsigned char)(filesize>> 8);
-    bmpfileheader[ 4] = (unsigned char)(filesize>>16);
-    bmpfileheader[ 5] = (unsigned char)(filesize>>24);
+    fileHeader[2] = (uint8_t)(fileSize    );
+    fileHeader[3] = (uint8_t)(fileSize>> 8);
+    fileHeader[4] = (uint8_t)(fileSize>>16);
+    fileHeader[5] = (uint8_t)(fileSize>>24);
 
-    bmpinfoheader[ 4] = (unsigned char)(       w    );
-    bmpinfoheader[ 5] = (unsigned char)(       w>> 8);
-    bmpinfoheader[ 6] = (unsigned char)(       w>>16);
-    bmpinfoheader[ 7] = (unsigned char)(       w>>24);
-    bmpinfoheader[ 8] = (unsigned char)(       h    );
-    bmpinfoheader[ 9] = (unsigned char)(       h>> 8);
-    bmpinfoheader[10] = (unsigned char)(       h>>16);
-    bmpinfoheader[11] = (unsigned char)(       h>>24);
+    infoHeader[4] = (uint8_t)w;
+    infoHeader[5] = (uint8_t)(w >> 8);
+    infoHeader[6] = (uint8_t)(w >> 16);
+    infoHeader[7] = (uint8_t)(w >> 24);
+    infoHeader[8] = (uint8_t)h;
+    infoHeader[9] = (uint8_t)(h >> 8);
+    infoHeader[10] = (uint8_t)(h >> 16);
+    infoHeader[11] = (uint8_t)(h >> 24);
 
-    fwrite(bmpfileheader, 1, 14, f);
-    fwrite(bmpinfoheader, 1, 40, f);
-    for(int i=0; i<h; i++)
+    fwrite(fileHeader, 1, 14, f);
+    fwrite(infoHeader, 1, 40, f);
+    for(int i = 0; i < h; i++)
     {
         fwrite(img+(w*(h-i-1)*3), 3, w, f);
         fwrite(bmppad, 1, (4-(w*3)%4)%4, f);
