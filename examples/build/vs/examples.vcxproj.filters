@@ -7,7 +7,7 @@
     <ClCompile Include="..\..\gas.cpp" />
     <ClCompile Include="..\..\harmonograph.cpp" />
     <ClCompile Include="..\..\hello_world.cpp" />
-    <ClCompile Include="..\..\mandlebrot.cpp" />
+    <ClCompile Include="..\..\mandelbrot.cpp" />
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
     <ClCompile Include="..\..\fractal_fern.cpp" />
   </ItemGroup>
