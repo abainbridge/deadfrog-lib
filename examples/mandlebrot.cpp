@@ -5,7 +5,7 @@
 #include <windows.h>
 
 
-void MandlebrotMain()
+void MandelbrotMain()
 {
     // Setup the window
     int width, height;

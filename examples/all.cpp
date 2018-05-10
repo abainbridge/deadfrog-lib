@@ -7,7 +7,7 @@ void FractalFernMain();
 void GasMain();
 void HarmonographMain();
 void HelloWorldMain();
-void MandlebrotMain();
+void MandelbrotMain();
 void Sierpinski3DMain();
 
 
@@ -19,7 +19,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 //     GasMain();
 //     HarmonographMain();
 //     HelloWorldMain();
-//     MandlebrotMain();
+//     MandelbrotMain();
 //    Sierpinski3DMain();
 
     return 0;
