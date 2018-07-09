@@ -58,14 +58,14 @@ static int ComputePixelCoverage(int x)
 static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 {
     int solidRunStartX = leftMax / SUBXRES;
-    int solidRunEndX = rightMin / SUBXRES - 1;
+    int solidRunEndX = rightMin / SUBXRES;
     if (solidRunStartX < solidRunEndX) {
         for (int x = leftMin / SUBXRES; x <= solidRunStartX; x++) {
             col.a = ComputePixelCoverage(x);
             PutPix(bmp, x, y, col);
         }
 		col.a = 255;
-        HLine(bmp, solidRunStartX + 1, y, (solidRunEndX - solidRunStartX), col);
+        HLine(bmp, solidRunStartX + 1, y, (solidRunEndX - solidRunStartX) - 1, col);
         for (int x = solidRunEndX; x <= (rightMax / SUBXRES); x++) {
             col.a = ComputePixelCoverage(x);
             PutPix(bmp, x, y, col);
@@ -104,6 +104,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
         subpixelRowExtents[i].left = -1;
         subpixelRowExtents[i].right = -1;
     }
+
     leftMin = rightMin = INT_MAX;
     leftMax = rightMax = -1;
     double leftSlope = 0, rightSlope = 0;
