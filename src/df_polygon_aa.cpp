@@ -68,8 +68,7 @@ static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
             PutPix(bmp, x, y, col);
         }
 		col.a = 255;
-        HLine(bmp, solidRunStartX + 1, y, 
-            (solidRunEndX - solidRunStartX), col);
+        HLine(bmp, solidRunStartX + 1, y, (solidRunEndX - solidRunStartX), col);
         for (int x = solidRunEndX; x <= (rightMax / SUBXRES); x++) {
             col.a = ComputePixelCoverage(x);
             PutPix(bmp, x, y, col);
@@ -110,6 +109,8 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
     }
     leftMin = rightMin = INT_MAX;
     leftMax = rightMax = -1;
+    double alphaStepLeft = 0;
+    double alphaStepRight = 0;
 
     // Consider for each row of subpixels from top to bottom.
     for (int y = vertLeft->y; ; y++) {
@@ -119,7 +120,8 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
             if (nextVertLeft > endVert)            // wraparound
                 nextVertLeft = verts;
             if (nextVertLeft == vertRight)      // all y's same?
-                goto done;                      // (null polygon)  
+                goto done;                      // (null polygon)
+            alphaStepLeft = 1.0 / (nextVertLeft->y - vertLeft->y);
         }
 
         // Have we reached the end of the right hand edge we are following?
@@ -127,6 +129,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
             nextVertRight = (vertRight=nextVertRight) - 1;
             if (nextVertRight < verts)           // wraparound
                 nextVertRight = endVert;
+            alphaStepRight = 1.0 / (nextVertRight->y - vertRight->y);
         }
 
         if (y > nextVertLeft->y || y > nextVertRight->y) {
@@ -138,23 +141,18 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
             goto done;
         }
 
-        // Interpolate sub-pixel x endpoints at this y,
-        // and update extremes for pixel coherence optimization
+        // Interpolate sub-pixel x endpoints at this y and update extremes.
         
-        SubpixelRowExtents *spse = &subpixelRowExtents[MOD_Y_RES(y)];
-        double alpha = (double)(y - vertLeft->y) / (nextVertLeft->y - vertLeft->y);
-        spse->left = LERP(alpha, vertLeft->x, nextVertLeft->x);
-        if (spse->left < leftMin)
-            leftMin = spse->left;
-        if (spse->left > leftMax)
-            leftMax = spse->left;
+        SubpixelRowExtents *sre = &subpixelRowExtents[MOD_Y_RES(y)];
+        double alpha = (double)(y - vertLeft->y) * alphaStepLeft;
+        sre->left = LERP(alpha, vertLeft->x, nextVertLeft->x);
+        leftMin = IntMin(leftMin, sre->left);
+        leftMax = IntMax(leftMax, sre->left);
 
-        alpha = (double)(y - vertRight->y) / (nextVertRight->y - vertRight->y);
-        spse->right = LERP(alpha, vertRight->x, nextVertRight->x);
-        if (spse->right < rightMin)
-            rightMin = spse->right;
-        if (spse->right > rightMax)
-            rightMax = spse->right;
+        alpha = (double)(y - vertRight->y) * alphaStepRight;
+        sre->right = LERP(alpha, vertRight->x, nextVertRight->x);
+        rightMin = IntMin(rightMin, sre->right);
+        rightMax = IntMax(rightMax, sre->right);
 
         // Is this the last row of subpixels for this scanline?
         if (MOD_Y_RES(y) == SUBYRES - 1) { 
