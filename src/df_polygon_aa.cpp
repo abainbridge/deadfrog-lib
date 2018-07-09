@@ -41,6 +41,7 @@ static int LERP(double alpha, int a, int b) {
 static int ComputePixelCoverage(int x)
 {
     int area = 0;           // total covered area 
+    x *= SUBXRES;
     int xr = x + SUBXRES - 1;   // right subpixel of pixel 
 
     for (int y = 0; y < SUBYRES; y++) {
@@ -55,26 +56,25 @@ static int ComputePixelCoverage(int x)
 
 static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 {
-	int MASK = ~(SUBXRES - 1);
-    int solidRunStartX = (xLmax & MASK) + SUBXRES;
-    int solidRunEndX = (xRmin & MASK) - SUBXRES;
+    int solidRunStartX = xLmax / SUBXRES;
+    int solidRunEndX = xRmin / SUBXRES - 1;
     if (solidRunStartX < solidRunEndX) {
-        for (int x = xLmin & MASK; x <= solidRunStartX; x += SUBXRES) {
+        for (int x = xLmin / SUBXRES; x <= solidRunStartX; x++) {
             col.a = ComputePixelCoverage(x);
-            PutPix(bmp, x / SUBXRES, y, col);
+            PutPix(bmp, x, y, col);
         }
 		col.a = 255;
-        HLine(bmp, solidRunStartX/SUBXRES, y, 
-            (solidRunEndX - solidRunStartX) / SUBXRES + 1, col);
-        for (int x = solidRunEndX; x <= xRmax; x += SUBXRES) {
+        HLine(bmp, solidRunStartX + 1, y, 
+            (solidRunEndX - solidRunStartX), col);
+        for (int x = solidRunEndX; x <= (xRmax / SUBXRES); x++) {
             col.a = ComputePixelCoverage(x);
-            PutPix(bmp, x / SUBXRES, y, col);
+            PutPix(bmp, x, y, col);
         }
     }
     else {
-        for (int x = xLmin & MASK; x <= xRmax; x += SUBXRES) {
+        for (int x = xLmin / SUBXRES; x <= (xRmax / SUBXRES); x++) {
             col.a = ComputePixelCoverage(x);
-            PutPix(bmp, x / SUBXRES, y, col);
+            PutPix(bmp, x, y, col);
         }
     }
 }
