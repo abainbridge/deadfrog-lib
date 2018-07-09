@@ -35,9 +35,6 @@ static SubpixelRowExtents subpixelRowExtents[SUBYRES];
 // searching subpixelRowExtents. Only stored as an optimization.
 static int leftMin, leftMax, rightMin, rightMax;
 
-static int LERP(double alpha, int a, int b) {
-    return a + (b - a) * alpha;
-}
 
 // Compute number of subpixels covered by polygon at current pixel
 // x is left subpixel of pixel.
@@ -109,8 +106,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
     }
     leftMin = rightMin = INT_MAX;
     leftMax = rightMax = -1;
-    double alphaStepLeft = 0;
-    double alphaStepRight = 0;
+    double leftSlope = 0, rightSlope = 0;
 
     // Consider for each row of subpixels from top to bottom.
     for (int y = vertLeft->y; ; y++) {
@@ -121,7 +117,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
                 nextVertLeft = verts;
             if (nextVertLeft == vertRight)      // all y's same?
                 goto done;                      // (null polygon)
-            alphaStepLeft = 1.0 / (nextVertLeft->y - vertLeft->y);
+            leftSlope = (nextVertLeft->x - vertLeft->x) / (double)(nextVertLeft->y - vertLeft->y);
         }
 
         // Have we reached the end of the right hand edge we are following?
@@ -129,7 +125,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
             nextVertRight = (vertRight=nextVertRight) - 1;
             if (nextVertRight < verts)           // wraparound
                 nextVertRight = endVert;
-            alphaStepRight = 1.0 / (nextVertRight->y - vertRight->y);
+            rightSlope = (nextVertRight->x - vertRight->x) / (double)(nextVertRight->y - vertRight->y);
         }
 
         if (y > nextVertLeft->y || y > nextVertRight->y) {
@@ -144,13 +140,11 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
         // Interpolate sub-pixel x endpoints at this y and update extremes.
         
         SubpixelRowExtents *sre = &subpixelRowExtents[MOD_Y_RES(y)];
-        double alpha = (double)(y - vertLeft->y) * alphaStepLeft;
-        sre->left = LERP(alpha, vertLeft->x, nextVertLeft->x);
+        sre->left = vertLeft->x + (y - vertLeft->y) * leftSlope;
         leftMin = IntMin(leftMin, sre->left);
         leftMax = IntMax(leftMax, sre->left);
 
-        alpha = (double)(y - vertRight->y) * alphaStepRight;
-        sre->right = LERP(alpha, vertRight->x, nextVertRight->x);
+        sre->right = vertRight->x + (y - vertRight->y) * rightSlope;
         rightMin = IntMin(rightMin, sre->right);
         rightMax = IntMax(rightMax, sre->right);
 
