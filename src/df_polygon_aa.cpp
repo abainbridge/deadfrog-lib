@@ -12,25 +12,28 @@
 #include "df_common.h"
 
 #include <algorithm>
+#include <limits.h>
 #include <math.h>
 
 
-static const int SUBYRES = 8;       // subpixel Y resolution per scanline 
 static const int SUBXRES = 16;      // subpixel X resolution per pixel 
-static const int MAX_AREA = SUBXRES * SUBYRES;
+static const int SUBYRES = 8;       // subpixel Y resolution per scanline 
 
 #define MOD_Y_RES(y)   ((y) & 7)    // subpixel Y modulo 
-#define MAX_X 0x7FFF                // subpixel X beyond right edge 
 
 
-struct SubPixelScanlineExtents 
-{
-    int xLeft, xRight;
+struct SubpixelRowExtents {
+    int left, right;
 };
 
-static SubPixelScanlineExtents subpixelScanlineExtents[SUBYRES];
-static int xLmin, xLmax;       // subpixel x extremes for scanline 
-static int xRmax, xRmin;       // (for optimization shortcut) 
+
+// Array to store the start and end X values for each row of subpixels in the
+// current scanline.
+static SubpixelRowExtents subpixelRowExtents[SUBYRES];
+
+// Min and max X values of subpixels in the current pixel. Can be found by
+// searching subpixelRowExtents. Only stored as an optimization.
+static int leftMin, leftMax, rightMin, rightMax;
 
 static int LERP(double alpha, int a, int b) {
     return a + (b - a) * alpha;
@@ -40,14 +43,15 @@ static int LERP(double alpha, int a, int b) {
 // x is left subpixel of pixel.
 static int ComputePixelCoverage(int x)
 {
-    int area = 0;           // total covered area 
+    static const int MAX_AREA = SUBXRES * SUBYRES;
+    int area = 0;
     x *= SUBXRES;
-    int xr = x + SUBXRES - 1;   // right subpixel of pixel 
+    int xr = x + SUBXRES - 1;   // Right-most subpixel of pixel.
 
     for (int y = 0; y < SUBYRES; y++) {
         // Calc covered area for current subpixel y 
-        int partialArea = IntMin(subpixelScanlineExtents[y].xRight, xr) - 
-            IntMax(subpixelScanlineExtents[y].xLeft, x) + 1;
+        int partialArea = IntMin(subpixelRowExtents[y].right, xr) - 
+            IntMax(subpixelRowExtents[y].left, x) + 1;
         if (partialArea > 0)
             area += partialArea;
     }
@@ -56,23 +60,23 @@ static int ComputePixelCoverage(int x)
 
 static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 {
-    int solidRunStartX = xLmax / SUBXRES;
-    int solidRunEndX = xRmin / SUBXRES - 1;
+    int solidRunStartX = leftMax / SUBXRES;
+    int solidRunEndX = rightMin / SUBXRES - 1;
     if (solidRunStartX < solidRunEndX) {
-        for (int x = xLmin / SUBXRES; x <= solidRunStartX; x++) {
+        for (int x = leftMin / SUBXRES; x <= solidRunStartX; x++) {
             col.a = ComputePixelCoverage(x);
             PutPix(bmp, x, y, col);
         }
 		col.a = 255;
         HLine(bmp, solidRunStartX + 1, y, 
             (solidRunEndX - solidRunStartX), col);
-        for (int x = solidRunEndX; x <= (xRmax / SUBXRES); x++) {
+        for (int x = solidRunEndX; x <= (rightMax / SUBXRES); x++) {
             col.a = ComputePixelCoverage(x);
             PutPix(bmp, x, y, col);
         }
     }
     else {
-        for (int x = xLmin / SUBXRES; x <= (xRmax / SUBXRES); x++) {
+        for (int x = leftMin / SUBXRES; x <= (rightMax / SUBXRES); x++) {
             col.a = ComputePixelCoverage(x);
             PutPix(bmp, x, y, col);
         }
@@ -82,52 +86,54 @@ static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
 {
     // Convert the verts passed in into the format we use internally. 
-    for (int i = 0; i < numVerts; i++)
+    for (int i = 0; i < numVerts; i++) {
         verts[i].y /= SUBXRES / SUBYRES;
+    }
 
     // Find the vertex with minimum y.
     Vertex *vertLeft = verts;
     for (int i = 1; i < numVerts; i++) {
-        if (verts[i].y < vertLeft->y)
+        if (verts[i].y < vertLeft->y) {
             vertLeft = &verts[i];
+        }
     }
     Vertex *endVert = &verts[numVerts - 1];
 
-    // initialize scanning edges 
-    Vertex *nextVertLeft;
-    Vertex *vertRight, *nextVertRight;
+    // Initialize scanning edges.
+    Vertex *nextVertLeft, *vertRight, *nextVertRight;
     vertRight = nextVertRight = nextVertLeft = vertLeft;
 
-    // prepare bottom of initial scanline - no coverage by polygon 
+    // Prepare bottom of initial scanline - no coverage by polygon 
     for (int i = 0; i < SUBYRES; i++) {
-        subpixelScanlineExtents[i].xLeft = -1;
-        subpixelScanlineExtents[i].xRight = -1;
+        subpixelRowExtents[i].left = -1;
+        subpixelRowExtents[i].right = -1;
     }
-    xLmin = xRmin = MAX_X;
-    xLmax = xRmax = -1;
+    leftMin = rightMin = INT_MAX;
+    leftMax = rightMax = -1;
 
-    // Scan convert for each subpixel from top to bottom.
+    // Consider for each row of subpixels from top to bottom.
     for (int y = vertLeft->y; ; y++) {
         // Have we reached the end of the left hand edge we are following?
         while (y == nextVertLeft->y) {
             nextVertLeft = (vertLeft=nextVertLeft) + 1;  // advance 
-            if (nextVertLeft > endVert)            // (wraparound) 
+            if (nextVertLeft > endVert)            // wraparound
                 nextVertLeft = verts;
-            if (nextVertLeft == vertRight)    // all y's same?
-                goto done;                 // (null polygon)  
+            if (nextVertLeft == vertRight)      // all y's same?
+                goto done;                      // (null polygon)  
         }
 
         // Have we reached the end of the right hand edge we are following?
         while (y == nextVertRight->y) {
             nextVertRight = (vertRight=nextVertRight) - 1;
-            if (nextVertRight < verts)           // (wraparound) 
+            if (nextVertRight < verts)           // wraparound
                 nextVertRight = endVert;
         }
 
         if (y > nextVertLeft->y || y > nextVertRight->y) {
-            // done, mark uncovered part of last scanline 
-            for (; MOD_Y_RES(y); y++)
-                subpixelScanlineExtents[MOD_Y_RES(y)].xLeft = subpixelScanlineExtents[MOD_Y_RES(y)].xRight = -1;
+            // Done. Mark remaining subpixel rows as empty.
+            for (; MOD_Y_RES(y); y++) {
+                subpixelRowExtents[MOD_Y_RES(y)].left = subpixelRowExtents[MOD_Y_RES(y)].right = -1;
+            }
             RenderScanline(bmp, y / SUBYRES, col);
             goto done;
         }
@@ -135,30 +141,32 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
         // Interpolate sub-pixel x endpoints at this y,
         // and update extremes for pixel coherence optimization
         
-        SubPixelScanlineExtents *spse = &subpixelScanlineExtents[MOD_Y_RES(y)];
+        SubpixelRowExtents *spse = &subpixelRowExtents[MOD_Y_RES(y)];
         double alpha = (double)(y - vertLeft->y) / (nextVertLeft->y - vertLeft->y);
-        spse->xLeft = LERP(alpha, vertLeft->x, nextVertLeft->x);
-        if (spse->xLeft < xLmin)
-            xLmin = spse->xLeft;
-        if (spse->xLeft > xLmax)
-            xLmax = spse->xLeft;
+        spse->left = LERP(alpha, vertLeft->x, nextVertLeft->x);
+        if (spse->left < leftMin)
+            leftMin = spse->left;
+        if (spse->left > leftMax)
+            leftMax = spse->left;
 
         alpha = (double)(y - vertRight->y) / (nextVertRight->y - vertRight->y);
-        spse->xRight = LERP(alpha, vertRight->x, nextVertRight->x);
-        if (spse->xRight < xRmin)
-            xRmin = spse->xRight;
-        if (spse->xRight > xRmax)
-            xRmax = spse->xRight;
+        spse->right = LERP(alpha, vertRight->x, nextVertRight->x);
+        if (spse->right < rightMin)
+            rightMin = spse->right;
+        if (spse->right > rightMax)
+            rightMax = spse->right;
 
-        if (MOD_Y_RES(y) == SUBYRES - 1) {   // end of scanline 
+        // Is this the last row of subpixels for this scanline?
+        if (MOD_Y_RES(y) == SUBYRES - 1) { 
             RenderScanline(bmp, y / SUBYRES, col);
-            xLmin = xRmin = MAX_X;      // reset extremes 
-            xLmax = xRmax = -1;
+            leftMin = rightMin = INT_MAX;
+            leftMax = rightMax = -1;
         }
     }
 
 done:
     // Convert the verts back into the format the caller uses. 
-    for (int i = 0; i < numVerts; i++)
+    for (int i = 0; i < numVerts; i++) {
         verts[i].y *= SUBXRES / SUBYRES;
+    }
 }

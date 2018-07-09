@@ -10,10 +10,9 @@ extern "C"
 #endif
 
 
-// Stores a Vertex WITH SUBPIXEL ACCURACY in a fixed point format. The bottom
-// 4 bits are the fractional part. In other words, x and y values should be
-// 16x larger than the pixel coordinates.
-// For example, pixel coordinates (0.5, 1.5) is represented by (8, 24).
+// Stores a Vertex at 16 times pixel resolution, so that subpixel positions can
+// be represented. For example, pixel coordinates (0.5, 1.5) is represented by 
+// (8, 24).
 typedef struct Vertex 
 {
     int x, y;
