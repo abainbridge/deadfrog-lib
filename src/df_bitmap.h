@@ -73,15 +73,18 @@ DLL_API void 		BitmapDownsample(DfBitmap *src_bmp, DfBitmap *dst_bmp);
 inline void PutPixUnclipped(DfBitmap *bmp, unsigned x, unsigned y, DfColour c)
 {
     DfColour *pixel = (bmp->pixels + y * bmp->width) + x;
-//    RGBAColour *pixel = bmp->lines[y] + x;
+//    DfColour *pixel = bmp->lines[y] + x;
     if (c.a == 255)
         *pixel = c;
     else
     {
         unsigned char invA = 255 - c.a;
-        pixel->r = (pixel->r * invA + c.r * c.a) / 255;
-        pixel->g = (pixel->g * invA + c.g * c.a) / 255;
-        pixel->b = (pixel->b * invA + c.b * c.a) / 255;
+        unsigned crb = (c.c & 0xff00ff) * c.a;
+        unsigned cg = c.g * c.a;
+        unsigned rb = (pixel->c & 0xff00ff) * invA + crb;
+        unsigned g = pixel->g * invA + cg;
+        pixel->c = rb >> 8;
+        pixel->g = g >> 8;
     }
 }
 
