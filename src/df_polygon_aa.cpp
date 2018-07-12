@@ -11,7 +11,6 @@
 #include "df_bitmap.h"
 #include "df_common.h"
 
-#include <algorithm>
 #include <limits.h>
 #include <math.h>
 
@@ -36,7 +35,7 @@ static SubpixelRowExtents subpixelRowExtents[SUBYRES];
 static int leftMin, leftMax, rightMin, rightMax;
 
 
-// Compute number of subpixels covered by polygon at current pixel
+// Compute number of subpixels covered by polygon at current pixel.
 // x is left subpixel of pixel.
 static int ComputePixelCoverage(int x)
 {
@@ -49,11 +48,14 @@ static int ComputePixelCoverage(int x)
         // Calc covered area for current subpixel y 
         int partialArea = IntMin(subpixelRowExtents[y].right, xr) - 
             IntMax(subpixelRowExtents[y].left, x) + 1;
-        if (partialArea > 0)
+        if (partialArea > 0) {
             area += partialArea;
+        }
     }
+
     return 255 * area / MAX_AREA;
 }
+
 
 static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 {
@@ -79,6 +81,7 @@ static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
     }
 }
 
+
 void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
 {
     // Convert the verts passed in into the format we use internally. 
@@ -99,7 +102,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
     Vertex *nextVertLeft, *vertRight, *nextVertRight;
     vertRight = nextVertRight = nextVertLeft = vertLeft;
 
-    // Prepare bottom of initial scanline - no coverage by polygon 
+    // Initialize the extents for each row of subpixels.
     for (int i = 0; i < SUBYRES; i++) {
         subpixelRowExtents[i].left = -1;
         subpixelRowExtents[i].right = -1;
@@ -114,18 +117,21 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
         // Have we reached the end of the left hand edge we are following?
         while (y == nextVertLeft->y) {
             nextVertLeft = (vertLeft=nextVertLeft) + 1;  // advance 
-            if (nextVertLeft > endVert)            // wraparound
+            if (nextVertLeft > endVert) {            // wraparound
                 nextVertLeft = verts;
-            if (nextVertLeft == vertRight)      // all y's same?
+            }
+            if (nextVertLeft == vertRight) {      // all y's same?
                 goto done;                      // (null polygon)
+            }
             leftSlope = (nextVertLeft->x - vertLeft->x) / (double)(nextVertLeft->y - vertLeft->y);
         }
 
         // Have we reached the end of the right hand edge we are following?
         while (y == nextVertRight->y) {
             nextVertRight = (vertRight=nextVertRight) - 1;
-            if (nextVertRight < verts)           // wraparound
+            if (nextVertRight < verts) {          // wraparound
                 nextVertRight = endVert;
+            }
             rightSlope = (nextVertRight->x - vertRight->x) / (double)(nextVertRight->y - vertRight->y);
         }
 
