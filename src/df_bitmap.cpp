@@ -898,12 +898,6 @@ void ScaleUpBlit(DfBitmap *destBmp, unsigned x, unsigned y, unsigned scale, DfBi
             }
         }
     }
-
-    for (unsigned sy = 0; sy < srcBmp->height; sy++)
-        HLine(destBmp, x, y + sy * scale, srcBmp->width * scale, Colour(0,0,208));
-
-    for (unsigned sx = 0; sx < srcBmp->width; sx++)
-        VLine(destBmp, x + sx * scale, y, srcBmp->height * scale, Colour(0,0,208));
 }
 
 
