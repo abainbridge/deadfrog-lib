@@ -110,7 +110,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
 
     leftMin = rightMin = INT_MAX;
     leftMax = rightMax = -1;
-    double leftSlope = 0, rightSlope = 0;
+    int leftSlope = 0, rightSlope = 0;
 
     // Consider for each row of subpixels from top to bottom.
     for (int y = vertLeft->y; ; y++) {
@@ -123,7 +123,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
             if (nextVertLeft == vertRight) {      // all y's same?
                 goto done;                      // (null polygon)
             }
-            leftSlope = (nextVertLeft->x - vertLeft->x) / (double)(nextVertLeft->y - vertLeft->y);
+            leftSlope = ((nextVertLeft->x - vertLeft->x) << 16) / (nextVertLeft->y - vertLeft->y);
         }
 
         // Have we reached the end of the right hand edge we are following?
@@ -132,7 +132,7 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
             if (nextVertRight < verts) {          // wraparound
                 nextVertRight = endVert;
             }
-            rightSlope = (nextVertRight->x - vertRight->x) / (double)(nextVertRight->y - vertRight->y);
+            rightSlope = ((nextVertRight->x - vertRight->x) << 16) / (nextVertRight->y - vertRight->y);
         }
 
         if (y > nextVertLeft->y || y > nextVertRight->y) {
@@ -147,11 +147,11 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
         // Interpolate sub-pixel x endpoints at this y and update extremes.
         
         SubpixelRowExtents *sre = &subpixelRowExtents[MOD_Y_RES(y)];
-        sre->left = vertLeft->x + (y - vertLeft->y) * leftSlope;
-        leftMin = IntMin(leftMin, sre->left);
+        sre->left = vertLeft->x + (((y - vertLeft->y) * leftSlope) >> 16);
+        leftMin = IntMin(leftMin, sre->left); 
         leftMax = IntMax(leftMax, sre->left);
 
-        sre->right = vertRight->x + (y - vertRight->y) * rightSlope;
+        sre->right = vertRight->x + (((y - vertRight->y) * rightSlope) >> 16);
         rightMin = IntMin(rightMin, sre->right);
         rightMax = IntMax(rightMax, sre->right);
 
