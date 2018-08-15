@@ -11,12 +11,17 @@
 #include <stdlib.h>
 
 
+// Prototype of DwmFlush function from Win API.
+typedef void (WINAPI DwmFlushFunc)();
+
+
 struct WindowDataPrivate
 {
     HWND				m_hWnd;
     unsigned int	    m_framesThisSecond;
     double			    m_endOfSecond;
     double              m_lastUpdateTime;
+    DwmFlushFunc        *m_dwmFlush;
 };
 
 
@@ -158,6 +163,9 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
     wd->_private->m_lastUpdateTime = now;
     wd->_private->m_endOfSecond = now + 1.0;
 
+    HMODULE dwm = LoadLibrary("dwmapi.dll");
+    wd->_private->m_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
+
     CreateInputManager();
 	return true;
 }
@@ -236,4 +244,15 @@ void ShowMouse()
 void HideMouse()
 {
 	ShowCursor(false);
+}
+
+
+bool WaitVsync()
+{
+    if (g_window->_private->m_dwmFlush) {
+        g_window->_private->m_dwmFlush();
+        return true;
+    }
+
+    return false;
 }

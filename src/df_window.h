@@ -54,6 +54,8 @@ DLL_API void UpdateWin();
 DLL_API void ShowMouse();
 DLL_API void HideMouse();
 
+DLL_API bool WaitVsync();   // Returns false if not supported.
+
 
 #ifdef __cplusplus
 }
