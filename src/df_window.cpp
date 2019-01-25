@@ -173,7 +173,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 
 // This function copies a DfBitmap to the window, so you can actually see it.
 // SetBIBitsToDevice seems to be the fastest way to achieve this on most hardware.
-static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp, int x, int y)
+static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp)
 {
     BITMAPINFO binfo;
     binfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -191,7 +191,7 @@ static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp, int x, int y)
     HDC dc = GetDC(wd->_private->m_hWnd);
 
     SetDIBitsToDevice(dc,
-        x, y, bmp->width, bmp->height,
+        0, 0, bmp->width, bmp->height,
         0, 0, 0, bmp->height,
         bmp->pixels, &binfo, DIB_RGB_COLORS
     );
@@ -231,7 +231,7 @@ void UpdateWin()
 
     // *** Swap buffers ***
 
-    BlitBitmapToWindow(g_window, g_window->bmp, 0, 0);
+    BlitBitmapToWindow(g_window, g_window->bmp);
 }
 
 
