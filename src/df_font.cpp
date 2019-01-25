@@ -246,28 +246,13 @@ int DrawTextSimple(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char 
 
         // Copy the glyph onto the stack for better cache performance. This increased the 
         // performance from 13.8 to 14.4 million chars per second. Madness.
-        Glyph glyph = *tr->glyphs[(unsigned char)*text]; 
+        Glyph glyph = *tr->glyphs[(unsigned char)*text];
         EncodedRun *rleBuf = glyph.m_pixelRuns;
         for (int i = 0; i < glyph.m_numRuns; i++)
         {
             DfColour *startPixel = startRow + rleBuf->startY * width + rleBuf->startX + x;
-
-            // Loop unrolled for speed
-            switch (rleBuf->runLen)
-            {
-            case 8: startPixel[7] = col;
-            case 7: startPixel[6] = col;
-            case 6: startPixel[5] = col;
-            case 5: startPixel[4] = col;
-            case 4: startPixel[3] = col;
-            case 3: startPixel[2] = col;
-            case 2: startPixel[1] = col;
-            case 1: startPixel[0] = col;
-                break;
-            default:
-                for (unsigned i = 0; i < rleBuf->runLen; i++)
-                    startPixel[i] = col;
-            }
+            for (unsigned i = 0; i < rleBuf->runLen; i++)
+                startPixel[i] = col;
             rleBuf++;
         }
 
@@ -275,7 +260,7 @@ int DrawTextSimple(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char 
         text++;
     }
 
-    return _x - x;
+    return x - _x;
 }
 
 
