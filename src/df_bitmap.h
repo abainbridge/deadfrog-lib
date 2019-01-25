@@ -15,13 +15,13 @@ extern "C"
 #endif
 
 
-struct DfBitmap
+typedef struct _DfBitmap
 {
 	unsigned width;
 	unsigned height;
 	DfColour *pixels;
 	DfColour **lines;
-};
+} DfBitmap;
 
 
 DLL_API DfBitmap   *BitmapCreate(unsigned width, unsigned height);

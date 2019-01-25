@@ -21,7 +21,7 @@ extern "C"
 const int MAX_FONT_SIZE = 40;
 
 
-struct DfBitmap;
+typedef struct _DfBitmap DfBitmap;
 class MasterGlyph;
 
 

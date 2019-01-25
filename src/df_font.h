@@ -17,7 +17,7 @@ extern "C"
 #endif
 
 
-struct DfBitmap;
+typedef struct _DfBitmap DfBitmap;
 class Glyph;
 
 
