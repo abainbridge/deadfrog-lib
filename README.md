@@ -75,24 +75,24 @@ int main()
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         // Get mouse and keyboard events from OS
-        DfInputManagerAdvance();
+        InputManagerAdvance();
 
         // Clear the back buffer
-        DfClearBitmap(g_window->bmp, g_colourBlack);
+        BitmapClear(g_window->bmp, g_colourBlack);
 
         // Print "Hello World!"
         DfColour col = Colour(255, 128, 0);
         unsigned x = 100;
         unsigned y = 100;
-        DfDrawTextSimple(font, col, g_window->bmp, x, y, "Hello World!");
+        DrawTextSimple(font, col, g_window->bmp, x, y, "Hello World!");
 
         // Draw frames per second counter
-        DfDrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
+        DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
         // Blit back buffer to screen
-        DfUpdateWin();
+        UpdateWin();
 
-        DfSleepMillisec(10);
+        SleepMillisec(10);
     }
 
     return 0;
