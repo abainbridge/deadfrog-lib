@@ -21,31 +21,33 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\df_bitmap.cpp" />
     <ClCompile Include="..\..\src\df_bmp.cpp" />
+    <ClCompile Include="..\..\src\df_colour.cpp" />
     <ClCompile Include="..\..\src\df_common.cpp" />
+    <ClCompile Include="..\..\src\df_font.cpp" />
+    <ClCompile Include="..\..\src\df_font_aa.cpp" />
     <ClCompile Include="..\..\src\df_input.cpp" />
     <ClCompile Include="..\..\src\df_master_glyph.cpp" />
     <ClCompile Include="..\..\src\df_message_dialog.cpp" />
     <ClCompile Include="..\..\src\df_polygon.cpp" />
-    <ClCompile Include="..\..\src\df_colour.cpp" />
+    <ClCompile Include="..\..\src\df_polygon_aa.cpp" />
     <ClCompile Include="..\..\src\df_sized_glyph.cpp" />
-    <ClCompile Include="..\..\src\df_font.cpp" />
-    <ClCompile Include="..\..\src\df_font_aa.cpp" />
     <ClCompile Include="..\..\src\df_time.cpp" />
     <ClCompile Include="..\..\src\df_window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\df_bitmap.h" />
     <ClInclude Include="..\..\src\df_bmp.h" />
+    <ClInclude Include="..\..\src\df_colour.h" />
     <ClInclude Include="..\..\src\df_common.h" />
+    <ClInclude Include="..\..\src\df_font.h" />
+    <ClInclude Include="..\..\src\df_font_aa.h" />
+    <ClInclude Include="..\..\src\df_font_aa_internals.h" />
     <ClInclude Include="..\..\src\df_input.h" />
     <ClInclude Include="..\..\src\df_master_glyph.h" />
     <ClInclude Include="..\..\src\df_message_dialog.h" />
     <ClInclude Include="..\..\src\df_polygon.h" />
-    <ClInclude Include="..\..\src\df_colour.h" />
+    <ClInclude Include="..\..\src\df_polygon_aa.h" />
     <ClInclude Include="..\..\src\df_sized_glyph.h" />
-    <ClInclude Include="..\..\src\df_font.h" />
-    <ClInclude Include="..\..\src\df_font_aa.h" />
-    <ClInclude Include="..\..\src\df_font_aa_internals.h" />
     <ClInclude Include="..\..\src\df_time.h" />
     <ClInclude Include="..\..\src\df_window.h" />
   </ItemGroup>
@@ -145,7 +147,7 @@
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>MinSpace</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../src</AdditionalIncludeDirectories>
@@ -157,7 +159,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <WholeProgramOptimization>true</WholeProgramOptimization>

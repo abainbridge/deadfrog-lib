@@ -11,4 +11,8 @@
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
     <ClCompile Include="..\..\fractal_fern.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\polygon\clip_rectangle.h" />
+    <ClInclude Include="..\..\polygon\coverage_table.h" />
+  </ItemGroup>
 </Project>
