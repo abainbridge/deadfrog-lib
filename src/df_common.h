@@ -50,16 +50,16 @@ void ReleaseWarn(bool condition, char const *fmt, ...);
 #endif
 
 
-inline int IntMin(int a, int b) { return (a < b) ? a : b; };
-inline int IntMax(int a, int b) { return (a > b) ? a : b; };
-inline int RoundToInt(double r) {
+static inline int IntMin(int a, int b) { return (a < b) ? a : b; };
+static inline int IntMax(int a, int b) { return (a > b) ? a : b; };
+static inline int RoundToInt(double r) {
     int tmp = (int)(r);
     tmp += (r-tmp>=.5) - (r-tmp<=-.5);
     return tmp;
 }
 
 
-inline int ClampInt(int val, int min, int max)
+static inline int ClampInt(int val, int min, int max)
 {
     if (val < min)
         return min;
@@ -69,7 +69,7 @@ inline int ClampInt(int val, int min, int max)
 }
 
 
-inline double ClampDouble(double val, double min, double max)
+static inline double ClampDouble(double val, double min, double max)
 {
     if (val < min)
         return min;
