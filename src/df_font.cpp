@@ -188,7 +188,7 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
 }
 
 
-static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text)
+static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
 {
     int x = _x;
     DfColour *startRow = bmp->pixels + y * (int)bmp->width;
@@ -197,12 +197,12 @@ static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x
     if (y + tr->charHeight < 0 || y > (int)bmp->height)
         return 0;
 
-    while (*text != '\0')
+    for (int j = 0; text[j] && j < maxChars; j++)
     {
         if (x + tr->maxCharWidth > (int)bmp->width)
             break;
 
-        unsigned char c = *((unsigned char const *)text);
+        unsigned char c = text[j];
         Glyph *glyph = tr->glyphs[c]; 
         EncodedRun *rleBuf = glyph->m_pixelRuns;
         for (int i = 0; i < glyph->m_numRuns; i++)
@@ -222,31 +222,30 @@ static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x
         }
 
         x += glyph->m_width;
-        text++;
     }
 
-    return _x - x;
+    return x - _x;
 }
 
 
-int DrawTextSimple(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text)
+int DrawTextSimpleLen(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
 {
     int x = _x;
     int width = bmp->width;
 
     if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
-        return DrawTextSimpleClipped(tr, col, bmp, _x, y, text);
+        return DrawTextSimpleClipped(tr, col, bmp, _x, y, text, maxChars);
 
     DfColour *startRow = bmp->pixels + y * bmp->width;
-    while (*text != '\0')
+    for (int j = 0; text[j] && j < maxChars; j++)
     {
-        unsigned char c = *((unsigned char const *)text);
+        unsigned char c = text[j];
         if (x + tr->glyphs[c]->m_width > (int)bmp->width)
             break;
 
         // Copy the glyph onto the stack for better cache performance. This increased the 
         // performance from 13.8 to 14.4 million chars per second. Madness.
-        Glyph glyph = *tr->glyphs[(unsigned char)*text];
+        Glyph glyph = *tr->glyphs[c];
         EncodedRun *rleBuf = glyph.m_pixelRuns;
         for (int i = 0; i < glyph.m_numRuns; i++)
         {
@@ -257,10 +256,15 @@ int DrawTextSimple(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char 
         }
 
         x += glyph.m_width;
-        text++;
     }
 
     return x - _x;
+}
+
+
+int DrawTextSimple(DfFont *f, DfColour col, DfBitmap *bmp, int x, int y, char const *text)
+{
+    return DrawTextSimpleLen(f, col, bmp, x, y, text, 9999);
 }
 
 

@@ -31,14 +31,21 @@ typedef struct _DfFont
 
 
 // Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
-DLL_API DfFont *FontCreate    (char const *fontname, int size, int weight);
+DLL_API DfFont *FontCreate  (char const *fontname, int size, int weight);
 
-DLL_API int DrawTextSimple		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text);       // Returns text length in pixels
-DLL_API int DrawTextLeft		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like simple but with variable args
-DLL_API int DrawTextRight		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like above but with right justify
-DLL_API int DrawTextCentre		(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like above but with centre justify
+// All the DrawText... functions below return rendered text length in pixels.
 
-DLL_API int	GetTextWidth		(DfFont *, char const *text, int len=999999);
+// Renders "text" up to the NULL terminator.
+DLL_API int DrawTextSimple   (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text);
+
+// Renders "text" up to the NULL terminator or until maxChars is reached - whichever comes first.
+DLL_API int DrawTextSimpleLen(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, int maxChars);
+
+DLL_API int DrawTextLeft     (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like simple but with variable args
+DLL_API int DrawTextRight	 (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like above but with right justify
+DLL_API int DrawTextCentre	 (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like above but with centre justify
+
+DLL_API int	GetTextWidth	 (DfFont *, char const *text, int len=999999);
 
 
 extern DfFont *g_defaultFont;
