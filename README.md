@@ -18,13 +18,12 @@ It is a little like SDL, but smaller and with useful features like text renderin
 ## Advantages
 
 * Simple easy to use API.
-* Reliable results - unlike hardware accelerated drawing where output can change depending on the graphics card or even the driver version.
+* Depends on no third-party libraries.
 * It's tiny. Less than 5000 lines of code. The DLL is about 15K bytes when dynamically linked against the Visual Studio runtime libraries.
+* Reliable results - unlike hardware accelerated drawing where the exact pixel output can change depending on the graphics card or even the driver version.
 * Easy to debug. Unlike OpenGl/DirectX etc, you can step through all the code in the debugger to see why your rendering code isn't working.
 * Written in C++ with a C interface (to make it easy to use from other languages).
-* Python bindings provided (not recently updated).
 * Permissive BSD licence.
-* Depends on no third-party libraries.
 * Easy to port to other platforms (but currently limited to Windows).
 
 ## Design Details
@@ -43,25 +42,16 @@ To keep the code simple, Deadfrog Lib makes the following assumptions:
 
 Below is some performance data of various functions rendering to an in-memory frame buffer. Nothing is visible on the screen. The frame buffer would need to be blitted to the screen for the results to be visible. (Performance of blitting the frame buffer to the screen on my Windows box is around 6 billion pixels per second - eg blitting 1920x1200 to the screen 60 times per second results in about 2% CPU load.)
 
-Figures in the GDI column result from using a device independent bitmap.
+Running on Windows 10 on a single core of an Intel Core i3 530 @ 2.93 GHz, built with MSVC 2013, targetting x64:
 
-Running on Windows 7 on a single core of an Intel Core i3 530 @ 2.93 GHz:
-
-    FUNCTION        UNIT                    Deadfrog    GDI     NOTES
+    FUNCTION        UNIT                    Deadfrog    NOTES
     -------------------------------------------------------------------------------------
-    Put pixel       million per sec         50          1 
-    Line draw       million pixels per sec  600         150
-    Rectangle fill  million pixels per sec  2700        4300
-    Text render     million chars per sec   14          4.5     8 point, fixed width font
-
-Running on Windows XP on a single core of an Intel i5-2430M @ 3.0 GHz:
-
-    FUNCTION        UNIT                    Deadfrog    GDI     NOTES
-    -------------------------------------------------------------------------------------
-    Put pixel       million per sec         1290        2
-    Line draw       million pixels per sec  600         210
-    Rectangle fill  million pixels per sec  3100        2470
-    Text render     million chars per sec   17          8       8 point, fixed width font
+    Put pixel       million per sec         95
+    Line draw       million pixels per sec  650
+    Rectangle fill  million pixels per sec  5700
+    Text render     million chars per sec   41          8 point, fixed width font
+    Text render     million chars per sec   8           8 point, fixed width font, antialiased
+    Swap buffers    number per sec          1260        Bitmap size 1280x1024
 
 ## Hello World Example
 
