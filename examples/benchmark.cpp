@@ -295,8 +295,6 @@ void BenchmarkMain()
     score = CalcMillionAaCharsPerSec(backBmp, fontAa);
     END_TEST;
 
-    SleepMillisec(1000);
-
     // Polygon fill
     score = CalcBillionPolyFillPixelsPerSec(backBmp);
     END_TEST;

@@ -1,0 +1,11 @@
+Million putpix per sec                      94.56   0.42 40000000
+Million hline pixels per sec               981.04   0.41 20000000
+Million vline pixels per sec               384.43   0.47  9000000
+Million line pixels per sec                634.89   0.46   300000
+Billion rect fill pixels per sec             5.38   0.50    30000
+Million DrawText chars per sec              43.36   0.40   500000
+Million DrawText AA chars per sec            7.77   0.45   100000
+Billion polygon fill pixels per sec          0.83   0.42     4000
+Thousands blits backbuf to screen per sec    1.22   0.41      500
+
+Windows 8, NUC i3-6100U.
