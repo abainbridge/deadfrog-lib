@@ -131,8 +131,11 @@ double CalcMillionCharsPerSec(DfBitmap *bmp, DfFont *font)
     static char const *str = "Here's some interesting text []£# !";
     g_iterations = 1000 * 500;
     double startTime = GetRealTime();
-    for (unsigned i = 0; i < g_iterations; i++)
-        DrawTextSimple(font, g_colourWhite, bmp, 10, 10, str);
+    for (unsigned i = 0; i < g_iterations; i++) {
+        int x = GetRand() % bmp->width;
+        int y = i % bmp->height;
+        DrawTextSimple(font, g_colourWhite, bmp, x, y, str);
+    }
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
     g_testFmtString = "Million DrawText chars per sec";
@@ -146,8 +149,12 @@ double CalcMillionAaCharsPerSec(DfBitmap *bmp, DfFontAa *font)
     static char const *str = "Here's some interesting text []£# !";
     g_iterations = 1000 * 100;
     double startTime = GetRealTime();
-    for (unsigned i = 0; i < g_iterations; i++)
-        DrawTextSimpleAa(font, Colour(255,255,255,60), bmp, 10, 10, 10, str);
+    for (unsigned i = 0; i < g_iterations; i++) 
+    {
+        int x = GetRand() % bmp->width;
+        int y = i % bmp->height;
+        DrawTextSimpleAa(font, Colour(255, 255, 255, 60), bmp, x, y, 10, str);
+    }
     double endTime = GetRealTime();
 
 //    RectFill(bmp, 10, 10, 500, font->charHeight, g_colourBlack);
@@ -251,11 +258,13 @@ void BenchmarkMain()
     DfFont *font = FontCreate("Courier New", 10, 4);
     DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
 
-    DfBitmap *backBmp = BitmapCreate(800, 600);
+    DfBitmap *backBmp = BitmapCreate(1920, 1200);
     BitmapClear(backBmp, g_colourBlack);
 
-    int textY = 10;
-    int yInc = font->charHeight * 3;
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "%-42s %6s %5s %8s", "", "Result", "Time", "Iterations");
+    
+    int textY = 30;
+    int yInc = font->charHeight * 4;
     double score;
 
     // Put pixel
@@ -285,6 +294,8 @@ void BenchmarkMain()
     // Text render AA
     score = CalcMillionAaCharsPerSec(backBmp, fontAa);
     END_TEST;
+
+    SleepMillisec(1000);
 
     // Polygon fill
     score = CalcBillionPolyFillPixelsPerSec(backBmp);
