@@ -17,28 +17,39 @@ extern "C"
 
 typedef struct _DfBitmap
 {
-	unsigned width;
-	unsigned height;
-	DfColour *pixels;
+	int width;
+	int height;
+
+    // Clipping rectangle. Pixel is clipped if and only if:
+    //    x < clipLeft || x >= clipRight || y < clipTop || y >= clipBottom
+    int clipLeft;
+    int clipRight;
+    int clipTop;
+    int clipBottom;
+
+    DfColour *pixels;
 	DfColour **lines;
 } DfBitmap;
 
 
-DLL_API DfBitmap   *BitmapCreate(unsigned width, unsigned height);
+DLL_API DfBitmap   *BitmapCreate(int width, int height);
 DLL_API void        BitmapDelete(DfBitmap *bmp);
+
+DLL_API void        SetClipRect     (DfBitmap *bmp, int x, int y, int w, int h);
+DLL_API void        ClearClipRect   (DfBitmap *bmp); // Sets bitmap's full size as the clip rect.
 
 DLL_API void        BitmapClear     (DfBitmap *bmp, DfColour c);
 
-DLL_API void        PutPixUnclipped (DfBitmap *bmp, unsigned x, unsigned y, DfColour c);
-DLL_API void        PutPix          (DfBitmap *bmp, unsigned x, unsigned y, DfColour c);
+DLL_API void        PutPixUnclipped (DfBitmap *bmp, int x, int y, DfColour c);
+DLL_API void        PutPix          (DfBitmap *bmp, int x, int y, DfColour c);
 
-DLL_API DfColour    GetPixUnclipped (DfBitmap *bmp, unsigned x, unsigned y);
-DLL_API DfColour    GetPix          (DfBitmap *bmp, unsigned x, unsigned y);
+DLL_API DfColour    GetPixUnclipped (DfBitmap *bmp, int x, int y);
+DLL_API DfColour    GetPix          (DfBitmap *bmp, int x, int y);
 
-DLL_API void        HLine           (DfBitmap *bmp, int x, int y, unsigned len, DfColour c);
-DLL_API void        HLineUnclipped  (DfBitmap *bmp, int x, int y, unsigned len, DfColour c);
-DLL_API void        VLine           (DfBitmap *bmp, int x, int y, unsigned len, DfColour c);
-DLL_API void        VLineUnclipped  (DfBitmap *bmp, int x, int y, unsigned len, DfColour c);
+DLL_API void        HLine           (DfBitmap *bmp, int x, int y, int len, DfColour c);
+DLL_API void        HLineUnclipped  (DfBitmap *bmp, int x, int y, int len, DfColour c);
+DLL_API void        VLine           (DfBitmap *bmp, int x, int y, int len, DfColour c);
+DLL_API void        VLineUnclipped  (DfBitmap *bmp, int x, int y, int len, DfColour c);
 DLL_API void        DrawLine        (DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour c);
 
 // Arguments a to d are points, represented as arrays of 2 integers. Curve starts at 'a' and ends at 'd'.
@@ -48,29 +59,29 @@ DLL_API void        DrawBezier      (DfBitmap *bmp, int const *a, int const *b, 
 DLL_API void        GetBezierPos    (int const *a, int const *b, int const *c, int const *d, int t, int *result);
 DLL_API void        GetBezierDir    (int const *a, int const *b, int const *c, int const *d, int t, int *result);
 
-DLL_API void        RectFill        (DfBitmap *bmp, int x, int y, unsigned w, unsigned h, DfColour c);
-DLL_API void        RectOutline     (DfBitmap *bmp, int x, int y, unsigned w, unsigned h, DfColour c);
+DLL_API void        RectFill        (DfBitmap *bmp, int x, int y, int w, int h, DfColour c);
+DLL_API void        RectOutline     (DfBitmap *bmp, int x, int y, int w, int h, DfColour c);
 
-DLL_API void        CircleOutline   (DfBitmap *bmp, int x, int y, unsigned r, DfColour c);
-DLL_API void        CircleFill      (DfBitmap *bmp, int x, int y, unsigned r, DfColour c);
+DLL_API void        CircleOutline   (DfBitmap *bmp, int x, int y, int r, DfColour c);
+DLL_API void        CircleFill      (DfBitmap *bmp, int x, int y, int r, DfColour c);
 
-DLL_API void        EllipseOutline  (DfBitmap *bmp, int x, int y, unsigned rx, unsigned ry, DfColour c);
-DLL_API void        EllipseFill     (DfBitmap *bmp, int x, int y, unsigned rx, unsigned ry, DfColour c);
+DLL_API void        EllipseOutline  (DfBitmap *bmp, int x, int y, int rx, int ry, DfColour c);
+DLL_API void        EllipseFill     (DfBitmap *bmp, int x, int y, int rx, int ry, DfColour c);
 
 // Copies the source bitmap to the destination bitmap, skipping pixels whose source alpha values are 0
 DLL_API void        MaskedBlit      (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
 
 // Copies the source bitmap to the destination bitmap, including pixels whose source alpha values are 0
-DLL_API void        QuickBlit       (DfBitmap *destBmp, unsigned x, unsigned y, DfBitmap *srcBmp);
+DLL_API void        QuickBlit       (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
 
 // Copies the source bitmap to the destination bitmap, scaling the result down by the specified scale factor
-DLL_API void        ScaleDownBlit   (DfBitmap *destBmp, unsigned x, unsigned y, unsigned scale, DfBitmap *srcBmp);
-DLL_API void        ScaleUpBlit     (DfBitmap *destBmp, unsigned x, unsigned y, unsigned scale, DfBitmap *srcBmp);
+DLL_API void        ScaleDownBlit   (DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp);
+DLL_API void        ScaleUpBlit     (DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp);
 
 DLL_API void 		BitmapDownsample(DfBitmap *src_bmp, DfBitmap *dst_bmp);
 
 
-inline void PutPixUnclipped(DfBitmap *bmp, unsigned x, unsigned y, DfColour c)
+inline void PutPixUnclipped(DfBitmap *bmp, int x, int y, DfColour c)
 {
     DfColour *pixel = (bmp->pixels + y * bmp->width) + x;
 //    DfColour *pixel = bmp->lines[y] + x;

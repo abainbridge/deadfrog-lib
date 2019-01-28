@@ -1,0 +1,266 @@
+#include "df_time.h"
+#include "df_input.h"
+#include "df_polygon.h"
+#include "df_font.h"
+#include "df_font_aa.h"
+#include "df_window.h"
+
+#include <stdint.h>
+#include <string.h>
+
+#include "df_master_glyph.h"
+
+
+inline unsigned GetRand()
+{
+    static unsigned r = 0x12345671;
+    return r = ((r * 214013 + 2531011) >> 16) & 0xffff;
+}
+
+
+void Check(DfBitmap *bmp)
+{
+    for (int y = 0; y < bmp->clipTop; y++)
+        for (int x = 0; x < bmp->width; x++)
+            ReleaseAssert(GetPixUnclipped(bmp, x, y).c == g_colourBlack.c, "Top region not blank");
+    
+    for (int y = bmp->clipTop; y < bmp->clipBottom; y++)
+    {
+        for (int x = 0; x < bmp->clipLeft; x++)
+            ReleaseAssert(GetPixUnclipped(bmp, x, y).c == g_colourBlack.c, "Left region not blank");
+        for (int x = bmp->clipRight; x < bmp->width; x++)
+            ReleaseAssert(GetPixUnclipped(bmp, x, y).c == g_colourBlack.c, "Right region not blank");
+    }
+
+    for (int y = bmp->clipBottom; y < bmp->height; y++)
+        for (int x = 0; x < bmp->width; x++)
+            ReleaseAssert(GetPixUnclipped(bmp, x, y).c == g_colourBlack.c, "Bottom region not blank");
+}
+
+
+void TestPutPix(DfBitmap *bmp)
+{
+    for (int y = 0; y < bmp->height; y++)
+        for (int x = 0; x < bmp->width; x++)
+            PutPix(bmp, x, y, g_colourWhite);
+
+    Check(bmp);
+}
+
+
+void TestHLine(DfBitmap *bmp)
+{
+    for (int y = 0; y < bmp->height; y++)
+    {
+        for (unsigned i = 0; i < 1000; i++)
+        {
+            int x = (y * i + GetRand()) % bmp->width;
+            int lineLen = GetRand() % 20;
+            HLine(bmp, x, y, lineLen, g_colourWhite);
+        }
+    }
+
+    Check(bmp);
+}
+
+
+void TestVLine(DfBitmap *bmp)
+{
+    for (int x = 0; x < bmp->width; x++)
+    {
+        for (unsigned i = 0; i < 1000; i++)
+        {
+            int y = (x * i + GetRand()) % bmp->width;
+            int lineLen = GetRand() % 20;
+            VLine(bmp, x, y, lineLen, g_colourWhite);
+        }
+    }
+
+    Check(bmp);
+}
+
+
+void TestDrawLine(DfBitmap *bmp)
+{
+    for (int y = -1; y < bmp->height + 1; y++)
+    {
+        for (int x = -1; x < bmp->width + 1; x++)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                int x2 = x + GetRand() % 20 - 10;
+                int y2 = y + GetRand() % 20 - 10;
+                DrawLine(bmp, x, y, x2, y2, g_colourWhite);
+            }
+        }
+    }
+
+    Check(bmp);
+}
+
+
+void TestRectFill(DfBitmap *bmp)
+{
+    for (int y = -1; y < bmp->height + 1; y++)
+    {
+        int iterations = 30;
+        for (unsigned i = 0; i < iterations; i++)
+        {
+            int x = GetRand() % bmp->width;
+            int w = GetRand() % 20;
+            int h = GetRand() % 20;
+            RectFill(bmp, x, y, w, h, g_colourWhite);
+        }
+    }
+
+    Check(bmp);
+}
+
+
+void TestDrawText(DfBitmap *bmp, DfFont *font)
+{
+    static char const *str = "Here's some interesting text []£# !";
+    int iterations = 1000 * 500;
+    for (unsigned i = 0; i < iterations; i++) {
+        int x = GetRand() % bmp->width;
+        int y = i % bmp->height;
+        DrawTextSimple(font, g_colourWhite, bmp, x, y, str);
+    }
+
+    Check(bmp);
+}
+
+
+void TestDrawTextAa(DfBitmap *bmp, DfFontAa *font)
+{
+    static char const *str = "Here's some interesting text []£# !";
+    int iterations = 1000 * 100;
+    for (unsigned i = 0; i < iterations; i++)
+    {
+        int x = GetRand() % bmp->width;
+        int y = i % bmp->height;
+        DrawTextSimpleAa(font, Colour(255, 255, 255, 60), bmp, x, y, 10, str);
+    }
+
+    Check(bmp);
+}
+
+
+#define DRAW_POLYGON(pointList, Color, x, y)              \
+    Polygon.numPoints = sizeof(pointList) / sizeof(Point);   \
+    Polygon.points = pointList;                         \
+    FillConvexPolygon(bmp, &Polygon, g_colourWhite, x, y);
+
+
+void TestFillConvexPolygon(DfBitmap *bmp)
+{
+    int iterations = 1;
+    for (unsigned k = 0; k < iterations; k++)
+    {
+        PointListHeader Polygon;
+        static Point ScreenRectangle[] = { { 340, 10 }, { 380, 10 }, { 380, 200 }, { 340, 200 } };
+        static Point Hexagon[] = { { 190, 250 }, { 100, 210 }, { 10, 250 }, { 10, 350 }, { 100, 390 }, { 190, 350 } };
+        static Point Triangle1[] = { { 30, 0 }, { 15, 20 }, { 0, 0 } };
+        static Point Triangle2[] = { { 30, 20 }, { 15, 0 }, { 0, 20 } };
+        static Point Triangle3[] = { { 0, 20 }, { 20, 10 }, { 0, 0 } };
+        static Point Triangle4[] = { { 20, 20 }, { 20, 0 }, { 0, 10 } };
+
+        DRAW_POLYGON(ScreenRectangle, 3, 0, 1);
+
+        // Draw adjacent triangles across the top half of the screen
+        int i, j;
+        for (j = 0; j <= 80; j += 20) {
+            for (i = 0; i < 290; i += 30) {
+                DRAW_POLYGON(Triangle1, 2, i, j);
+                DRAW_POLYGON(Triangle2, 4, i + 15, j);
+            }
+        }
+
+        // Draw adjacent triangles across the bottom half of the screen
+        for (j = 100; j <= 170; j += 20) {
+            // Do a row of pointing-right triangles
+            for (i = 0; i < 290; i += 20) {
+                DRAW_POLYGON(Triangle3, 40, i, j);
+            }
+            // Do a row of pointing-left triangles halfway between one row
+            // of pointing-right triangles and the next, to fit between
+            for (i = 0; i < 290; i += 20) {
+                DRAW_POLYGON(Triangle4, 1, i, j + 10);
+            }
+        }
+
+        DRAW_POLYGON(Hexagon, i, 0, 0);
+    }
+
+    Check(bmp);
+}
+
+
+#define END_TEST \
+    QuickBlit(g_window->bmp, 600, textY, backBmp); \
+    UpdateWin(); \
+    InputManagerAdvance(); \
+if (g_window->windowClosed || g_input.keyDowns[KEY_ESC]) return; \
+    ClearClipRect(backBmp); \
+    BitmapClear(backBmp, g_colourBlack); \
+    SetClipRect(backBmp, 1, 1, backBmp->width - 2, backBmp->height - 2); \
+    textY += yInc;
+
+
+void TestMain()
+{
+    CreateWin(1024, 768, WT_WINDOWED, "Test");
+    BitmapClear(g_window->bmp, g_colourBlack);
+
+    DfFont *font = FontCreate("Courier New", 10, 4);
+    DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
+
+    DfBitmap *backBmp = BitmapCreate(1920, 1200);
+    BitmapClear(backBmp, g_colourBlack);
+
+    int textY = 30;
+    int yInc = font->charHeight * 4;
+
+    // PutPix
+    TestPutPix(backBmp);
+    END_TEST;
+
+    // HLine draw
+    TestHLine(backBmp);
+    END_TEST;
+
+    // VLine draw
+    TestVLine(backBmp);
+    END_TEST;
+
+    // Line draw
+    TestDrawLine(backBmp);
+    END_TEST;
+
+    // Rect fill
+    TestRectFill(backBmp);
+    END_TEST;
+
+    // Text render
+    TestDrawText(backBmp, font);
+    END_TEST;
+
+    // Text render AA
+    TestDrawTextAa(backBmp, fontAa);
+    END_TEST;
+
+    // Polygon fill
+    TestFillConvexPolygon(backBmp);
+    END_TEST;
+
+    textY += yInc;
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
+        "Press ESC to quit");
+
+    UpdateWin();
+    while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
+    {
+        InputManagerAdvance();
+        SleepMillisec(100);
+    }
+}

@@ -106,7 +106,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../src</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4244;4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4018;4244;4996</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -167,7 +167,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../src</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4244;4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4018;4244;4996</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>false</ExceptionHandling>
@@ -196,6 +196,7 @@
     <ClCompile Include="..\..\hello_world.cpp" />
     <ClCompile Include="..\..\mandelbrot.cpp" />
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
+    <ClCompile Include="..\..\test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\polygon\clip_rectangle.h" />
