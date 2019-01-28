@@ -3,8 +3,6 @@ A simple graphics, keyboard and mouse library with a C interface.
 
 Deadfrog Lib is a collection of simple portable functions to create a window, get keyboard and mouse input and provide various 2D drawing primitives. It was created due to the frustration I found in just getting a simple interactive program up and running on a PC. The PC should be as easy to program as my ZX Spectrum was in 1982.
 
-It is a little like SDL, but smaller and with useful features like text rendering oddly missing from SDL.
-
 ## Functions include
 
 * Window creation.
@@ -17,7 +15,9 @@ It is a little like SDL, but smaller and with useful features like text renderin
 
 ## Advantages
 
-* Simple easy to use API.
+* Simple API.
+* Simple source code.
+* Fast (for a simple, portable, software renderer).
 * Depends on no third-party libraries.
 * It's tiny. Less than 5000 lines of code. The DLL is about 15K bytes when dynamically linked against the Visual Studio runtime libraries.
 * Reliable results - unlike hardware accelerated drawing where the exact pixel output can change depending on the graphics card or even the driver version.
@@ -46,7 +46,8 @@ Running on Windows 10 on a single core of an Intel Core i3 530 @ 2.93 GHz, built
 
     FUNCTION        UNIT                    Deadfrog    NOTES
     -------------------------------------------------------------------------------------
-    Put pixel       million per sec         95
+    Put pixel       million per sec         125
+    Put pixel       million per sec         95          Alpha blended
     Line draw       million pixels per sec  650
     Rectangle fill  million pixels per sec  5700
     Text render     million chars per sec   41          8 point, fixed width font
