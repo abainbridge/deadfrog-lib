@@ -199,7 +199,7 @@ static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x
 
     for (int j = 0; text[j] && j < maxChars; j++)
     {
-        if (x + tr->maxCharWidth > bmp->clipRight)
+        if (x > bmp->clipRight)
             break;
 
         unsigned char c = text[j];
