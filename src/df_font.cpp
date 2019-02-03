@@ -191,30 +191,31 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
 static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
 {
     int x = _x;
-    DfColour *startRow = bmp->pixels + y * (int)bmp->width;
+    DfColour *startRow = bmp->pixels + y * bmp->width;
     int width = bmp->width;
 
-    if (y + tr->charHeight < 0 || y > (int)bmp->height)
+    if (y + tr->charHeight < bmp->clipTop || y > bmp->clipBottom)
         return 0;
 
     for (int j = 0; text[j] && j < maxChars; j++)
     {
-        if (x + tr->maxCharWidth > (int)bmp->width)
+        if (x + tr->maxCharWidth > bmp->clipRight)
             break;
 
         unsigned char c = text[j];
-        Glyph *glyph = tr->glyphs[c]; 
+        Glyph *glyph = tr->glyphs[c];
+
         EncodedRun *rleBuf = glyph->m_pixelRuns;
         for (int i = 0; i < glyph->m_numRuns; i++)
         {
             int y3 = y + rleBuf->startY;
-            if (y3 >= 0 && y3 < (int)bmp->height)
+            if (y3 >= bmp->clipTop && y3 < bmp->clipBottom)
             {
                 DfColour *thisRow = startRow + rleBuf->startY * width;
                 for (unsigned i = 0; i < rleBuf->runLen; i++)
                 {
                     int x3 = x + rleBuf->startX + i;
-                    if (x3 >= 0 && x3 < width)
+                    if (x3 >= bmp->clipLeft && x3 < bmp->clipRight)
                         thisRow[x3] = col;
                 }
             }
@@ -233,14 +234,14 @@ int DrawTextSimpleLen(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, ch
     int x = _x;
     int width = bmp->width;
 
-    if (x < 0 || y < 0 || (y + tr->charHeight) > (int)bmp->height)
+    if (x < bmp->clipLeft || y < bmp->clipTop || (y + tr->charHeight) > bmp->clipBottom)
         return DrawTextSimpleClipped(tr, col, bmp, _x, y, text, maxChars);
 
     DfColour *startRow = bmp->pixels + y * bmp->width;
     for (int j = 0; text[j] && j < maxChars; j++)
     {
         unsigned char c = text[j];
-        if (x + tr->glyphs[c]->m_width > (int)bmp->width)
+        if (x + (int)tr->glyphs[c]->m_width > bmp->clipRight)
             break;
 
         // Copy the glyph onto the stack for better cache performance. This increased the 

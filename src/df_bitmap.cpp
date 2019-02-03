@@ -43,10 +43,10 @@ void BitmapDelete(DfBitmap *bmp)
 
 void SetClipRect(DfBitmap *bmp, int x, int y, int w, int h)
 {
-    bmp->clipLeft = x;
-    bmp->clipTop = y;
-    bmp->clipRight = x + w;
-    bmp->clipBottom = y + h;
+    bmp->clipLeft = IntMax(0, x);
+    bmp->clipTop = IntMax(0, y);
+    bmp->clipRight = IntMin(x + w, bmp->width);
+    bmp->clipBottom = IntMin(y + h, bmp->height);
 }
 
 
