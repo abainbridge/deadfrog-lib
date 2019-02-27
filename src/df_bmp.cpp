@@ -123,7 +123,34 @@ static void ReadBmpPalette(int ncols, DfColour pal[256], FILE *f)
 }
 
 
-// Support function for reading the 4 bit bitmap file format.
+static void SkipPadding(FILE *f, int width, int pixels_per_byte)
+{
+    // Skip any padding until we've read a multiple of 4 bytes.
+    int num_bytes = (width + pixels_per_byte - 1) / pixels_per_byte;
+    while (num_bytes & 3)
+    {
+        ReadU8(f);
+        num_bytes++;
+    }
+}
+
+
+static void Read1BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
+{
+    for (int x = 0; x < length; x += 8)
+    {
+        uint8_t i = ReadU8(f);
+        for (int j = 0; j < 8; j++) {
+            int idx = (i >> 7) & 1;
+            PutPix(bitmap, x + j, y, pal[idx]);
+            i <<= 1;
+        }
+    }
+
+    SkipPadding(f, length, 8);
+}
+
+
 static void Read4BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
 {
 	for (int x = 0; x < length; x += 2) 
@@ -134,10 +161,11 @@ static void Read4BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256
 		PutPix(bitmap, x+1, y, pal[idx1]);
 		PutPix(bitmap, x, y, pal[idx2]);
 	}
+
+    SkipPadding(f, length, 2);
 }
 
 
-// Support function for reading the 8 bit bitmap file format.
 static void Read8BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256], int y)
 {
 	for (int x = 0; x < length; ++x) 
@@ -146,16 +174,10 @@ static void Read8BitLine(DfBitmap *bitmap, int length, FILE *f, DfColour pal[256
 		PutPix(bitmap, x, y, pal[i]);
 	}
 
-    // Skip any padding until we've read a multiple of 4 bytes.
-    while (length & 3)
-    {
-        ReadU8(f);
-        length++;
-    }
+    SkipPadding(f, length, 1);
 }
 
 
-// Support function for reading the 24 bit bitmap file format
 static void Read24BitLine(DfBitmap *bitmap, int length, FILE *f, int y)
 {
 	DfColour c;
@@ -208,6 +230,9 @@ DfBitmap *LoadBmp(char const *filename)
         int y = bitmap->height - i - 1;
         switch (infoheader.bitCount)
         {
+        case 1:
+            Read1BitLine(bitmap, infoheader.width, f, palette, y);
+            break;
         case 4:
             Read4BitLine(bitmap, infoheader.width, f, palette, y);
             break;
