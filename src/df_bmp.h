@@ -11,7 +11,7 @@ typedef struct _DfBitmap DfBitmap;
 
 
 DfBitmap *LoadBmp(char const *filename);
-bool SaveBmp(DfBitmap *bitmap, char const *filename);
+bool SaveBmp(DfBitmap *bmp, char const *filename);
 
 
 #ifdef __cplusplus

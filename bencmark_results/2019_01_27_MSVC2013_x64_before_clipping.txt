@@ -9,3 +9,5 @@ Billion polygon fill pixels per sec          0.83   0.42     4000
 Thousands blits backbuf to screen per sec    1.22   0.41      500
 
 Windows 8, NUC i3-6100U.
+
+This is from before support for custom clipping rectangles was added.

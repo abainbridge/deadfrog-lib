@@ -307,3 +307,4 @@ bool SaveBmp(DfBitmap *bmp, char const *filename)
     delete [] img;
     return true;
 }
+
