@@ -146,33 +146,26 @@ void TestDrawTextAa(DfBitmap *bmp, DfFontAa *font)
 }
 
 
-#define DRAW_POLYGON(pointList, Color, x, y)              \
-    Polygon.numPoints = sizeof(pointList) / sizeof(Point);   \
-    Polygon.points = pointList;                         \
-    FillConvexPolygon(bmp, &Polygon, g_colourWhite, x, y);
-
-
 void TestFillConvexPolygon(DfBitmap *bmp)
 {
     int iterations = 1;
     for (unsigned k = 0; k < iterations; k++)
     {
-        PointListHeader Polygon;
-        static Point ScreenRectangle[] = { { 340, 10 }, { 380, 10 }, { 380, 200 }, { 340, 200 } };
-        static Point Hexagon[] = { { 190, 250 }, { 100, 210 }, { 10, 250 }, { 10, 350 }, { 100, 390 }, { 190, 350 } };
-        static Point Triangle1[] = { { 30, 0 }, { 15, 20 }, { 0, 0 } };
-        static Point Triangle2[] = { { 30, 20 }, { 15, 0 }, { 0, 20 } };
-        static Point Triangle3[] = { { 0, 20 }, { 20, 10 }, { 0, 0 } };
-        static Point Triangle4[] = { { 20, 20 }, { 20, 0 }, { 0, 10 } };
+        static PolyVertList ScreenRectangle = { 4, { { 340, 10 }, { 380, 10 }, { 380, 200 }, { 340, 200 } } };
+        static PolyVertList Hexagon = { 6, { { 190, 250 }, { 100, 210 }, { 10, 250 }, { 10, 350 }, { 100, 390 }, { 190, 350 } } };
+        static PolyVertList Triangle1 = { 3, { { 30, 0 }, { 15, 20 }, { 0, 0 } } };
+        static PolyVertList Triangle2 = { 3, { { 30, 20 }, { 15, 0 }, { 0, 20 } } };
+        static PolyVertList Triangle3 = { 3, { { 0, 20 }, { 20, 10 }, { 0, 0 } } };
+        static PolyVertList Triangle4 = { 3, { { 20, 20 }, { 20, 0 }, { 0, 10 } } };
 
-        DRAW_POLYGON(ScreenRectangle, 3, 0, 1);
+        FillConvexPolygon(bmp, &ScreenRectangle, g_colourWhite, 0, 1);
 
         // Draw adjacent triangles across the top half of the screen
         int i, j;
         for (j = 0; j <= 80; j += 20) {
             for (i = 0; i < 290; i += 30) {
-                DRAW_POLYGON(Triangle1, 2, i, j);
-                DRAW_POLYGON(Triangle2, 4, i + 15, j);
+                FillConvexPolygon(bmp, &Triangle1, g_colourWhite, i, j);
+                FillConvexPolygon(bmp, &Triangle2, g_colourWhite, i + 15, j);
             }
         }
 
@@ -180,16 +173,16 @@ void TestFillConvexPolygon(DfBitmap *bmp)
         for (j = 100; j <= 170; j += 20) {
             // Do a row of pointing-right triangles
             for (i = 0; i < 290; i += 20) {
-                DRAW_POLYGON(Triangle3, 40, i, j);
+                FillConvexPolygon(bmp, &Triangle3, g_colourWhite, i, j);
             }
             // Do a row of pointing-left triangles halfway between one row
             // of pointing-right triangles and the next, to fit between
             for (i = 0; i < 290; i += 20) {
-                DRAW_POLYGON(Triangle4, 1, i, j + 10);
+                FillConvexPolygon(bmp, &Triangle4, g_colourWhite, i, j + 10);
             }
         }
 
-        DRAW_POLYGON(Hexagon, i, 0, 0);
+        FillConvexPolygon(bmp, &Hexagon, g_colourWhite, 0, 0);
     }
 
     Check(bmp);

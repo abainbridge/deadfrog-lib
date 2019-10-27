@@ -252,11 +252,11 @@ static void DrawHorizontalLineList(DfBitmap *bmp, HLineList *hLines, DfColour co
 }
 
 
-int FillConvexPolygon(DfBitmap *bmp, PointListHeader *vertexList, DfColour col,
+int FillConvexPolygon(DfBitmap *bmp, PolyVertList *vertexList, DfColour col,
                       int xOffset, int yOffset)
 {
     // Point to the vertex list 
-    Point *vertices = vertexList->points;
+    PolyVert *vertices = vertexList->points;
 
     // Scan the list to find the top and bottom of the polygon 
     if (vertexList->numPoints == 0)

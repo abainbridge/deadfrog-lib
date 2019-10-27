@@ -13,12 +13,15 @@ extern "C"
 #endif
 
 
+enum { MAX_POLY_VERTICES = 20 };
+
+
 // Describes a single point (used for a single vertex)
 typedef struct 
 {
-    int x;
-    int y;
-} Point;
+    short x;
+    short y;
+} PolyVert;
 
 
 // Describes a series of points (used to store a list of vertices that
@@ -28,11 +31,11 @@ typedef struct
 typedef struct 
 {
     int numPoints;
-    Point *points;
-} PointListHeader;
+    PolyVert points[MAX_POLY_VERTICES];
+} PolyVertList;
 
 
-int FillConvexPolygon(DfBitmap *bmp, PointListHeader *vertexList, DfColour col,
+int FillConvexPolygon(DfBitmap *bmp, PolyVertList *vertList, DfColour col,
                       int xOffset, int yOffset);
 
 
