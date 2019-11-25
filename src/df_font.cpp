@@ -314,7 +314,7 @@ int GetTextWidth(DfFont *tr, char const *text, int len)
 	{
         int width = 0;
         for (int i = 0; i < len; i++)
-            width += tr->glyphs[(int)text[i]]->m_width;
+            width += tr->glyphs[text[i] & 0xff]->m_width;
 
 		return width;
 	}
