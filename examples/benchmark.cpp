@@ -25,7 +25,7 @@ inline unsigned GetRand()
 
 double CalcMillionPixelsPerSec(DfBitmap *bmp)
 {
-    g_iterations = 1000 * 1000 * 40;
+    g_iterations = 1000 * 1000 * 30;
     double startTime = GetRealTime();
     for (unsigned i = 0; i < g_iterations; i++)
     {
@@ -35,11 +35,17 @@ double CalcMillionPixelsPerSec(DfBitmap *bmp)
         c.g = r & 0xff;
         c.b = r & 0xff;
         c.a = 128;
-        PutPixUnclipped(bmp, r & 255, (r >> 8) & 255, c);
+		unsigned x = r & 255;
+		unsigned y = (r >> 8) & 255;
+        PutPixUnclipped(bmp, x, y, c);
+        PutPixUnclipped(bmp, x+1, y, c);
+        PutPixUnclipped(bmp, x, y+1, c);
+        PutPixUnclipped(bmp, x+1, y+1, c);
     }
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
-    g_testFmtString = "Million putpix per sec";
+    g_testFmtString = "Million unclipped putpix per sec";
+	g_iterations *= 4;
     double numPixels = (double)g_iterations;
     return (numPixels / g_duration) / 1e6;
 }
@@ -47,7 +53,7 @@ double CalcMillionPixelsPerSec(DfBitmap *bmp)
 
 double CalcMillionHLinePixelsPerSec(DfBitmap *bmp)
 {
-    g_iterations = 1000 * 1000 * 20;
+    g_iterations = 1000 * 1000 * 10;
     double startTime = GetRealTime();
     unsigned lineLen = 20;
     for (unsigned i = 0; i < g_iterations; i++)
@@ -58,13 +64,42 @@ double CalcMillionHLinePixelsPerSec(DfBitmap *bmp)
         c.g = r & 0xff;
         c.b = r & 0xff;
         c.a = 255;
-        HLine(bmp, r & 255, (r >> 8) & 255, lineLen, c);
+        HLineUnclipped(bmp, r & 255, (r >> 8) & 255, lineLen, c);
+        HLineUnclipped(bmp, r & 255, (r >> 8) & 255 + 1, lineLen, c);
+        HLineUnclipped(bmp, r & 255, (r >> 8) & 255 + 2, lineLen, c);
+        HLineUnclipped(bmp, r & 255, (r >> 8) & 255 + 3, lineLen, c);
     }
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
     g_testFmtString = "Million hline pixels per sec";
+	g_iterations *= 4;
+    double numPixels = (double)g_iterations * lineLen;
+    return (numPixels / g_duration) / 1e6;
+}
 
 
+double CalcMillionHLineAlphaPixelsPerSec(DfBitmap *bmp)
+{
+    g_iterations = 1000 * 1000 * 4;
+    double startTime = GetRealTime();
+    unsigned lineLen = 20;
+    for (unsigned i = 0; i < g_iterations; i++)
+    {
+        unsigned r = GetRand();
+        DfColour c;
+        c.r = r & 0xff;
+        c.g = r & 0xff;
+        c.b = r & 0xff;
+        c.a = 128;
+        HLineUnclipped(bmp, r & 255, (r >> 8) & 255, lineLen, c);
+        HLineUnclipped(bmp, r & 255, (r >> 8) & 255 + 1, lineLen, c);
+        HLineUnclipped(bmp, r & 255, (r >> 8) & 255 + 2, lineLen, c);
+        HLineUnclipped(bmp, r & 255, (r >> 8) & 255 + 3, lineLen, c);
+    }
+    double endTime = GetRealTime();
+    g_duration = endTime - startTime;
+	g_iterations *= 4;
+    g_testFmtString = "Million hline alpha pixels per sec";
     double numPixels = (double)g_iterations * lineLen;
     return (numPixels / g_duration) / 1e6;
 }
@@ -72,7 +107,7 @@ double CalcMillionHLinePixelsPerSec(DfBitmap *bmp)
 
 double CalcMillionVLinePixelsPerSec(DfBitmap *bmp)
 {
-    g_iterations = 1000 * 1000 * 9;
+    g_iterations = 1000 * 1000 * 5;
     double startTime = GetRealTime();
     unsigned lineLen = 20;
     for (unsigned i = 0; i < g_iterations; i++)
@@ -83,11 +118,17 @@ double CalcMillionVLinePixelsPerSec(DfBitmap *bmp)
         c.g = r & 0xff;
         c.b = r & 0xff;
         c.a = 255;
-        VLine(bmp, r & 255, (r >> 8) & 255, lineLen, c);
+        unsigned x = r & 255;
+        unsigned y = (r >> 8) & 255;
+        VLine(bmp, x, y, lineLen, c);
+        VLine(bmp, x+1, y, lineLen, c);
+        VLine(bmp, x, y+1, lineLen, c);
+        VLine(bmp, x+1, y+1, lineLen, c);
     }
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
     g_testFmtString = "Million vline pixels per sec";
+    g_iterations *= 4;
     double numPixels = (double)g_iterations * lineLen;
     return (numPixels / g_duration) / 1e6;
 }
@@ -237,8 +278,8 @@ double CalcWindowUpdatesPerSecond()
     InputManagerAdvance(); \
     if (g_window->windowClosed || g_input.keyDowns[KEY_ESC]) return; \
     BitmapClear(backBmp, g_colourBlack); \
-    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, "%-42s %6.2f %5.2f %8u", g_testFmtString, score, g_duration, g_iterations); \
-    fprintf(file, "%-42s %6.2f %6.2f %8u\n", g_testFmtString, score, g_duration, g_iterations); \
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, "%-42s %7.2f %5.2f %9u", g_testFmtString, score, g_duration, g_iterations); \
+    fprintf(file, "%-42s %7.2f %6.2f %9u\n", g_testFmtString, score, g_duration, g_iterations); \
     textY += yInc;
 
 
@@ -255,7 +296,7 @@ void BenchmarkMain()
     DfBitmap *backBmp = BitmapCreate(1920, 1200);
     BitmapClear(backBmp, g_colourBlack);
 
-    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "%-42s %6s %5s %8s", "", "Result", "Time", "Iterations");
+    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "%-42s %7s %5s %9s", "", "Result", "Time", "Iterations");
     
     int textY = 30;
     int yInc = font->charHeight * 4;
@@ -267,6 +308,10 @@ void BenchmarkMain()
 
     // HLine draw
     score = CalcMillionHLinePixelsPerSec(backBmp);
+    END_TEST;
+
+    // HLine alpha draw
+    score = CalcMillionHLineAlphaPixelsPerSec(backBmp);
     END_TEST;
 
     // VLine draw

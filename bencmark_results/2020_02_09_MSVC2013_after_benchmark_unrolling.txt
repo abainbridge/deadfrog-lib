@@ -1,0 +1,23 @@
+x86:
+Million unclipped putpix per sec            229.71   0.52 120000000
+Million hline pixels per sec               1182.77   0.68  40000000
+Million hline alpha pixels per sec          497.82   0.64  16000000
+Million vline pixels per sec                667.18   0.60  20000000
+Million line pixels per sec                 514.69   0.57    300000
+Billion rect fill pixels per sec              5.47   0.49     30000
+Million DrawText chars per sec               40.36   0.43    500000
+Million DrawText AA chars per sec             7.00   0.50    100000
+Billion polygon fill pixels per sec           0.80   0.43      4000
+Thousands blits backbuf to screen per sec     0.97   0.52       500
+
+x64:
+Million unclipped putpix per sec            240.26   0.50 120000000
+Million hline pixels per sec               1601.81   0.50  40000000
+Million hline alpha pixels per sec          570.88   0.56  16000000
+Million vline pixels per sec                874.17   0.46  20000000
+Million line pixels per sec                 653.29   0.45    300000
+Billion rect fill pixels per sec              5.37   0.50     30000
+Million DrawText chars per sec               42.87   0.41    500000
+Million DrawText AA chars per sec             8.27   0.42    100000
+Billion polygon fill pixels per sec           0.84   0.41      4000
+Thousands blits backbuf to screen per sec     0.99   0.50       500
