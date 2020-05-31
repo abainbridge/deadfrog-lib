@@ -8,6 +8,7 @@
 #include <sys/un.h>
 
 #include <fcntl.h>
+#include <poll.h>
 
 // Standard includes
 #include <stdint.h>
@@ -188,25 +189,46 @@ void x11_init(state_t *state) {
     state->screens = (screen_t *)(state->pixmap_formats +
                                   state->connection_reply_success_body->num_pixmap_formats);
 
+//     {
+//         uint8_t packet[20] = { 0 };
+//         packet[0] = 98; // Opcode = QueryExtension.
+//         packet[2] = 5;  // Request length in 32-bit words.
+//         packet[4] = 12; // Name length.
+//         memcpy(packet + 8, "BIG-REQUESTS", 12);
+//         fatal_write(state->socket_fd, packet, sizeof(packet));
+// 
+//         uint8_t reply[32];
+//         fatal_read(state->socket_fd, reply, sizeof(reply));
+//         if (reply[8] != 1) {
+//             FATAL_ERROR("Big requests not supported");
+//         }
+//     }
+// 
+//     // Enable big requests
+//     if (1)
+//     {
+//         uint16_t packet[2];
+//         packet[0] = 133;
+//         packet[1] = 1;
+//         fatal_write(state->socket_fd, packet, sizeof(packet));
+// 
+//         uint8_t buf[64];
+//         int len = recvfrom(state->socket_fd, buf, sizeof(buf), 0, NULL, NULL);
+//         if (len < 12) {
+//             FATAL_ERROR("Big requests response too small");
+//         }
+//         if (buf[0] != 1) {
+//             FATAL_ERROR("Big requests enable failed\n");
+//         }
+//         state->max_request_size = *((uint32_t *)(buf + 8));
+//     }
+
     state->next_resource_id = state->connection_reply_success_body->id_base;
 }
 
 
 static uint32_t generate_id(state_t *state) {
     return state->next_resource_id++;
-}
-
-
-void create_gc(state_t *state) {
-    state->graphics_context_id = generate_id(state);
-    int const len = 4;
-    uint32_t packet[len];
-    packet[0] = X11_OPCODE_CREATE_GC | (len<<16);
-    packet[1] = state->graphics_context_id;
-    packet[2] = state->screens[0].root_id;
-    packet[3] = 0; // Value mask.
-
-    fatal_write(state->socket_fd, packet, len * 4);
 }
 
 
@@ -229,6 +251,19 @@ void create_window(state_t *state, uint16_t w, uint16_t h, uint32_t window_paren
 }
 
 
+void create_gc(state_t *state) {
+    state->graphics_context_id = generate_id(state);
+    int const len = 4;
+    uint32_t packet[len];
+    packet[0] = X11_OPCODE_CREATE_GC | (len<<16);
+    packet[1] = state->graphics_context_id;
+    packet[2] = state->window_id;
+    packet[3] = 0; // Value mask.
+
+    fatal_write(state->socket_fd, packet, sizeof(packet));
+}
+
+
 void map_window(state_t *state) {
     int const len = 2;
     uint32_t packet[len];
@@ -238,16 +273,36 @@ void map_window(state_t *state) {
 }
 
 
-void put_image(state_t *state) {
-    enum { W = 100, H = 100 };
-    enum { BITMAP_SIZE_BYTES = W * H * 4 };
+static void send_block(int fd, char *block, int len) {
+    while (1) {
+        int size_sent = write(fd, block, len);
+        if (size_sent < 0) {
+            FATAL_ERROR("Couldn't send block");
+        }
 
-    static uint32_t *packet = NULL;
-    if (!packet) {
-        packet = malloc(24 + BITMAP_SIZE_BYTES);
+        len -= size_sent;
+        // TODO, assert that (size_to_send >= 0)
+        if (len == 0) break;
+        
+        block += size_sent;
+
+        struct pollfd poll_fd = { fd, POLLOUT };
+        poll(&poll_fd, 1, -1);
+    }
+}
+
+
+void put_image(state_t *state) {
+    enum { W = 320, H = 240 };
+    enum { BITMAP_SIZE_BYTES = W * H * 4 };
+    enum { MAX_BYTES_PER_REQUEST = 262144 };
+
+    static uint32_t *bmp = NULL;
+    if (!bmp) {
+        bmp = malloc(BITMAP_SIZE_BYTES);
     }
 
-    uint32_t *bmp = packet + 6;
+    // Draw something on the bitmap
     for (int y = 0; y < H; y++) {
         uint32_t *row = bmp + y * W;
         for (int x = 0; x < W; x++) {
@@ -255,24 +310,33 @@ void put_image(state_t *state) {
         }
     }
 
-    uint32_t bmp_format = 2 << 8;
-    uint32_t request_len = (uint32_t)(W * H + 6) << 16;
-    packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
-    packet[1] = state->window_id;
-    packet[2] = state->graphics_context_id;
-    packet[3] = W | (H << 16); // Width and height.
-    packet[4] = 0; // Dst X and Y.
-    packet[5] = 24 << 8; // Bit depth.
+    int num_rows_in_chunk = MAX_BYTES_PER_REQUEST / 4 / W;
+    for (int y = 0; y < H; y += num_rows_in_chunk) {
+        if (y + num_rows_in_chunk > H) {
+            num_rows_in_chunk = H - y;
+        }
+        
+        uint32_t packet[6];   
+        uint32_t bmp_format = 2 << 8;
+        uint32_t request_len = (uint32_t)(W * num_rows_in_chunk + 6) << 16;
+        packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
+        packet[1] = state->window_id;
+        packet[2] = state->graphics_context_id;
+        packet[3] = W | (num_rows_in_chunk << 16); // Width and height.
+        packet[4] = 0 | (y << 16); // Dst X and Y.
+        packet[5] = 24 << 8; // Bit depth.
 
-    fatal_write(state->socket_fd, packet, 24 + BITMAP_SIZE_BYTES);
+        fatal_write(state->socket_fd, packet, sizeof(packet));
+        send_block(state->socket_fd, (char *)bmp, W * num_rows_in_chunk * 4);
+    }
 }
 
 
 int main() {
     state_t state = {0};
     x11_init(&state);
-    create_gc(&state);
     create_window(&state, 320, 240, state.screens[0].root_id);
+    create_gc(&state);
     map_window(&state);
 
     // Make socket non-blocking.
@@ -289,8 +353,18 @@ int main() {
         char buf[1024];
         ssize_t len = recvfrom(state.socket_fd, buf, sizeof(buf), 0, NULL, NULL);
         if (len > 0) {
-             printf("Got an event\n");
-             break;
+            if (buf[0] == 0) {
+                switch (buf[1]) {
+                    case 9: printf("Bad drawable\n"); break;
+                    case 16: printf("Bad length\n"); break;
+                    default: printf("Unknown error code %i\n", buf[1]);
+                }
+            }
+            else {
+                printf("Got an event\n");
+            }
+
+            break;
         }
 
         put_image(&state);
