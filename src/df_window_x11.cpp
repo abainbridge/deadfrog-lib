@@ -2,6 +2,9 @@
 // gcc main.c -L/usr/X11R6/lib -lX11 -o x11 -g -Wall
 // Tested on xubuntu 20.
 
+// Own header
+#include "df_window.h"
+
 // Platform includes
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -122,6 +125,9 @@ typedef struct {
 } state_t;
 
 
+static state_t g_state = { .socket_fd = -1 };
+
+
 static void fatal_write(int fd, const void *buf, size_t count) {
     if (write(fd, buf, count) != count) {
         FATAL_ERROR("Failed to write.");
@@ -136,16 +142,17 @@ static void fatal_read(int fd, void *buf, size_t count) {
 }
 
 
-void x11_init(state_t *state) {
+// Initialize the connection to the Xserver if we haven't already.
+static void ensure_state() {
     // Open socket and connect.
-    state->socket_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (state->socket_fd < 0) {
+    g_state.socket_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (g_state.socket_fd < 0) {
         FATAL_ERROR("Create socket failed");
     }
     struct sockaddr_un serv_addr = { 0 };
     serv_addr.sun_family = AF_UNIX;
     strcpy(serv_addr.sun_path, "/tmp/.X11-unix/X0");
-    if (connect(state->socket_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (connect(g_state.socket_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         FATAL_ERROR("Couldn't connect");
     }
 
@@ -168,77 +175,43 @@ void x11_init(state_t *state) {
     request.minor_version =  0;
     request.auth_proto_name_len = 18;
     request.auth_proto_data_len = 16;
-    fatal_write(state->socket_fd, &request, sizeof(connection_request_t));
-    fatal_write(state->socket_fd, "MIT-MAGIC-COOKIE-1\0\0", 20);
-    fatal_write(state->socket_fd, xauth_cookie + xauth_len - 16, 16);
+    fatal_write(g_state.socket_fd, &request, sizeof(connection_request_t));
+    fatal_write(g_state.socket_fd, "MIT-MAGIC-COOKIE-1\0\0", 20);
+    fatal_write(g_state.socket_fd, xauth_cookie + xauth_len - 16, 16);
 
     // Read connection reply header.
-    fatal_read(state->socket_fd, &state->connection_reply_header, sizeof(connection_reply_header_t));
-    if (state->connection_reply_header.success == 0) {
+    fatal_read(g_state.socket_fd, &g_state.connection_reply_header, sizeof(connection_reply_header_t));
+    if (g_state.connection_reply_header.success == 0) {
         FATAL_ERROR("Connection reply indicated failure.");
     }
 
     // Read rest of connection reply.
-    state->connection_reply_success_body = malloc(state->connection_reply_header.len * 4);
-    fatal_read(state->socket_fd, state->connection_reply_success_body,
-               state->connection_reply_header.len * 4);
+    g_state.connection_reply_success_body = (connection_reply_success_body_t*)new char[g_state.connection_reply_header.len * 4];
+    fatal_read(g_state.socket_fd, g_state.connection_reply_success_body,
+               g_state.connection_reply_header.len * 4);
 
     // Set some pointers into the connection reply because they'll be convenient later.
-    state->pixmap_formats = (pixmap_format_t *)(state->connection_reply_success_body->vendor_string +
-                             state->connection_reply_success_body->vendor_len);
-    state->screens = (screen_t *)(state->pixmap_formats +
-                                  state->connection_reply_success_body->num_pixmap_formats);
+    g_state.pixmap_formats = (pixmap_format_t *)(g_state.connection_reply_success_body->vendor_string +
+                             g_state.connection_reply_success_body->vendor_len);
+    g_state.screens = (screen_t *)(g_state.pixmap_formats +
+                                  g_state.connection_reply_success_body->num_pixmap_formats);
 
-//     {
-//         uint8_t packet[20] = { 0 };
-//         packet[0] = 98; // Opcode = QueryExtension.
-//         packet[2] = 5;  // Request length in 32-bit words.
-//         packet[4] = 12; // Name length.
-//         memcpy(packet + 8, "BIG-REQUESTS", 12);
-//         fatal_write(state->socket_fd, packet, sizeof(packet));
-// 
-//         uint8_t reply[32];
-//         fatal_read(state->socket_fd, reply, sizeof(reply));
-//         if (reply[8] != 1) {
-//             FATAL_ERROR("Big requests not supported");
-//         }
-//     }
-// 
-//     // Enable big requests
-//     if (1)
-//     {
-//         uint16_t packet[2];
-//         packet[0] = 133;
-//         packet[1] = 1;
-//         fatal_write(state->socket_fd, packet, sizeof(packet));
-// 
-//         uint8_t buf[64];
-//         int len = recvfrom(state->socket_fd, buf, sizeof(buf), 0, NULL, NULL);
-//         if (len < 12) {
-//             FATAL_ERROR("Big requests response too small");
-//         }
-//         if (buf[0] != 1) {
-//             FATAL_ERROR("Big requests enable failed\n");
-//         }
-//         state->max_request_size = *((uint32_t *)(buf + 8));
-//     }
-
-    state->next_resource_id = state->connection_reply_success_body->id_base;
+    g_state.next_resource_id = g_state.connection_reply_success_body->id_base;
 }
 
 
-static uint32_t generate_id(state_t *state) {
-    return state->next_resource_id++;
+static uint32_t generate_id() {
+    return g_state.next_resource_id++;
 }
 
 
-void create_window(state_t *state, uint16_t w, uint16_t h, uint32_t window_parent) {
-    state->window_id = generate_id(state);
+void create_window(uint16_t w, uint16_t h, uint32_t window_parent) {
+    g_state.window_id = generate_id();
 
     int const len = 9;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_CREATE_WINDOW | (len<<16);
-    packet[1] = state->window_id;
+    packet[1] = g_state.window_id;
     packet[2] = window_parent;
     packet[3] = 0; // x,y pos. System will position window.
     packet[4] = w | (h<<16);
@@ -247,29 +220,29 @@ void create_window(state_t *state, uint16_t w, uint16_t h, uint32_t window_paren
     packet[7] = 0x800; // value_mask = event-mask
     packet[8] = 1; // event-mask = keypress and exposure
 
-    fatal_write(state->socket_fd, packet, sizeof(packet));
+    fatal_write(g_state.socket_fd, packet, sizeof(packet));
 }
 
 
-void create_gc(state_t *state) {
-    state->graphics_context_id = generate_id(state);
+void create_gc() {
+    g_state.graphics_context_id = generate_id();
     int const len = 4;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_CREATE_GC | (len<<16);
-    packet[1] = state->graphics_context_id;
-    packet[2] = state->window_id;
+    packet[1] = g_state.graphics_context_id;
+    packet[2] = g_state.window_id;
     packet[3] = 0; // Value mask.
 
-    fatal_write(state->socket_fd, packet, sizeof(packet));
+    fatal_write(g_state.socket_fd, packet, sizeof(packet));
 }
 
 
-void map_window(state_t *state) {
+void map_window() {
     int const len = 2;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
-    packet[1] = state->window_id;
-    fatal_write(state->socket_fd, packet, 8);
+    packet[1] = g_state.window_id;
+    fatal_write(g_state.socket_fd, packet, 8);
 }
 
 
@@ -292,14 +265,14 @@ static void send_block(int fd, char *block, int len) {
 }
 
 
-void put_image(state_t *state) {
+void put_image() {
     enum { W = 320, H = 240 };
     enum { BITMAP_SIZE_BYTES = W * H * 4 };
     enum { MAX_BYTES_PER_REQUEST = 262144 };
 
     static uint32_t *bmp = NULL;
     if (!bmp) {
-        bmp = malloc(BITMAP_SIZE_BYTES);
+        bmp = new uint32_t[BITMAP_SIZE_BYTES];
     }
 
     // Draw something on the bitmap
@@ -320,38 +293,47 @@ void put_image(state_t *state) {
         uint32_t bmp_format = 2 << 8;
         uint32_t request_len = (uint32_t)(W * num_rows_in_chunk + 6) << 16;
         packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
-        packet[1] = state->window_id;
-        packet[2] = state->graphics_context_id;
+        packet[1] = g_state.window_id;
+        packet[2] = g_state.graphics_context_id;
         packet[3] = W | (num_rows_in_chunk << 16); // Width and height.
         packet[4] = 0 | (y << 16); // Dst X and Y.
         packet[5] = 24 << 8; // Bit depth.
 
-        fatal_write(state->socket_fd, packet, sizeof(packet));
-        send_block(state->socket_fd, (char *)bmp, W * num_rows_in_chunk * 4);
+        fatal_write(g_state.socket_fd, packet, sizeof(packet));
+        send_block(g_state.socket_fd, (char *)bmp, W * num_rows_in_chunk * 4);
     }
 }
 
 
+bool GetDesktopRes(int *width, int *height) {
+    *width = 1024;
+    *height = 768;
+    return true;
+}
+
+
+
+
+#if 1
 int main() {
-    state_t state = {0};
-    x11_init(&state);
-    create_window(&state, 320, 240, state.screens[0].root_id);
-    create_gc(&state);
-    map_window(&state);
+    ensure_state();
+    create_window(320, 240, g_state.screens[0].root_id);
+    create_gc();
+    map_window();
 
     // Make socket non-blocking.
-    int flags = fcntl(state.socket_fd, F_GETFL, 0);
+    int flags = fcntl(g_state.socket_fd, F_GETFL, 0);
     if (flags == -1) {
         FATAL_ERROR("Couldn't get flags of socket");
     }
     flags |= O_NONBLOCK;
-    if (fcntl(state.socket_fd, F_SETFL, flags) != 0) {
+    if (fcntl(g_state.socket_fd, F_SETFL, flags) != 0) {
         FATAL_ERROR("Couldn't set socket as non-blocking");
     }
 
     while (1) {
         char buf[1024];
-        ssize_t len = recvfrom(state.socket_fd, buf, sizeof(buf), 0, NULL, NULL);
+        ssize_t len = recvfrom(g_state.socket_fd, buf, sizeof(buf), 0, NULL, NULL);
         if (len > 0) {
             if (buf[0] == 0) {
                 switch (buf[1]) {
@@ -367,7 +349,8 @@ int main() {
             break;
         }
 
-        put_image(&state);
+        put_image();
         usleep(100 * 1000);
     }
 }
+#endif
