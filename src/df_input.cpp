@@ -91,27 +91,21 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam, bool /*_
 
 		case WM_LBUTTONDOWN:
 			g_input.priv->m_lmbPrivate = true;
-//			g_windowManager->CaptureMouse();
 			break;
 		case WM_LBUTTONUP:
 			g_input.priv->m_lmbPrivate = false;
-//			g_windowManager->UncaptureMouse();
 			break;
 		case WM_MBUTTONDOWN:
 			g_input.mmb = true;
-//			g_windowManager->CaptureMouse();
 			break;
 		case WM_MBUTTONUP:
 			g_input.mmb = false;
-//			g_windowManager->UncaptureMouse();
 			break;
 		case WM_RBUTTONDOWN:
 			g_input.rmb = true;
-//			g_windowManager->CaptureMouse();
 			break;
 		case WM_RBUTTONUP:
 			g_input.rmb = false;
-//			g_windowManager->UncaptureMouse();
 			break;
 
 		/* Mouse clicks in the Non-client area (ie titlebar) of the window are weird. If we
