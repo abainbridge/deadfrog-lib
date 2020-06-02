@@ -43,7 +43,7 @@ struct InputPrivate
 typedef void (WINAPI DwmFlushFunc)();
 
 
-DfInput g_input;
+DfInput g_input = { 0 };
 static InputPrivate g_priv = { 0 };
 
 static HWND g_hWnd = 0;
@@ -56,10 +56,8 @@ DfWindow *g_window = NULL;
 
 
 
-void CreateInputManager()
+static void InitInput()
 {
-    memset(&g_input, 0, sizeof(DfInput));
-
     g_input.eventSinceAdvance = true;
     g_input.windowHasFocus = true;
 }
@@ -225,7 +223,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 }
 
 
-bool InputManagerAdvance()
+bool InputPoll()
 {
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) 
@@ -564,7 +562,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
     HMODULE dwm = LoadLibrary("dwmapi.dll");
     g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
 
-    CreateInputManager();
+    InitInput();
 	return true;
 }
 

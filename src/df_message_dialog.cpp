@@ -17,8 +17,8 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     if (type != -1)
     {
  		HWND hwnd = NULL;
-// 		if (g_windowManager)
-// 			hwnd = g_windowManager->m_hWnd;
+// 		if (g_window)
+// 			hwnd = g_window->m_hWnd;
 
         switch (MessageBox(hwnd, message, title, type))
         {

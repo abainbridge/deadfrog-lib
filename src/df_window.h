@@ -70,7 +70,7 @@ typedef struct _DfWindow
     DfBitmap            *bmp;
     bool                windowClosed;
     unsigned int	    fps;
-    double              advanceTime;
+    double              advanceTime; // Time between last two calls of UpdateWin().
     // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
 } DfWindow;
 
@@ -88,8 +88,7 @@ DLL_API DfInput g_input;
 DLL_API bool GetDesktopRes(int *width, int *height);
 
 // Creates a Window (fullscreen is really just a big window) and a bitmap the size of the window
-// to use as the back buffer of a double buffer. Also initializes the InputManager to get key and mouse
-// input from the window.
+// to use as the back buffer of a double buffer.
 DLL_API bool CreateWin(int width, int height, WindowType windowed, char const *winName);
 
 // Blit back buffer to screen and update FPS counter.
@@ -103,7 +102,7 @@ DLL_API bool WaitVsync();   // Returns false if not supported.
 
 DLL_API char const *GetKeyName(int i);
 DLL_API int	        GetKeyId(char const *name);
-DLL_API bool	    InputManagerAdvance();  // Returns true if any events occurred since last call
+DLL_API bool	    InputPoll();  // Returns true if any events occurred since last call
 
 
 // Defines for indexes into g_input.keys[], keyDowns[] and keyUps[].

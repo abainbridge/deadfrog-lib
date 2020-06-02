@@ -167,7 +167,7 @@ void ColourWhirlMain()
         if ((n & 511) == 0)
         {
             // Abort drawing the set if the user presses escape or clicks the close icon
-            InputManagerAdvance();
+            InputPoll();
             if (g_window->windowClosed || g_input.keyDowns[KEY_ESC])
                 return;
             UpdateWin();
@@ -181,7 +181,7 @@ void ColourWhirlMain()
     // Continue to display the window until the user presses escape or clicks the close icon
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
-        InputManagerAdvance();
+        InputPoll();
         SleepMillisec(100);
     }
 }

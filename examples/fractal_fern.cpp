@@ -25,7 +25,7 @@ void FractalFernMain()
     // Continue to display the window until the user presses escape or clicks the close icon
     while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
     {
-        InputManagerAdvance();
+        InputPoll();
 
         for (int i = 0; i < 400000; i++) {
             int rnd = rand() % 100;

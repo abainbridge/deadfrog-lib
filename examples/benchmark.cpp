@@ -274,7 +274,7 @@ double CalcWindowUpdatesPerSecond()
 #define END_TEST \
     QuickBlit(g_window->bmp, 600, textY, backBmp); \
     UpdateWin(); \
-    InputManagerAdvance(); \
+    InputPoll(); \
     if (g_window->windowClosed || g_input.keyDowns[KEY_ESC]) return; \
     BitmapClear(backBmp, g_colourBlack); \
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, "%-42s %7.2f %5.2f %9u", g_testFmtString, score, g_duration, g_iterations); \
@@ -348,7 +348,7 @@ void BenchmarkMain()
     UpdateWin();
     while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
     {
-		InputManagerAdvance();
+		InputPoll();
         SleepMillisec(100);
     }
 }

@@ -14,8 +14,8 @@ void HelloWorldMain()
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         BitmapClear(g_window->bmp, g_colourBlack);
-        InputManagerAdvance();
-
+        InputPoll();
+		
         x += 1;
         y += 2;
         if (x > g_window->bmp->width)

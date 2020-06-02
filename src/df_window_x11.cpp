@@ -22,6 +22,7 @@
 #define FATAL_ERROR(msg, ...) { fprintf(stderr, msg "\n", ##__VA_ARGS__); exit(-1); }
 
 DfWindow *g_window = NULL;
+DfInput g_input;
 
 
 //
@@ -284,7 +285,7 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
         FATAL_ERROR("Couldn't set socket as non-blocking");
     }
 
-    CreateInputManager(&g_state);
+    InitInput();
 
     return true;
 }

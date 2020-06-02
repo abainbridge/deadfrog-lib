@@ -52,7 +52,7 @@ void MandelbrotMain()
     // Continue to display the window until the user presses escape or clicks the close icon
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
-        InputManagerAdvance();
+        InputPoll();
         SleepMillisec(100);
     }
 }

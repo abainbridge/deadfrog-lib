@@ -201,7 +201,7 @@ void GasMain()
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         BitmapClear(g_window->bmp, g_colourBlack);
-        InputManagerAdvance();
+        InputPoll();
 
         Advance();
         Render();

@@ -191,7 +191,7 @@ void TestFillConvexPolygon(DfBitmap *bmp)
 #define END_TEST \
     QuickBlit(g_window->bmp, 600, textY, backBmp); \
     UpdateWin(); \
-    InputManagerAdvance(); \
+    InputPoll(); \
 if (g_window->windowClosed || g_input.keyDowns[KEY_ESC]) return; \
     ClearClipRect(backBmp); \
     BitmapClear(backBmp, g_colourBlack); \
@@ -252,7 +252,7 @@ void TestMain()
     UpdateWin();
     while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
     {
-        InputManagerAdvance();
+        InputPoll();
         SleepMillisec(100);
     }
 }

@@ -93,7 +93,7 @@ void Sierpinski3DMain()
     while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
     {
         BitmapClear(g_window->bmp, g_colourBlack);
-        InputManagerAdvance();
+        InputPoll();
 
         if (g_input.keys[KEY_UP])
             g_cameraPos.z += 20.0f * g_window->advanceTime;
