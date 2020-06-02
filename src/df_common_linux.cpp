@@ -5,32 +5,32 @@
 #include <stdlib.h>
 
 
-void DebugOut(char *_fmt, ...)
+void DebugOut(char *fmt, ...)
 {
     va_list ap;
-    va_start (ap, _fmt);
-    vprintf(_fmt, ap);
+    va_start (ap, fmt);
+    vprintf(fmt, ap);
 }
 
 
-void ReleaseAssert(bool condition, char const *_fmt, ...)
+void ReleaseAssert(bool condition, char const *fmt, ...)
 {
 	if (!condition)
 	{
 		va_list ap;
-		va_start (ap, _fmt);
-		vprintf(_fmt, ap);
+		va_start (ap, fmt);
+		vprintf(fmt, ap);
 	    exit(-1);
 	}
 }
 
 
-void ReleaseWarn(bool condition, char const *_fmt, ...)
+void ReleaseWarn(bool condition, char const *fmt, ...)
 {
 	if (!condition)
 	{
 		va_list ap;
-		va_start (ap, _fmt);
-		vprintf(_fmt, ap);
+		va_start (ap, fmt);
+		vprintf(fmt, ap);
 	}
 }

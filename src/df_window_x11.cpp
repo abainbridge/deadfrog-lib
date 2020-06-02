@@ -1,7 +1,3 @@
-// Build with:
-// gcc main.c -L/usr/X11R6/lib -lX11 -o x11 -g -Wall
-// Tested on xubuntu 20.
-
 // Own header
 #include "df_window.h"
 
@@ -287,6 +283,8 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
     if (fcntl(g_state.socket_fd, F_SETFL, flags) != 0) {
         FATAL_ERROR("Couldn't set socket as non-blocking");
     }
+
+    CreateInputManager(&g_state);
 
     return true;
 }
