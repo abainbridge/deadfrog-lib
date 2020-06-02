@@ -5,6 +5,8 @@
 // Own header
 #include "df_window.h"
 
+#include "df_bitmap.h"
+
 // Platform includes
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -22,6 +24,8 @@
 
 
 #define FATAL_ERROR(msg, ...) { fprintf(stderr, msg "\n", ##__VA_ARGS__); exit(-1); }
+
+DfWindow *g_window = NULL;
 
 
 //
@@ -144,6 +148,8 @@ static void fatal_read(int fd, void *buf, size_t count) {
 
 // Initialize the connection to the Xserver if we haven't already.
 static void ensure_state() {
+    if (g_state.socket_fd >= 0) return;
+
     // Open socket and connect.
     g_state.socket_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (g_state.socket_fd < 0) {
@@ -205,26 +211,7 @@ static uint32_t generate_id() {
 }
 
 
-void create_window(uint16_t w, uint16_t h, uint32_t window_parent) {
-    g_state.window_id = generate_id();
-
-    int const len = 9;
-    uint32_t packet[len];
-    packet[0] = X11_OPCODE_CREATE_WINDOW | (len<<16);
-    packet[1] = g_state.window_id;
-    packet[2] = window_parent;
-    packet[3] = 0; // x,y pos. System will position window.
-    packet[4] = w | (h<<16);
-    packet[5] = 0; // DEFAULT_BORDER and DEFAULT_GROUP.
-    packet[6] = 0; // Visual: Copy from parent.
-    packet[7] = 0x800; // value_mask = event-mask
-    packet[8] = 1; // event-mask = keypress and exposure
-
-    fatal_write(g_state.socket_fd, packet, sizeof(packet));
-}
-
-
-void create_gc() {
+static void create_gc() {
     g_state.graphics_context_id = generate_id();
     int const len = 4;
     uint32_t packet[len];
@@ -237,7 +224,7 @@ void create_gc() {
 }
 
 
-void map_window() {
+static void map_window() {
     int const len = 2;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
@@ -265,25 +252,61 @@ static void send_block(int fd, char *block, int len) {
 }
 
 
-void put_image() {
+bool CreateWin(int width, int height, WindowType windowed, char const *winName) {
+    DfWindow *wd = g_window = new DfWindow;
+	memset(wd, 0, sizeof(DfWindow));
+    wd->bmp = BitmapCreate(width, height);
+
+    ensure_state();
+    
+    g_state.window_id = generate_id();
+
+    int const len = 9;
+    uint32_t packet[len];
+    packet[0] = X11_OPCODE_CREATE_WINDOW | (len<<16);
+    packet[1] = g_state.window_id;
+    packet[2] = g_state.screens[0].root_id;
+    packet[3] = 0; // x,y pos. System will position window.
+    packet[4] = width | (height<<16);
+    packet[5] = 0; // DEFAULT_BORDER and DEFAULT_GROUP.
+    packet[6] = 0; // Visual: Copy from parent.
+    packet[7] = 0x800; // value_mask = event-mask
+    packet[8] = 1; // event-mask = keypress and exposure
+
+    fatal_write(g_state.socket_fd, packet, sizeof(packet));
+
+    create_gc();
+    map_window();
+
+    // Make socket non-blocking.
+    int flags = fcntl(g_state.socket_fd, F_GETFL, 0);
+    if (flags == -1) {
+        FATAL_ERROR("Couldn't get flags of socket");
+    }
+    flags |= O_NONBLOCK;
+    if (fcntl(g_state.socket_fd, F_SETFL, flags) != 0) {
+        FATAL_ERROR("Couldn't set socket as non-blocking");
+    }
+
+    return true;
+}
+
+
+void UpdateWin() {
     enum { W = 320, H = 240 };
     enum { BITMAP_SIZE_BYTES = W * H * 4 };
     enum { MAX_BYTES_PER_REQUEST = 262144 };
 
-    static uint32_t *bmp = NULL;
-    if (!bmp) {
-        bmp = new uint32_t[BITMAP_SIZE_BYTES];
-    }
-
     // Draw something on the bitmap
     for (int y = 0; y < H; y++) {
-        uint32_t *row = bmp + y * W;
+        DfColour *row = g_window->bmp->pixels + y * W;
         for (int x = 0; x < W; x++) {
-            row[x] = (x << 8) + y;
+            row[x].c = (x << 8) + y;
         }
     }
 
     int num_rows_in_chunk = MAX_BYTES_PER_REQUEST / 4 / W;
+    DfColour *row = g_window->bmp->pixels;
     for (int y = 0; y < H; y += num_rows_in_chunk) {
         if (y + num_rows_in_chunk > H) {
             num_rows_in_chunk = H - y;
@@ -300,36 +323,24 @@ void put_image() {
         packet[5] = 24 << 8; // Bit depth.
 
         fatal_write(g_state.socket_fd, packet, sizeof(packet));
-        send_block(g_state.socket_fd, (char *)bmp, W * num_rows_in_chunk * 4);
+        send_block(g_state.socket_fd, (char *)row, W * num_rows_in_chunk * 4);
+        row += W * num_rows_in_chunk;
     }
 }
 
 
 bool GetDesktopRes(int *width, int *height) {
+    ensure_state();
     *width = 1024;
     *height = 768;
     return true;
 }
 
 
-
-
 #if 1
+// g++ df_window_x11.cpp df_bitmap.cpp df_colour.cpp -L/usr/X11R6/lib -lX11 -o x11 -g
 int main() {
-    ensure_state();
-    create_window(320, 240, g_state.screens[0].root_id);
-    create_gc();
-    map_window();
-
-    // Make socket non-blocking.
-    int flags = fcntl(g_state.socket_fd, F_GETFL, 0);
-    if (flags == -1) {
-        FATAL_ERROR("Couldn't get flags of socket");
-    }
-    flags |= O_NONBLOCK;
-    if (fcntl(g_state.socket_fd, F_SETFL, flags) != 0) {
-        FATAL_ERROR("Couldn't set socket as non-blocking");
-    }
+    CreateWin(320, 240, WT_WINDOWED, "Hello X11");
 
     while (1) {
         char buf[1024];
@@ -349,7 +360,7 @@ int main() {
             break;
         }
 
-        put_image();
+        UpdateWin();
         usleep(100 * 1000);
     }
 }
