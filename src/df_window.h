@@ -1,8 +1,5 @@
-// This module implements code to open a window. It connects the created window
-// to the input system (input.h) so that mouse and keyboard events are 
-// captured. It also creates a bitmap the same size as the window to use as
-// the back buffer of a double buffer system.
-
+// This module implements code to open a window. It also creates a bitmap the
+// same size as the window to use as the back buffer of a double buffer system.
 
 #pragma once
 
@@ -18,12 +15,8 @@ extern "C"
 #endif
 
 
-struct WindowDataPrivate;
-
-
 typedef struct _DfWindow
 {
-    WindowDataPrivate   *_private;
     DfBitmap            *bmp;
     bool                windowClosed;
     unsigned int	    fps;

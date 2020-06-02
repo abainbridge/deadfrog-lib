@@ -15,15 +15,11 @@
 typedef void (WINAPI DwmFlushFunc)();
 
 
-struct WindowDataPrivate
-{
-    HWND				m_hWnd;
-    unsigned int	    m_framesThisSecond;
-    double			    m_endOfSecond;
-    double              m_lastUpdateTime;
-    DwmFlushFunc        *m_dwmFlush;
-};
-
+static HWND g_hWnd = 0;
+static unsigned g_framesThisSecond = 0;
+static double g_endOfSecond = 0.0;
+static double g_lastUpdateTime = 0.0;
+static DwmFlushFunc *g_dwmFlush = NULL;
 
 DfWindow *g_window = NULL;
 
@@ -111,9 +107,6 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
 
-    wd->_private = new WindowDataPrivate;
-    memset(wd->_private, 0, sizeof(WindowDataPrivate));
-
 	width = ClampInt(width, 100, 4000);
 	height = ClampInt(height, 100, 4000);
 
@@ -155,16 +148,16 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 	}
 
 	// Create main window
-	wd->_private->m_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName,
+	g_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName,
 		windowStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height,
 		NULL, NULL, 0/*g_hInstance*/, NULL);
 
     double now = GetRealTime();
-    wd->_private->m_lastUpdateTime = now;
-    wd->_private->m_endOfSecond = now + 1.0;
+    g_lastUpdateTime = now;
+    g_endOfSecond = now + 1.0;
 
     HMODULE dwm = LoadLibrary("dwmapi.dll");
-    wd->_private->m_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
+    g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
 
     CreateInputManager();
 	return true;
@@ -188,7 +181,7 @@ static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp)
     binfo.bmiHeader.biClrUsed = 0;
     binfo.bmiHeader.biClrImportant = 0;
 
-    HDC dc = GetDC(wd->_private->m_hWnd);
+    HDC dc = GetDC(g_hWnd);
 
     SetDIBitsToDevice(dc,
         0, 0, bmp->width, bmp->height,
@@ -196,7 +189,7 @@ static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp)
         bmp->pixels, &binfo, DIB_RGB_COLORS
     );
 
-    ReleaseDC(wd->_private->m_hWnd, dc);
+    ReleaseDC(g_hWnd, dc);
 }
 
 
@@ -204,29 +197,29 @@ void UpdateWin()
 {
     // *** FPS Meter ***
 
-    g_window->_private->m_framesThisSecond++;
+    g_framesThisSecond++;
 
     double currentTime = GetRealTime();
-    if (currentTime > g_window->_private->m_endOfSecond)
+    if (currentTime > g_endOfSecond)
     {
         // If program has been paused by a debugger, skip the seconds we missed
-        if (currentTime > g_window->_private->m_endOfSecond + 2.0)
-            g_window->_private->m_endOfSecond = currentTime + 1.0;
+        if (currentTime > g_endOfSecond + 2.0)
+            g_endOfSecond = currentTime + 1.0;
         else
-            g_window->_private->m_endOfSecond += 1.0;
-        g_window->fps = g_window->_private->m_framesThisSecond;
-        g_window->_private->m_framesThisSecond = 0;
+            g_endOfSecond += 1.0;
+        g_window->fps = g_framesThisSecond;
+        g_framesThisSecond = 0;
     }
-    else if (g_window->_private->m_endOfSecond > currentTime + 2.0)
+    else if (g_endOfSecond > currentTime + 2.0)
     {
-        g_window->_private->m_endOfSecond = currentTime + 1.0;
+        g_endOfSecond = currentTime + 1.0;
     }
 
 
-    // *** Adance time ***
+    // *** Advance time ***
 
-    g_window->advanceTime = currentTime - g_window->_private->m_lastUpdateTime;
-    g_window->_private->m_lastUpdateTime = currentTime;
+    g_window->advanceTime = currentTime - g_lastUpdateTime;
+    g_lastUpdateTime = currentTime;
 
 
     // *** Swap buffers ***
@@ -249,8 +242,8 @@ void HideMouse()
 
 bool WaitVsync()
 {
-    if (g_window->_private->m_dwmFlush) {
-        g_window->_private->m_dwmFlush();
+    if (g_dwmFlush) {
+        g_dwmFlush();
         return true;
     }
 
