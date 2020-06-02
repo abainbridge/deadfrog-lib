@@ -293,18 +293,9 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
 
 
 void UpdateWin() {
-    enum { W = 320, H = 240 };
-    enum { BITMAP_SIZE_BYTES = W * H * 4 };
-    enum { MAX_BYTES_PER_REQUEST = 262144 };
-
-    // Draw something on the bitmap
-    for (int y = 0; y < H; y++) {
-        DfColour *row = g_window->bmp->pixels + y * W;
-        for (int x = 0; x < W; x++) {
-            row[x].c = (x << 8) + y;
-        }
-    }
-
+    int W = g_window->bmp->width;
+    int H = g_window->bmp->height;
+    enum { MAX_BYTES_PER_REQUEST = 262140 }; // Value from www.x.org/releases/X11R7.7/doc/bigreqsproto/bigreq.html
     int num_rows_in_chunk = MAX_BYTES_PER_REQUEST / 4 / W;
     DfColour *row = g_window->bmp->pixels;
     for (int y = 0; y < H; y += num_rows_in_chunk) {
@@ -331,8 +322,8 @@ void UpdateWin() {
 
 bool GetDesktopRes(int *width, int *height) {
     ensure_state();
-    *width = 1024;
-    *height = 768;
+    *width = g_state.screens[0].width;
+    *height = g_state.screens[0].height;
     return true;
 }
 
@@ -340,7 +331,19 @@ bool GetDesktopRes(int *width, int *height) {
 #if 1
 // g++ df_window_x11.cpp df_bitmap.cpp df_colour.cpp -L/usr/X11R6/lib -lX11 -o x11 -g
 int main() {
-    CreateWin(320, 240, WT_WINDOWED, "Hello X11");
+    int width, height;
+    GetDesktopRes(&width, &height);
+    width /= 3;
+    height /= 3;
+    CreateWin(width, height, WT_WINDOWED, "Hello X11");
+
+    // Draw something on the bitmap
+    for (int y = 0; y < height; y++) {
+        DfColour *row = g_window->bmp->pixels + y * width;
+        for (int x = 0; x < width; x++) {
+            row[x].c = (x << 8) + y;
+        }
+    }
 
     while (1) {
         char buf[1024];
