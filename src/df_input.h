@@ -23,13 +23,8 @@ extern "C"
 #endif
 
 
-struct InputPrivate;
-
-
 typedef struct
 {
-    InputPrivate *priv;
-
     bool		windowHasFocus;
     bool        eventSinceAdvance;  // True if we've seen any events since the last advance
 
