@@ -1,12 +1,10 @@
-// This module implements mouse and keyboard input functions. Its just a thin 
-// wrapper on a bunch of OS specific calls. It is "Advanced" by the window
-// manager every frame (ie every time AdvanceWin() is called). 
+// This module implements mouse and keyboard input functions.
 
 // You can test if any specific key has been pressed this frame using 
 // g_input.keyDowns[KEY_ESC].
 
 // You can see how much the mouse has moved along the X axis this frame using 
-// g_inputManger.mouseVelX.
+// g_input.mouseVelX.
 
 
 #pragma once
@@ -70,12 +68,12 @@ typedef struct
 
 
 // Public API functions
-DLL_API void        CreateInputManager();
 DLL_API char const *GetKeyName(int i);
 DLL_API int	        GetKeyId(char const *name);
+DLL_API bool	    InputManagerAdvance();  // Returns true if any events occurred since last call
 
 // Internal functions used by the window manager
-bool	            InputManagerAdvance();  // Returns true if any events occurred since last call
+void                CreateInputManager();
 int 	            EventHandler(unsigned int _eventId, unsigned int wParam, int lParam, bool _isAReplayedEvent = false);
 
 bool                UntypeKey(char key);
