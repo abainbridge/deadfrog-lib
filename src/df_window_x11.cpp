@@ -22,7 +22,7 @@
 #define FATAL_ERROR(msg, ...) { fprintf(stderr, msg "\n", ##__VA_ARGS__); exit(-1); }
 
 DfWindow *g_window = NULL;
-DfInput g_input;
+DfInput g_input = { 0 };
 
 
 //
@@ -31,6 +31,7 @@ DfInput g_input;
 enum {
     X11_OPCODE_CREATE_WINDOW = 1,
     X11_OPCODE_MAP_WINDOW = 8,
+    X11_OPCODE_QUERY_KEYMAP = 44,
     X11_OPCODE_CREATE_GC = 55,
     X11_OPCODE_PUT_IMAGE = 72,
 
@@ -249,6 +250,13 @@ static void send_block(int fd, char *block, int len) {
 }
 
 
+static void InitInput()
+{
+    g_input.eventSinceAdvance = true;
+    g_input.windowHasFocus = true;
+}
+
+
 bool CreateWin(int width, int height, WindowType windowed, char const *winName) {
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
@@ -268,7 +276,7 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
     packet[5] = 0; // DEFAULT_BORDER and DEFAULT_GROUP.
     packet[6] = 0; // Visual: Copy from parent.
     packet[7] = 0x800; // value_mask = event-mask
-    packet[8] = 1; // event-mask = keypress and exposure
+    packet[8] = 1 | 2; // event-mask = keypress and key release
 
     fatal_write(g_state.socket_fd, packet, sizeof(packet));
 
@@ -316,6 +324,8 @@ void UpdateWin() {
         send_block(g_state.socket_fd, (char *)row, W * num_rows_in_chunk * 4);
         row += W * num_rows_in_chunk;
     }
+
+    g_window->advanceTime = 0.0167;
 }
 
 
@@ -327,7 +337,94 @@ bool GetDesktopRes(int *width, int *height) {
 }
 
 
-#if 1
+bool WaitVsync() {
+    usleep(16667);
+    return true;
+}
+
+
+static void HandleErrorEvent(char *buf) {
+    switch (buf[1]) {
+        case 9: printf("Bad drawable\n"); break;
+        case 16: printf("Bad length\n"); break;
+        default: printf("Unknown error code %i\n", buf[1]);
+    }
+}
+
+
+static int ConvertX11Keycode(int i) {
+    switch (i) {
+        case 37:  return KEY_CONTROL;
+        case 111: return KEY_UP;
+        case 113: return KEY_LEFT;
+        case 114: return KEY_RIGHT;
+        case 116: return KEY_DOWN;
+    }
+
+    return 0;
+}
+
+
+static void HandleKeyPressEvent(char *buf) {
+    int i = ConvertX11Keycode(buf[1]);
+    g_input.keyDowns[i] = 1;
+    printf("Keypress event. Code %i.\n", buf[1]);
+}
+
+
+static void HandleKeyReleaseEvent(char *buf) {
+    int i = ConvertX11Keycode(buf[1]);
+    g_input.keyUps[i] = 1;
+    printf("Keyrelease event. Code %i.\n", buf[1]);
+}
+
+
+bool InputPoll()
+{
+    usleep(10000);
+    uint32_t packet = X11_OPCODE_QUERY_KEYMAP | (1<<16);
+    fatal_write(g_state.socket_fd, &packet, sizeof(packet));
+
+    usleep(10000);
+    uint8_t resp[40];
+    fatal_read(g_state.socket_fd, resp, sizeof(resp));
+
+    for (int i = 0; i < 32; i++) {
+        uint8_t bits = resp[8 + i];
+        printf("%02x ", bits);
+//         if (bits)
+//             puts("Key pressed");
+//         
+//         for (int j = 0; j < 8; j++) {
+//             int x11_keycode = i * 8 + j;
+//             int df_keycode = ConvertX11Keycode(x11_keycode);
+//             g_input.keys[df_keycode] = bits & 1;
+//             bits >>= 1;
+//         }
+    }
+    puts("");
+    
+    while (1) {
+        char buf[1024];
+        ssize_t len = recvfrom(g_state.socket_fd, buf, sizeof(buf), 0, NULL, NULL);
+        if (len > 0) {
+            switch (buf[0]) {
+                case 0: HandleErrorEvent(buf); break;
+                case 2: HandleKeyPressEvent(buf); break;
+                case 3: HandleKeyReleaseEvent(buf); break;
+                default: printf("Got an unknown event type (%i).\n", buf[0]);
+            }
+        }
+        else {
+            break;
+        }
+    }
+
+    return true;
+}
+
+
+#if 0
 // g++ df_window_x11.cpp df_bitmap.cpp df_colour.cpp -L/usr/X11R6/lib -lX11 -o x11 -g
 int main() {
     int width, height;
@@ -345,25 +442,14 @@ int main() {
     }
 
     while (1) {
-        char buf[1024];
-        ssize_t len = recvfrom(g_state.socket_fd, buf, sizeof(buf), 0, NULL, NULL);
-        if (len > 0) {
-            if (buf[0] == 0) {
-                switch (buf[1]) {
-                    case 9: printf("Bad drawable\n"); break;
-                    case 16: printf("Bad length\n"); break;
-                    default: printf("Unknown error code %i\n", buf[1]);
-                }
-            }
-            else {
-                printf("Got an event\n");
-            }
-
-            break;
-        }
-
-        UpdateWin();
+        InputPoll();
+//        UpdateWin();
         usleep(100 * 1000);
     }
+}
+#else
+void Sierpinski3DMain();
+int main() {
+    Sierpinski3DMain();
 }
 #endif
