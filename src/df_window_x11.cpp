@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
 
@@ -19,7 +20,7 @@
 #include <unistd.h>
 
 
-#define FATAL_ERROR(msg, ...) { fprintf(stderr, msg "\n", ##__VA_ARGS__); exit(-1); }
+#define FATAL_ERROR(msg, ...) { fprintf(stderr, msg "\n", ##__VA_ARGS__); __asm__("int3"); exit(-1); }
 
 DfWindow *g_window = NULL;
 DfInput g_input = { 0 };
@@ -114,6 +115,8 @@ typedef struct __attribute__((packed)) {
 
 typedef struct {
     int socket_fd;
+    char recv_buf[10000];
+    int recv_buf_num_bytes;
 
     connection_reply_header_t connection_reply_header;
     connection_reply_success_body_t *connection_reply_success_body;
@@ -130,16 +133,129 @@ typedef struct {
 static state_t g_state = { .socket_fd = -1 };
 
 
-static void fatal_write(int fd, const void *buf, size_t count) {
-    if (write(fd, buf, count) != count) {
+static int ConvertX11Keycode(int i) {
+    switch (i) {
+        case 37:  return KEY_CONTROL;
+        case 111: return KEY_UP;
+        case 113: return KEY_LEFT;
+        case 114: return KEY_RIGHT;
+        case 116: return KEY_DOWN;
+    }
+
+    return 0;
+}
+
+
+static void HandleErrorEvent() {
+    switch (g_state.recv_buf[1]) {
+        case 9: printf("Bad drawable\n"); break;
+        case 16: printf("Bad length\n"); break;
+        default: printf("Unknown error code %i\n", g_state.recv_buf[1]);
+    }
+    exit(-1);
+}
+
+
+static void ConsumeMessage(int len) {
+    memmove(g_state.recv_buf, g_state.recv_buf + len, g_state.recv_buf_num_bytes - len);
+    g_state.recv_buf_num_bytes -= len;
+    if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
+        FATAL_ERROR("bad num bytes");
+    }
+}
+
+
+static void fatal_write(const void *buf, size_t count) {
+    if (write(g_state.socket_fd, buf, count) != count) {
         FATAL_ERROR("Failed to write.");
     }
 }
 
 
-static void fatal_read(int fd, void *buf, size_t count) {
-    if (recvfrom(fd, buf, count, 0, NULL, NULL) != count) {
+static void fatal_read(void *buf, size_t count) {
+    if (recvfrom(g_state.socket_fd, buf, count, 0, NULL, NULL) != count) {
         FATAL_ERROR("Failed to read.");
+    }
+}
+
+
+static void read_response(void *buf, size_t expected_len) {
+    while (expected_len) {
+//        usleep(1000);
+        
+//         struct pollfd fd = { g_state.socket_fd, POLLIN };
+//         int poll_result = poll(&fd, 1, -1);
+//         printf("poll result = %i\n", poll_result);
+    
+//         ssize_t peek_len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), MSG_PEEK);
+//         printf("peek len = %i\n", peek_len);
+
+        ssize_t len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), 0);
+        if (len == 0) {
+            printf("X11 server closed the socket\n");
+            continue;
+        }
+        if (len < 0) {
+            if (errno == EAGAIN) {
+                continue;
+            }
+            
+            perror("");
+            FATAL_ERROR("Couldn't read from socket. Len = %i", (int)len);
+        }
+
+//        printf("received %i\n", (int)len);
+        g_state.recv_buf_num_bytes += len;
+        if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
+            FATAL_ERROR("bad num bytes");
+        }
+
+        int keep_going = 1;
+        while (keep_going && g_state.recv_buf_num_bytes) {
+            int key_code;
+            switch (g_state.recv_buf[0]) {
+            case 0: HandleErrorEvent(); break;
+            case 1:
+                // Handle reply.
+                if (g_state.recv_buf_num_bytes >= expected_len) {
+                    memcpy(buf, g_state.recv_buf, expected_len);
+                    ConsumeMessage(expected_len);
+                    expected_len = 0;   // Store the fact that we've received the expected reply.
+                }
+                else {
+                    keep_going = 0;
+                }
+                break;
+            case 2:
+                if (g_state.recv_buf_num_bytes >= 32) {
+                    key_code = ConvertX11Keycode(g_state.recv_buf[1]);
+                    g_input.keyDowns[key_code] = 1;
+//                    printf("Keypress event. Code %i.\n", key_code);
+                    ConsumeMessage(8 * 4);
+                }
+                else {
+                    keep_going = 0;
+                }
+                break;
+            case 3:
+                if (g_state.recv_buf_num_bytes >= 32) {
+                    key_code = ConvertX11Keycode(g_state.recv_buf[1]);
+                    g_input.keyUps[key_code] = 1;
+//                    printf("Keyrelease event. Code %i.\n", key_code);
+                    ConsumeMessage(8 * 4);
+                }
+                else {
+                    keep_going = 0;
+                }                    
+                break;
+            default:
+                FATAL_ERROR("Got an unknown message type (%i).\n", g_state.recv_buf[0]);
+            }
+        }
+
+        if (g_state.recv_buf_num_bytes != 0) {
+            FATAL_ERROR("Received incomplete packet");
+        }
     }
 }
 
@@ -179,19 +295,19 @@ static void ensure_state() {
     request.minor_version =  0;
     request.auth_proto_name_len = 18;
     request.auth_proto_data_len = 16;
-    fatal_write(g_state.socket_fd, &request, sizeof(connection_request_t));
-    fatal_write(g_state.socket_fd, "MIT-MAGIC-COOKIE-1\0\0", 20);
-    fatal_write(g_state.socket_fd, xauth_cookie + xauth_len - 16, 16);
+    fatal_write(&request, sizeof(connection_request_t));
+    fatal_write("MIT-MAGIC-COOKIE-1\0\0", 20);
+    fatal_write(xauth_cookie + xauth_len - 16, 16);
 
     // Read connection reply header.
-    fatal_read(g_state.socket_fd, &g_state.connection_reply_header, sizeof(connection_reply_header_t));
+    fatal_read(&g_state.connection_reply_header, sizeof(connection_reply_header_t));
     if (g_state.connection_reply_header.success == 0) {
         FATAL_ERROR("Connection reply indicated failure.");
     }
 
     // Read rest of connection reply.
     g_state.connection_reply_success_body = (connection_reply_success_body_t*)new char[g_state.connection_reply_header.len * 4];
-    fatal_read(g_state.socket_fd, g_state.connection_reply_success_body,
+    fatal_read(g_state.connection_reply_success_body,
                g_state.connection_reply_header.len * 4);
 
     // Set some pointers into the connection reply because they'll be convenient later.
@@ -218,7 +334,7 @@ static void create_gc() {
     packet[2] = g_state.window_id;
     packet[3] = 0; // Value mask.
 
-    fatal_write(g_state.socket_fd, packet, sizeof(packet));
+    fatal_write(packet, sizeof(packet));
 }
 
 
@@ -227,7 +343,7 @@ static void map_window() {
     uint32_t packet[len];
     packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
     packet[1] = g_state.window_id;
-    fatal_write(g_state.socket_fd, packet, 8);
+    fatal_write(packet, 8);
 }
 
 
@@ -278,7 +394,7 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
     packet[7] = 0x800; // value_mask = event-mask
     packet[8] = 1 | 2; // event-mask = keypress and key release
 
-    fatal_write(g_state.socket_fd, packet, sizeof(packet));
+    fatal_write(packet, sizeof(packet));
 
     create_gc();
     map_window();
@@ -320,7 +436,7 @@ void UpdateWin() {
         packet[4] = 0 | (y << 16); // Dst X and Y.
         packet[5] = 24 << 8; // Bit depth.
 
-        fatal_write(g_state.socket_fd, packet, sizeof(packet));
+        fatal_write(packet, sizeof(packet));
         send_block(g_state.socket_fd, (char *)row, W * num_rows_in_chunk * 4);
         row += W * num_rows_in_chunk;
     }
@@ -343,80 +459,27 @@ bool WaitVsync() {
 }
 
 
-static void HandleErrorEvent(char *buf) {
-    switch (buf[1]) {
-        case 9: printf("Bad drawable\n"); break;
-        case 16: printf("Bad length\n"); break;
-        default: printf("Unknown error code %i\n", buf[1]);
-    }
-}
-
-
-static int ConvertX11Keycode(int i) {
-    switch (i) {
-        case 37:  return KEY_CONTROL;
-        case 111: return KEY_UP;
-        case 113: return KEY_LEFT;
-        case 114: return KEY_RIGHT;
-        case 116: return KEY_DOWN;
-    }
-
-    return 0;
-}
-
-
-static void HandleKeyPressEvent(char *buf) {
-    int i = ConvertX11Keycode(buf[1]);
-    g_input.keyDowns[i] = 1;
-    printf("Keypress event. Code %i.\n", buf[1]);
-}
-
-
-static void HandleKeyReleaseEvent(char *buf) {
-    int i = ConvertX11Keycode(buf[1]);
-    g_input.keyUps[i] = 1;
-    printf("Keyrelease event. Code %i.\n", buf[1]);
-}
-
-
 bool InputPoll()
 {
-    usleep(10000);
+    usleep(1000);
     uint32_t packet = X11_OPCODE_QUERY_KEYMAP | (1<<16);
-    fatal_write(g_state.socket_fd, &packet, sizeof(packet));
+    fatal_write(&packet, sizeof(packet));
 
-    usleep(10000);
+    usleep(1000);
     uint8_t resp[40];
-    fatal_read(g_state.socket_fd, resp, sizeof(resp));
+    read_response(resp, sizeof(resp));
 
     for (int i = 0; i < 32; i++) {
         uint8_t bits = resp[8 + i];
-        printf("%02x ", bits);
+//        printf("%02x ", bits);
 //         if (bits)
 //             puts("Key pressed");
 //         
-//         for (int j = 0; j < 8; j++) {
-//             int x11_keycode = i * 8 + j;
-//             int df_keycode = ConvertX11Keycode(x11_keycode);
-//             g_input.keys[df_keycode] = bits & 1;
-//             bits >>= 1;
-//         }
-    }
-    puts("");
-    
-    while (1) {
-        char buf[1024];
-        ssize_t len = recvfrom(g_state.socket_fd, buf, sizeof(buf), 0, NULL, NULL);
-        if (len > 0) {
-            switch (buf[0]) {
-                case 0: HandleErrorEvent(buf); break;
-                case 2: HandleKeyPressEvent(buf); break;
-                case 3: HandleKeyReleaseEvent(buf); break;
-                default: printf("Got an unknown event type (%i).\n", buf[0]);
-            }
-        }
-        else {
-            break;
+        for (int j = 0; j < 8; j++) {
+            int x11_keycode = i * 8 + j;
+            int df_keycode = ConvertX11Keycode(x11_keycode);
+            g_input.keys[df_keycode] = bits & 1;
+            bits >>= 1;
         }
     }
 
