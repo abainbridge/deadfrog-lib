@@ -1,10 +1,11 @@
 // Own header
 #include "df_window.h"
 
+// Project headers
 #include "df_bitmap.h"
+#include "df_time.h"
 
 // Platform includes
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -24,6 +25,10 @@
 
 DfWindow *g_window = NULL;
 DfInput g_input = { 0 };
+
+static unsigned g_framesThisSecond = 0;
+static double g_endOfSecond = 0.0;
+static double g_lastUpdateTime = 0.0;
 
 
 //
@@ -181,15 +186,6 @@ static void fatal_read(void *buf, size_t count) {
 
 static void read_response(void *buf, size_t expected_len) {
     while (expected_len) {
-//        usleep(1000);
-        
-//         struct pollfd fd = { g_state.socket_fd, POLLIN };
-//         int poll_result = poll(&fd, 1, -1);
-//         printf("poll result = %i\n", poll_result);
-    
-//         ssize_t peek_len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), MSG_PEEK);
-//         printf("peek len = %i\n", peek_len);
-
         ssize_t len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), 0);
         if (len == 0) {
             printf("X11 server closed the socket\n");
@@ -204,7 +200,6 @@ static void read_response(void *buf, size_t expected_len) {
             FATAL_ERROR("Couldn't read from socket. Len = %i", (int)len);
         }
 
-//        printf("received %i\n", (int)len);
         g_state.recv_buf_num_bytes += len;
         if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
             FATAL_ERROR("bad num bytes");
@@ -230,7 +225,6 @@ static void read_response(void *buf, size_t expected_len) {
                 if (g_state.recv_buf_num_bytes >= 32) {
                     key_code = ConvertX11Keycode(g_state.recv_buf[1]);
                     g_input.keyDowns[key_code] = 1;
-//                    printf("Keypress event. Code %i.\n", key_code);
                     ConsumeMessage(8 * 4);
                 }
                 else {
@@ -241,7 +235,6 @@ static void read_response(void *buf, size_t expected_len) {
                 if (g_state.recv_buf_num_bytes >= 32) {
                     key_code = ConvertX11Keycode(g_state.recv_buf[1]);
                     g_input.keyUps[key_code] = 1;
-//                    printf("Keyrelease event. Code %i.\n", key_code);
                     ConsumeMessage(8 * 4);
                 }
                 else {
@@ -416,6 +409,32 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
 
 
 void UpdateWin() {
+    // *** FPS Meter ***
+
+    g_framesThisSecond++;
+
+    double currentTime = GetRealTime();
+    if (currentTime > g_endOfSecond)
+    {
+        // If program has been paused by a debugger, skip the seconds we missed
+        if (currentTime > g_endOfSecond + 2.0)
+            g_endOfSecond = currentTime + 1.0;
+        else
+            g_endOfSecond += 1.0;
+        g_window->fps = g_framesThisSecond;
+        g_framesThisSecond = 0;
+    }
+    else if (g_endOfSecond > currentTime + 2.0)
+    {
+        g_endOfSecond = currentTime + 1.0;
+    }
+
+
+    // *** Advance time ***
+
+    g_window->advanceTime = currentTime - g_lastUpdateTime;
+    g_lastUpdateTime = currentTime;
+
     int W = g_window->bmp->width;
     int H = g_window->bmp->height;
     enum { MAX_BYTES_PER_REQUEST = 262140 }; // Value from www.x.org/releases/X11R7.7/doc/bigreqsproto/bigreq.html
@@ -440,8 +459,6 @@ void UpdateWin() {
         send_block(g_state.socket_fd, (char *)row, W * num_rows_in_chunk * 4);
         row += W * num_rows_in_chunk;
     }
-
-    g_window->advanceTime = 0.0167;
 }
 
 
@@ -461,11 +478,9 @@ bool WaitVsync() {
 
 bool InputPoll()
 {
-    usleep(1000);
     uint32_t packet = X11_OPCODE_QUERY_KEYMAP | (1<<16);
     fatal_write(&packet, sizeof(packet));
 
-    usleep(1000);
     uint8_t resp[40];
     read_response(resp, sizeof(resp));
 
@@ -487,30 +502,7 @@ bool InputPoll()
 }
 
 
-#if 0
-// g++ df_window_x11.cpp df_bitmap.cpp df_colour.cpp -L/usr/X11R6/lib -lX11 -o x11 -g
-int main() {
-    int width, height;
-    GetDesktopRes(&width, &height);
-    width /= 3;
-    height /= 3;
-    CreateWin(width, height, WT_WINDOWED, "Hello X11");
-
-    // Draw something on the bitmap
-    for (int y = 0; y < height; y++) {
-        DfColour *row = g_window->bmp->pixels + y * width;
-        for (int x = 0; x < width; x++) {
-            row[x].c = (x << 8) + y;
-        }
-    }
-
-    while (1) {
-        InputPoll();
-//        UpdateWin();
-        usleep(100 * 1000);
-    }
-}
-#else
+#if 1
 void Sierpinski3DMain();
 int main() {
     Sierpinski3DMain();
