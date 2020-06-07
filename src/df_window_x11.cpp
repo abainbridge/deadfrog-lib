@@ -170,9 +170,22 @@ static void ConsumeMessage(int len) {
 }
 
 
-static void fatal_write(const void *buf, size_t count) {
-    if (write(g_state.socket_fd, buf, count) != count) {
-        FATAL_ERROR("Failed to write.");
+static void send_buf(const void *_buf, int len) {
+    const char *buf = (const char *)_buf;
+    while (1) {
+        struct pollfd poll_fd = { g_state.socket_fd, POLLOUT };
+        poll(&poll_fd, 1, -1);
+
+        int size_sent = write(g_state.socket_fd, buf, len);
+        if (size_sent < 0) {
+            FATAL_ERROR("Couldn't send buf");
+        }
+
+        len -= size_sent;
+        // TODO, assert that (size_to_send >= 0)
+        if (len == 0) break;
+        
+        buf += size_sent;
     }
 }
 
@@ -288,9 +301,9 @@ static void ensure_state() {
     request.minor_version =  0;
     request.auth_proto_name_len = 18;
     request.auth_proto_data_len = 16;
-    fatal_write(&request, sizeof(connection_request_t));
-    fatal_write("MIT-MAGIC-COOKIE-1\0\0", 20);
-    fatal_write(xauth_cookie + xauth_len - 16, 16);
+    send_buf(&request, sizeof(connection_request_t));
+    send_buf("MIT-MAGIC-COOKIE-1\0\0", 20);
+    send_buf(xauth_cookie + xauth_len - 16, 16);
 
     // Read connection reply header.
     fatal_read(&g_state.connection_reply_header, sizeof(connection_reply_header_t));
@@ -327,7 +340,7 @@ static void create_gc() {
     packet[2] = g_state.window_id;
     packet[3] = 0; // Value mask.
 
-    fatal_write(packet, sizeof(packet));
+    send_buf(packet, sizeof(packet));
 }
 
 
@@ -336,26 +349,7 @@ static void map_window() {
     uint32_t packet[len];
     packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
     packet[1] = g_state.window_id;
-    fatal_write(packet, 8);
-}
-
-
-static void send_block(int fd, char *block, int len) {
-    while (1) {
-        int size_sent = write(fd, block, len);
-        if (size_sent < 0) {
-            FATAL_ERROR("Couldn't send block");
-        }
-
-        len -= size_sent;
-        // TODO, assert that (size_to_send >= 0)
-        if (len == 0) break;
-        
-        block += size_sent;
-
-        struct pollfd poll_fd = { fd, POLLOUT };
-        poll(&poll_fd, 1, -1);
-    }
+    send_buf(packet, 8);
 }
 
 
@@ -387,7 +381,7 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
     packet[7] = 0x800; // value_mask = event-mask
     packet[8] = 1 | 2; // event-mask = keypress and key release
 
-    fatal_write(packet, sizeof(packet));
+    send_buf(packet, sizeof(packet));
 
     create_gc();
     map_window();
@@ -435,6 +429,8 @@ void UpdateWin() {
     g_window->advanceTime = currentTime - g_lastUpdateTime;
     g_lastUpdateTime = currentTime;
 
+
+    // *** Send back-buffer to Xserver.
     int W = g_window->bmp->width;
     int H = g_window->bmp->height;
     enum { MAX_BYTES_PER_REQUEST = 262140 }; // Value from www.x.org/releases/X11R7.7/doc/bigreqsproto/bigreq.html
@@ -455,8 +451,8 @@ void UpdateWin() {
         packet[4] = 0 | (y << 16); // Dst X and Y.
         packet[5] = 24 << 8; // Bit depth.
 
-        fatal_write(packet, sizeof(packet));
-        send_block(g_state.socket_fd, (char *)row, W * num_rows_in_chunk * 4);
+        send_buf(packet, sizeof(packet));
+        send_buf(row, W * num_rows_in_chunk * 4);
         row += W * num_rows_in_chunk;
     }
 }
@@ -479,7 +475,7 @@ bool WaitVsync() {
 bool InputPoll()
 {
     uint32_t packet = X11_OPCODE_QUERY_KEYMAP | (1<<16);
-    fatal_write(&packet, sizeof(packet));
+    send_buf(&packet, sizeof(packet));
 
     uint8_t resp[40];
     read_response(resp, sizeof(resp));
