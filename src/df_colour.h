@@ -18,6 +18,7 @@ typedef union
 } DfColour;
 
 
+#ifdef __cplusplus
 DLL_API inline DfColour Colour(unsigned r, unsigned g, unsigned b, unsigned a=255)
 {
 	DfColour c;
@@ -27,7 +28,7 @@ DLL_API inline DfColour Colour(unsigned r, unsigned g, unsigned b, unsigned a=25
 	c.r = r;
 	return c;
 }
-
+#endif
 
 DLL_API inline DfColour RgbaAdd(DfColour a, DfColour b)
 {
