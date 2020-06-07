@@ -193,18 +193,45 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
     return tr;
 }
 #else
-DfFont *FontCreate(char const *fontName, int size, int weight)
+
+static int GetPixel(char *tmpBitmap, int bmpWidth, int x, int y) {
+    return tmpBitmap[y * bmpWidth + x];
+}
+
+
+DfFont *CreateFontFromMemory(unsigned char *buf, int buf_len)
 {
-    fontName = "../trowel7x15.bmp";
-    DfBitmap *bmp = LoadBmp(fontName);
-    ReleaseAssert(bmp, "Couldn't load bitmap '%s'.", fontName);
+    ReleaseAssert(buf_len > 10, "Font file too small");
+    ReleaseAssert(memcmp(buf, "dfbf", 5) == 0, "Magic marker not found in font file");
+    ReleaseAssert(buf[4] == 0, "Font file version must be 0");
 
     DfFont *tr = new DfFont;
     memset(tr, 0, sizeof(DfFont));
 
-    tr->charHeight = 15;
-    tr->maxCharWidth = 7;
+    tr->charHeight = buf[6];
+    tr->maxCharWidth = buf[5];
     tr->fixedWidth = 1;
+
+    int bmpWidth = tr->maxCharWidth * 16;
+    int bmpHeight = tr->charHeight * 14;
+    char *tmpBitmap = new char [bmpWidth * bmpHeight];
+    {
+        int runVal = 1;
+        int runLeft = 0;
+        int tmpBitmapOffset = 0;
+        for (int i = 7; i < buf_len; i++) {
+            runLeft = buf[i];
+            runVal = 1 - runVal;
+            while (runLeft > 0) {
+                tmpBitmap[tmpBitmapOffset] = runVal;
+                tmpBitmapOffset++;
+                runLeft--;
+            }
+        }
+
+        int pixelsLeft = bmpWidth * bmpHeight - tmpBitmapOffset;
+        memset(tmpBitmap + tmpBitmapOffset, 0, pixelsLeft);
+    }
 
     // Allocate enough EncodedRuns to store the worst case for a glyph of this size.
     // Worst case is if the whole glyph is encoded as runs of one pixel. There has
@@ -230,7 +257,7 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
             {
                 // Skip blank pixels               
                 int bmpX = i % 16 * tr->maxCharWidth + x;
-                while (GetPix(bmp, bmpX, bmpY).c == g_colourBlack.c)
+                while (GetPixel(tmpBitmap, bmpWidth, bmpX, bmpY) == 0)
                 {
                     x++;
                     if (x >= tr->maxCharWidth)
@@ -247,7 +274,7 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
                 run->runLen = 0;
 
                 // Count non-blank pixels
-                while (GetPix(bmp, bmpX, bmpY).c != g_colourBlack.c)
+                while (GetPixel(tmpBitmap, bmpWidth, bmpX, bmpY) != 0)
                 {
                     x++;
                     run->runLen++;
@@ -271,9 +298,18 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
     }
 
     delete [] tempRuns;
-    BitmapDelete(bmp);
+    delete [] tmpBitmap;
 
     return tr;
+}
+
+
+#include "df_font_fixed_7x15.h"
+
+
+DfFont *FontCreate(char const *fontName, int size, int weight)
+{
+    return CreateFontFromMemory(trowel7x15, sizeof(trowel7x15));
 }
 #endif
 
