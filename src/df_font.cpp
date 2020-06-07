@@ -3,10 +3,15 @@
 #include "df_bitmap.h"
 #include "df_common.h"
 
+#if _MSC_VER
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#else
+#include "df_bmp.h"
+#endif
 
 #include <limits.h>
+#include <memory.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,10 +36,10 @@ public:
     int m_numRuns;
     EncodedRun *m_pixelRuns;
 
-	Glyph(int w)
-	{
-		m_width = w;
-	}
+    Glyph(int w)
+    {
+        m_width = w;
+    }
 };
 
 
@@ -55,6 +60,7 @@ static bool GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
 }
 
 
+#if _MSC_VER
 DfFont *FontCreate(char const *fontName, int size, int weight)
 {
     if (size < 4 || size > 1000 || weight < 1 || weight > 9)
@@ -98,7 +104,7 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
     bmpInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     UINT *gdiPixels = 0;
     HBITMAP memBmp = CreateDIBSection(memDC, (BITMAPINFO *)&bmpInfo, DIB_RGB_COLORS, (void **)&gdiPixels, NULL, 0);
-	HBITMAP prevBmp = (HBITMAP)SelectObject(memDC, memBmp);
+    HBITMAP prevBmp = (HBITMAP)SelectObject(memDC, memBmp);
 
     // Allocate enough EncodedRuns to store the worst case for a glyph of this size.
     // Worst case is if the whole glyph is encoded as runs of one pixel. There has
@@ -114,7 +120,7 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
 
     // Run-length encode each ASCII character
     for (int i = 0; i < 256; i++)
-	{
+    {
         char buf[] = {(char)i};
 
         // Get the size of this glyph
@@ -126,13 +132,13 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
 //             tr->charHeight = glyphSize.cy;
 
         // Ask GDI to draw the character
-		ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
+        ExtTextOut(memDC, 0, 0, ETO_OPAQUE, &rect, buf, 1, 0);
 
         // Read back what GDI put in the bitmap and construct a run-length encoding
-		memset(tempRuns, 0, tempRunsSize);
-		EncodedRun *run = tempRuns;
+        memset(tempRuns, 0, tempRunsSize);
+        EncodedRun *run = tempRuns;
         for (int y = 0; y < tr->charHeight; y++)
-		{
+        {
             int x = 0;
             while (x < tr->maxCharWidth)
             {
@@ -163,29 +169,113 @@ DfFont *FontCreate(char const *fontName, int size, int weight)
 
                 run++;
             }
-		}
+        }
 
         // Create the glyph to store the encoded runs we've made
-		Glyph *glyph = new Glyph(glyphSize.cx);
-		tr->glyphs[i] = glyph;
+        Glyph *glyph = new Glyph(glyphSize.cx);
+        tr->glyphs[i] = glyph;
 
-		// Copy the runs into the glyph
-		glyph->m_numRuns = run - tempRuns;
-		glyph->m_pixelRuns = new EncodedRun [glyph->m_numRuns];
-		memcpy(glyph->m_pixelRuns, tempRuns, glyph->m_numRuns * sizeof(EncodedRun));
-	}
+        // Copy the runs into the glyph
+        glyph->m_numRuns = run - tempRuns;
+        glyph->m_pixelRuns = new EncodedRun [glyph->m_numRuns];
+        memcpy(glyph->m_pixelRuns, tempRuns, glyph->m_numRuns * sizeof(EncodedRun));
+    }
 
-	delete [] tempRuns;
+    delete [] tempRuns;
 
-	// Release the GDI resources
+    // Release the GDI resources
     DeleteDC(winDC);
     DeleteDC(memDC);
-	DeleteObject(fontHandle);
-	DeleteObject(memBmp);
-	DeleteObject(prevBmp);
+    DeleteObject(fontHandle);
+    DeleteObject(memBmp);
+    DeleteObject(prevBmp);
 
     return tr;
 }
+#else
+DfFont *FontCreate(char const *fontName, int size, int weight)
+{
+    fontName = "../trowel7x15.bmp";
+    DfBitmap *bmp = LoadBmp(fontName);
+    ReleaseAssert(bmp, "Couldn't load bitmap '%s'.", fontName);
+
+    DfFont *tr = new DfFont;
+    memset(tr, 0, sizeof(DfFont));
+
+    tr->charHeight = 15;
+    tr->maxCharWidth = 7;
+    tr->fixedWidth = 1;
+
+    // Allocate enough EncodedRuns to store the worst case for a glyph of this size.
+    // Worst case is if the whole glyph is encoded as runs of one pixel. There has
+    // to be a gap of one pixel between each run, so there can only be half as many
+    // runs as there are pixels.
+    unsigned tempRunsSize = tr->charHeight * (tr->maxCharWidth / 2 + 1);
+    EncodedRun *tempRuns = new EncodedRun [tempRunsSize];
+
+    // Run-length encode each ASCII character
+    for (int i = 48; i < 256; i++)
+    {
+        // Get the size of this glyph
+        int charWidth = tr->maxCharWidth;
+
+        // Read back what GDI put in the bitmap and construct a run-length encoding
+        memset(tempRuns, 0, tempRunsSize);
+        EncodedRun *run = tempRuns;
+        for (int y = 0; y < tr->charHeight; y++)
+        {
+            int x = 0;
+            int bmpY = (i - 32) / 16 * tr->charHeight + y;
+            while (x < tr->maxCharWidth)
+            {
+                // Skip blank pixels               
+                int bmpX = i % 16 * tr->maxCharWidth + x;
+                while (GetPix(bmp, bmpX, bmpY).c == g_colourBlack.c)
+                {
+                    x++;
+                    if (x >= tr->maxCharWidth)
+                        break;
+                    bmpX++;
+                }
+
+                // Have we got to the end of the line?
+                if (x >= tr->maxCharWidth)
+                    continue;
+
+                run->startX = x;
+                run->startY = y;
+                run->runLen = 0;
+
+                // Count non-blank pixels
+                while (GetPix(bmp, bmpX, bmpY).c != g_colourBlack.c)
+                {
+                    x++;
+                    run->runLen++;
+                    if (x >= tr->maxCharWidth)
+                        break;
+                    bmpX++;
+                }
+
+                run++;
+            }
+        }
+
+        // Create the glyph to store the encoded runs we've made
+        Glyph *glyph = new Glyph(charWidth);
+        tr->glyphs[i] = glyph;
+
+        // Copy the runs into the glyph
+        glyph->m_numRuns = run - tempRuns;
+        glyph->m_pixelRuns = new EncodedRun [glyph->m_numRuns];
+        memcpy(glyph->m_pixelRuns, tempRuns, glyph->m_numRuns * sizeof(EncodedRun));
+    }
+
+    delete [] tempRuns;
+    BitmapDelete(bmp);
+
+    return tr;
+}
+#endif
 
 
 static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
@@ -305,17 +395,17 @@ int DrawTextCentre(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char con
 
 int GetTextWidth(DfFont *tr, char const *text, int len)
 {
-	len = IntMin((int)strlen(text), len);
-	if (tr->fixedWidth)
-	{
-		return len * tr->maxCharWidth;
-	}
-	else
-	{
+    len = IntMin((int)strlen(text), len);
+    if (tr->fixedWidth)
+    {
+        return len * tr->maxCharWidth;
+    }
+    else
+    {
         int width = 0;
         for (int i = 0; i < len; i++)
             width += tr->glyphs[text[i] & 0xff]->m_width;
 
-		return width;
-	}
+        return width;
+    }
 }
