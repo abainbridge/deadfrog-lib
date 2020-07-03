@@ -1,5 +1,6 @@
 #include "df_font.h"
 #include "df_window.h"
+#include "fonts/deadfrog_mono.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -86,7 +87,7 @@ static void Render()
 void Sierpinski3DMain()
 {
     CreateWin(800, 600, WT_WINDOWED, "Sierpinski Gasket Example");
-    DfFont *font = FontCreate("Courier New", 12, 4);
+    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
     CreateSierpinski3D();
 

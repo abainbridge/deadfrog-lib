@@ -23,15 +23,21 @@ class Glyph;
 
 typedef struct _DfFont
 {
-	Glyph       *glyphs[256];
+	Glyph       *glyphs[256];   // TODO remove the *, so the glyphs are contiguous in memory.
 	bool		fixedWidth;
 	int			maxCharWidth;
 	int			charHeight;	// in pixels
 } DfFont;
 
 
-// Size is in pixels. Weight is in range 1 (thin) to 9 (heavy)
-DLL_API DfFont *FontCreate  (char const *fontname, int size, int weight);
+// Loads a font from a .dfbf file. Files typically contain multiple font sizes,
+// so you must specify the pixel height of the one you want. If the specified
+// size is not present, or there is an error, NULL will be returned.
+DLL_API DfFont *LoadFontFromFile(char const *filename, int pixHeight);
+
+// Loads a font from a block of data already in memory. Typically this will be
+// a font in C code format that has been #include'd.
+DLL_API DfFont *LoadFontFromMemory(void *buf, int numBytes);
 
 // All the DrawText... functions below return rendered text length in pixels.
 

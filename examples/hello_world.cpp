@@ -2,12 +2,13 @@
 #include "df_font.h"
 #include "df_time.h"
 #include "df_window.h"
+#include "fonts/deadfrog_mono.h"
 
 
 void HelloWorldMain()
 {
 	CreateWin(800, 600, WT_WINDOWED, "Hello World Example");
-    DfFont *font = FontCreate("Courier New", 12, 4);
+    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
     unsigned x = 100;
     unsigned y = 100;

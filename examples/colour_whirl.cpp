@@ -1,6 +1,7 @@
 #include "df_time.h"
 #include "df_font.h"
 #include "df_window.h"
+#include "fonts/deadfrog_mono.h"
 #include <limits.h>
 #include <stdlib.h>
 
@@ -175,7 +176,7 @@ void ColourWhirlMain()
     }
 
     double endTime = GetRealTime();
-    DfFont *font = FontCreate("Courier New", 10, 4);
+    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
     // Continue to display the window until the user presses escape or clicks the close icon

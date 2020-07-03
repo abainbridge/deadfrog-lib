@@ -6,6 +6,7 @@
 #include "df_font.h"
 #include "df_time.h"
 #include "df_window.h"
+#include "fonts/deadfrog_mono.h"
 
 #include <math.h>
 #include <memory.h>
@@ -193,7 +194,7 @@ static void Render()
 void GasMain()
 {
     CreateWin(800, 600, WT_WINDOWED, "Ideal Gas Simulation Example");
-    DfFont *font = FontCreate("Courier New", 12, 4);
+    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
     InitParticles();
 

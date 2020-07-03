@@ -3,6 +3,7 @@
 #include "df_time.h"
 #include "df_font.h"
 #include "df_window.h"
+#include "fonts/deadfrog_mono.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -211,7 +212,7 @@ void HarmonographMain()
     CreateWin(width, height, WT_WINDOWED, "Harmonograph");
 
     g_bigBmp = BitmapCreate(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
-    DfFont *font = FontCreate("Lucida Console", 10, 4);
+    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
     BitmapClear(g_window->bmp, g_colourBlack);
     BitmapClear(g_bigBmp, g_colourBlack);
