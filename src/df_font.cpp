@@ -50,29 +50,22 @@ public:
 DfFont *g_defaultFont = NULL;
 
 
-// ****************************************************************************
-// Public Functions
-// ****************************************************************************
-
-static bool GetPixelFromBuffer(unsigned *buf, int w, int h, int x, int y)
+static int GetPixel(char *tmpBitmap, int bmpWidth, int x, int y) 
 {
-    return buf[(h - y - 1) * w + x] > 0;
-}
-
-
-static int GetPixel(char *tmpBitmap, int bmpWidth, int x, int y) {
     return tmpBitmap[y * bmpWidth + x];
 }
 
 
-struct MemBuf {
+struct MemBuf 
+{
     unsigned char *data;
     int len;
     int currentPos;
     int currentByte;
     int hiNibbleNext;
 
-    MemBuf(unsigned *_data, int _len) {
+    MemBuf(unsigned *_data, int _len) 
+    {
         data = (unsigned char *)_data;
         len = _len;
         currentPos = 0;
@@ -80,14 +73,16 @@ struct MemBuf {
         hiNibbleNext = 0;
     }
 
-    int ReadByte() {
-        ReleaseAssert(currentPos < len, "Past end");
+    int ReadByte() 
+    {
+        if (currentPos >= len) return 0;
         currentByte = data[currentPos];
         currentPos++;
         return currentByte;
     }
 
-    int ReadNibble() {
+    int ReadNibble() 
+    {
         if (hiNibbleNext) {
             hiNibbleNext = 0;
             return currentByte >> 4;
@@ -100,45 +95,63 @@ struct MemBuf {
 };
 
 
+// ****************************************************************************
+// Public Functions
+// ****************************************************************************
+
 DfFont *LoadFontFromMemory(void *_buf, int bufLen)
 {
-    ReleaseAssert(bufLen > 10, "Font file too small");
     MemBuf buf((unsigned int *)_buf, bufLen);
-
     DfFont *tr = new DfFont;
     memset(tr, 0, sizeof(DfFont));
 
     tr->maxCharWidth = buf.ReadByte();
     tr->charHeight = buf.ReadByte();
-    tr->fixedWidth = buf.ReadByte();
+    tr->fixedWidth = !buf.ReadByte();
 
+    char glyphWidths[224];
+    if (!tr->fixedWidth)
+    {
+        for (int i = 0; i < 224; i++) glyphWidths[i] = buf.ReadByte();
+    }
+    else 
+    {
+        for (int i = 0; i < 224; i++) glyphWidths[i] = tr->maxCharWidth;
+    }
+
+    // Decode the RLE data into a bitmap with one char per pixel.
     int bmpWidth = tr->maxCharWidth * 16;
     int bmpHeight = tr->charHeight * 14;
     char *tmpBitmap = new char [bmpWidth * bmpHeight];
     {
         int runVal = 1;
         int tmpBitmapOffset = 0;
-        while (buf.currentPos < buf.len) {
+        while (buf.currentPos < buf.len) 
+        {
             int runLeft = buf.ReadNibble();
 
-            if (runLeft == 0) { // 0 is the escape token.
+            if (runLeft == 0) // 0 is the escape token.
+            {
                 runLeft = buf.ReadNibble();
                 runLeft += buf.ReadNibble() << 4;
             }
 
             runVal = 1 - runVal;
-            if (tmpBitmapOffset >= bmpWidth * bmpHeight) break;
+            DebugAssert((tmpBitmapOffset + runLeft) < bmpWidth * bmpHeight);
             memset(tmpBitmap + tmpBitmapOffset, runVal, runLeft);
             tmpBitmapOffset += runLeft;
         }
 
         int pixelsLeft = bmpWidth * bmpHeight - tmpBitmapOffset;
+        DebugAssert(pixelsLeft >= 0);
         memset(tmpBitmap + tmpBitmapOffset, 0, pixelsLeft);
     }
 
     // Undo "up" prediction
-    for (int y = 1; y < bmpHeight; y++) {
-        for (int x = 0; x < bmpWidth; x++) {
+    for (int y = 1; y < bmpHeight; y++) 
+    {
+        for (int x = 0; x < bmpWidth; x++) 
+        {
             char up = tmpBitmap[(y - 1) * bmpWidth + x];
             tmpBitmap[y * bmpWidth + x] ^= up;
         }
@@ -154,9 +167,6 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
     // Run-length encode each ASCII character
     for (int i = 32; i < 256; i++)
     {
-        // Get the size of this glyph
-        int charWidth = tr->maxCharWidth;
-
         // Read back the bitmap and construct a run-length encoding
         memset(tempRuns, 0, tempRunsSize);
         EncodedRun *run = tempRuns;
@@ -199,7 +209,7 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
         }
 
         // Create the glyph to store the encoded runs we've made
-        Glyph *glyph = new Glyph(charWidth);
+        Glyph *glyph = new Glyph(glyphWidths[i - 32]);
         tr->glyphs[i] = glyph;
 
         // Copy the runs into the glyph
