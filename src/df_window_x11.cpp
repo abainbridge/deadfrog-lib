@@ -140,11 +140,102 @@ static state_t g_state = { .socket_fd = -1 };
 
 static int ConvertX11Keycode(int i) {
     switch (i) {
+        case 9: return KEY_ESC;
+        case 10: return KEY_1;
+        case 11: return KEY_2;
+        case 12: return KEY_3;
+        case 13: return KEY_4;
+        case 14: return KEY_5;
+        case 15: return KEY_6;
+        case 16: return KEY_7;
+        case 17: return KEY_8;
+        case 18: return KEY_9;
+        case 19: return KEY_0;
+        case 20: return KEY_MINUS;
+        case 21: return KEY_EQUALS;
+        case 22: return KEY_BACKSPACE;
+        case 23: return KEY_TAB;
+        case 24: return KEY_Q;
+        case 25: return KEY_W;
+        case 26: return KEY_E;
+        case 27: return KEY_R;
+        case 28: return KEY_T;
+        case 29: return KEY_Y;
+        case 30: return KEY_U;
+        case 31: return KEY_I;
+        case 32: return KEY_O;
+        case 33: return KEY_P;
+        case 34: return KEY_OPENBRACE;
+        case 35: return KEY_CLOSEBRACE;
+        case 36: return KEY_ENTER;
         case 37:  return KEY_CONTROL;
+        case 38: return KEY_A;
+        case 39: return KEY_S;
+        case 40: return KEY_D;
+        case 41: return KEY_F;
+        case 42: return KEY_G;
+        case 43: return KEY_H;
+        case 44: return KEY_J;
+        case 45: return KEY_K;
+        case 46: return KEY_L;
+        case 47: return KEY_COLON;
+        case 48: return KEY_QUOTE;
+        case 50: return KEY_SHIFT;
+        case 51: return KEY_TILDE;
+        case 52: return KEY_Z;
+        case 53: return KEY_X;
+        case 54: return KEY_C;
+        case 55: return KEY_V;
+        case 56: return KEY_B;
+        case 57: return KEY_N;
+        case 58: return KEY_M;
+        case 59: return KEY_COMMA;
+        case 60: return KEY_STOP;
+        case 61: return KEY_SLASH;
+        case 62: return KEY_SHIFT;
+        case 63: return KEY_ASTERISK;
+        case 64: return KEY_ALT;
+        case 65: return KEY_SPACE;
+        case 66: return KEY_CAPSLOCK;
+        case 67: return KEY_F1;
+        case 68: return KEY_F2;
+        case 69: return KEY_F3;
+        case 70: return KEY_F4;
+        case 71: return KEY_F5;
+        case 72: return KEY_F6;
+        case 73: return KEY_F7;
+        case 74: return KEY_F8;
+        case 75: return KEY_F9;
+        case 76: return KEY_F10;
+        case 77: return KEY_NUMLOCK;
+        case 79: return KEY_7_PAD;
+        case 80: return KEY_8_PAD;
+        case 81: return KEY_9_PAD;
+        case 82: return KEY_MINUS_PAD;
+        case 83: return KEY_4_PAD;
+        case 84: return KEY_5_PAD;
+        case 85: return KEY_6_PAD;
+        case 86: return KEY_PLUS_PAD;
+        case 87: return KEY_1_PAD;
+        case 88: return KEY_2_PAD;
+        case 89: return KEY_3_PAD;
+        case 90: return KEY_0_PAD;
+        case 91: return KEY_DEL_PAD;
+        case 94: return KEY_BACKSLASH;
+        case 95: return KEY_F11;
+        case 96: return KEY_F12;
+        case 106: return KEY_SLASH_PAD;
+        case 110: return KEY_HOME;
         case 111: return KEY_UP;
+        case 112: return KEY_PGUP;
         case 113: return KEY_LEFT;
         case 114: return KEY_RIGHT;
+        case 115: return KEY_END;
         case 116: return KEY_DOWN;
+        case 117: return KEY_PGDN;
+        case 118: return KEY_INSERT;
+        case 119: return KEY_DEL;
+        case 127: return KEY_PAUSE;
     }
 
     return 0;
@@ -482,12 +573,13 @@ bool InputPoll()
 
     for (int i = 0; i < 32; i++) {
         uint8_t bits = resp[8 + i];
-//        printf("%02x ", bits);
-//         if (bits)
-//             puts("Key pressed");
-//         
+        
         for (int j = 0; j < 8; j++) {
             int x11_keycode = i * 8 + j;
+
+//            if (bits & 1 && x11_keycode)
+//                printf("%i\n", x11_keycode);
+
             int df_keycode = ConvertX11Keycode(x11_keycode);
             g_input.keys[df_keycode] = bits & 1;
             bits >>= 1;
@@ -498,7 +590,7 @@ bool InputPoll()
 }
 
 
-#if 1
+#if 0
 void Sierpinski3DMain();
 int main() {
     Sierpinski3DMain();
