@@ -237,18 +237,18 @@ DfFont *LoadFontFromFile(char const *filename, int pixHeight)
     unsigned char numFonts = 0;
     fread(&numFonts, 1, 1, f);
     
-    unsigned int filePffsets[257];
-    fread(filePffsets, 4, numFonts, f);
+    unsigned int fileOffsets[257];
+    fread(fileOffsets, 4, numFonts, f);
     fseek(f, 0, SEEK_END);
-    filePffsets[numFonts] = ftell(f);
+    fileOffsets[numFonts] = ftell(f);
 
     for (unsigned i = 0; i < numFonts; i++) {
-        fseek(f, filePffsets[i], SEEK_SET);
+        fseek(f, fileOffsets[i], SEEK_SET);
         int maxWidth = fgetc(f);
         int pixHeight = fgetc(f);
         if (pixHeight == pixHeight) {
-            fseek(f, filePffsets[i], SEEK_SET);
-            int fontBinSize = filePffsets[i + 1] - filePffsets[i];
+            fseek(f, fileOffsets[i], SEEK_SET);
+            int fontBinSize = fileOffsets[i + 1] - fileOffsets[i];
             char *fontBuf = new char[fontBinSize];
             fread(fontBuf, 1, fontBinSize, f);
             DfFont *fnt = LoadFontFromMemory((unsigned int *)fontBuf, fontBinSize / 4);
