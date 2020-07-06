@@ -1,10 +1,3 @@
-// Own header
-#include "df_window.h"
-
-// Project headers
-#include "df_bitmap.h"
-#include "df_time.h"
-
 // Platform includes
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -15,20 +8,12 @@
 
 // Standard includes
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 
 #define FATAL_ERROR(msg, ...) { fprintf(stderr, msg "\n", ##__VA_ARGS__); __asm__("int3"); exit(-1); }
 
-DfWindow *g_window = NULL;
-DfInput g_input = { 0 };
-
-static unsigned g_framesThisSecond = 0;
-static double g_endOfSecond = 0.0;
-static double g_lastUpdateTime = 0.0;
 
 
 //
@@ -168,7 +153,7 @@ static int ConvertX11Keycode(int i) {
         case 34: return KEY_OPENBRACE;
         case 35: return KEY_CLOSEBRACE;
         case 36: return KEY_ENTER;
-        case 37:  return KEY_CONTROL;
+        case 37: return KEY_CONTROL;
         case 38: return KEY_A;
         case 39: return KEY_S;
         case 40: return KEY_D;
@@ -444,13 +429,6 @@ static void map_window() {
 }
 
 
-static void InitInput()
-{
-    g_input.eventSinceAdvance = true;
-    g_input.windowHasFocus = true;
-}
-
-
 bool CreateWin(int width, int height, WindowType windowed, char const *winName) {
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
@@ -493,40 +471,13 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
 }
 
 
-void UpdateWin() {
-    // *** FPS Meter ***
-
-    g_framesThisSecond++;
-
-    double currentTime = GetRealTime();
-    if (currentTime > g_endOfSecond)
-    {
-        // If program has been paused by a debugger, skip the seconds we missed
-        if (currentTime > g_endOfSecond + 2.0)
-            g_endOfSecond = currentTime + 1.0;
-        else
-            g_endOfSecond += 1.0;
-        g_window->fps = g_framesThisSecond;
-        g_framesThisSecond = 0;
-    }
-    else if (g_endOfSecond > currentTime + 2.0)
-    {
-        g_endOfSecond = currentTime + 1.0;
-    }
-
-
-    // *** Advance time ***
-
-    g_window->advanceTime = currentTime - g_lastUpdateTime;
-    g_lastUpdateTime = currentTime;
-
-
+static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp) {
     // *** Send back-buffer to Xserver.
-    int W = g_window->bmp->width;
-    int H = g_window->bmp->height;
+    int W = wd->bmp->width;
+    int H = wd->bmp->height;
     enum { MAX_BYTES_PER_REQUEST = 262140 }; // Value from www.x.org/releases/X11R7.7/doc/bigreqsproto/bigreq.html
     int num_rows_in_chunk = MAX_BYTES_PER_REQUEST / 4 / W;
-    DfColour *row = g_window->bmp->pixels;
+    DfColour *row = wd->bmp->pixels;
     for (int y = 0; y < H; y += num_rows_in_chunk) {
         if (y + num_rows_in_chunk > H) {
             num_rows_in_chunk = H - y;
@@ -565,6 +516,8 @@ bool WaitVsync() {
 
 bool InputPoll()
 {
+    InputPollInternal();
+
     uint32_t packet = X11_OPCODE_QUERY_KEYMAP | (1<<16);
     send_buf(&packet, sizeof(packet));
 
