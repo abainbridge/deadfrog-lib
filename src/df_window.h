@@ -75,11 +75,11 @@ typedef struct _DfWindow
 } DfWindow;
 
 
-enum WindowType
+typedef enum
 {
     WT_FULLSCREEN = 0,
     WT_WINDOWED = 1
-};
+} WindowType;
 
 
 DLL_API DfWindow *g_window;
