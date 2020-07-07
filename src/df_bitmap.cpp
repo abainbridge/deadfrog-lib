@@ -566,20 +566,18 @@ void DrawBezier(DfBitmap *bmp, int const *a, int const *b, int const *c, int con
 
 void RectFill(DfBitmap *bmp, int x1, int y1, int w, int h, DfColour c)
 {
-    int x2 = IntMin(x1 + w, bmp->clipRight) - 1;
-    int y2 = IntMin(y1 + h, bmp->clipBottom) - 1;
+    int x2 = IntMin(x1 + w, bmp->clipRight);
+    int y2 = IntMin(y1 + h, bmp->clipBottom);
     x1 = IntMax(x1, bmp->clipLeft);
     y1 = IntMax(y1, bmp->clipTop);
 
-    if (x1 > bmp->clipRight || x2 <= bmp->clipLeft)
-        return;
+    w = x2 - x1;
+    if (w <= 0) return;
 
-    w = x2 - x1 + 1;
-  
     DfColour * __restrict line = GetLine(bmp, y1) + x1;
     if (c.a == 255)
     {
-        for (int a = y1; a <= y2; a++)
+        for (int a = y1; a < y2; a++)
         {
 #ifdef _MSC_VER
             __stosd((unsigned long*)line, c.c, w);
@@ -592,7 +590,7 @@ void RectFill(DfBitmap *bmp, int x1, int y1, int w, int h, DfColour c)
     }
     else
     {
-        for (int a = y1; a <= y2; a++)
+        for (int a = y1; a < y2; a++)
             HLineUnclipped(bmp, x1, a, w, c);
     }
 }
