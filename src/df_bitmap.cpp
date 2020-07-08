@@ -582,7 +582,7 @@ void RectFill(DfBitmap *bmp, int x1, int y1, int w, int h, DfColour c)
 #ifdef _MSC_VER
             __stosd((unsigned long*)line, c.c, w);
 #else
-            for (int b = x1; b <= x2; b++)
+            for (int b = x1; b < x2; b++)
                 line[b].c = c.c;
 #endif            
             line += bmp->width;
