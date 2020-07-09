@@ -781,33 +781,54 @@ void EllipseFill(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c)
 }
 
 
-void MaskedBlit(DfBitmap *destBmp, int x1, int y1, DfBitmap *srcBmp)
+static void BlitClip(DfBitmap *destBmp, int *dx, int *dy, DfBitmap *srcBmp,
+                     int *w, int *h, int *sx, int *sy)
 {
-    int x2 = IntMin(x1 + srcBmp->width, destBmp->clipRight) - 1;
-    int y2 = IntMin(y1 + srcBmp->height, destBmp->clipBottom) - 1;
-    x1 = IntMax(x1, destBmp->clipLeft);
-    y1 = IntMax(y1, destBmp->clipTop);
+    *w = srcBmp->width;
+    *h = srcBmp->height;
+    *sx = 0;
+    *sy = 0;
 
-    if (x1 > destBmp->clipRight || x2 <= destBmp->clipLeft)
-        return;
-    
-	// Reduce the amount of the src bitmap to copy, if it would go 
-	// beyond the edges of the dest bitmap
-	int w = srcBmp->width;
-	if (x1 + w > destBmp->width)
-		w = destBmp->width - x1;
-	int h = srcBmp->height;
-	if (y1 + h > destBmp->height)
-		h = destBmp->height - y1;
+    if (*dx < destBmp->clipLeft)
+    { 
+        *dx -= destBmp->clipLeft;
+        *w += *dx;
+        *sx -= *dx;
+        *dx = destBmp->clipLeft;
+    }
 
-	for (int sy = 0; sy < h; sy++)
+    if (*dy < destBmp->clipTop)
+    { 
+        *dy -= destBmp->clipTop;
+        *h += *dy;
+        *sy -= *dy;
+        *dy = destBmp->clipTop;
+    }
+
+    if (*dx+*w > destBmp->clipRight) 
+        *w = destBmp->clipRight - *dx;
+
+    if (*dy+*h > destBmp->clipBottom) 
+        *h = destBmp->clipBottom - *dy;
+
+    if (*w <= 0) 
+        *h = 0;
+}
+
+
+void MaskedBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp)
+{
+    int w, h, sx, sy;
+    BlitClip(destBmp, &dx, &dy, srcBmp, &w, &h, &sx, &sy);
+        
+	for (int y = 0; y < h; y++)
 	{
-		DfColour *srcLine = GetLine(srcBmp, sy);
-		DfColour *destLine = GetLine(destBmp, y1 + sy) + x1;
-		for (int i = 0; i < w; i++)
+		DfColour *srcLine = GetLine(srcBmp, sy + y) + sx;
+		DfColour *destLine = GetLine(destBmp, dy + y) + dx;
+		for (int x = 0; x < w; x++)
 		{
-			if (srcLine[i].a > 0)
-				destLine[i] = srcLine[i];
+			if (srcLine[x].a > 0)
+				destLine[x] = srcLine[x];
 		}
 	}
 }
@@ -815,28 +836,13 @@ void MaskedBlit(DfBitmap *destBmp, int x1, int y1, DfBitmap *srcBmp)
 
 void QuickBlit(DfBitmap *destBmp, int x1, int y1, DfBitmap *srcBmp)
 {
-    // TODO - This clipping code is the same as MaskedBlit and RectFill. Factor it out into a function.
-    int x2 = IntMin(x1 + srcBmp->width, destBmp->clipRight) - 1;
-    int y2 = IntMin(y1 + srcBmp->height, destBmp->clipBottom) - 1;
-    x1 = IntMax(x1, destBmp->clipLeft);
-    y1 = IntMax(y1, destBmp->clipTop);
+    int w, h, sx, sy;
+    BlitClip(destBmp, &dx, &dy, srcBmp, &w, &h, &sx, &sy);
 
-    if (x1 > destBmp->clipRight || x2 <= destBmp->clipLeft)
-        return;
-
-    // Reduce the amount of the src bitmap to copy, if it would go 
-    // beyond the edges of the dest bitmap
-    int w = srcBmp->width;
-    if (x1 + w > destBmp->width)
-        w = destBmp->width - x1;
-    int h = srcBmp->height;
-    if (y1 + h > destBmp->height)
-        h = destBmp->height - y1;
-
-    for (int sy = 0; sy < h; sy++)
+    for (int y = 0; y < h; y++)
     {
-        DfColour *srcLine = GetLine(srcBmp, sy);
-        DfColour *destLine = GetLine(destBmp, y1 + sy) + x1;
+        DfColour *srcLine = GetLine(srcBmp, sy + y) + sx;
+        DfColour *destLine = GetLine(destBmp, dy + y) + dx;
         memcpy(destLine, srcLine, w * sizeof(DfColour));
     }
 }
