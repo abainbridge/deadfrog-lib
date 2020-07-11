@@ -263,7 +263,6 @@ bool SaveBmp(DfBitmap *bmp, char const *filename)
     int h = bmp->height;
     int fileSize = 54 + 3*w*h;  //w is your image width, h is image height, both int
     uint8_t *img = new uint8_t [3*w*h];
-    memset(img, 0, sizeof(img));
 
     for (int x = 0; x < w; x++)
     {
