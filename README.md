@@ -44,7 +44,7 @@ Below is some performance data of various functions rendering to an in-memory fr
 
 Running on Windows 10 on a single core of an Intel Core i3 530 @ 2.93 GHz, built with MSVC 2013, targetting x64:
 
-    FUNCTION        UNIT                    Deadfrog    NOTES
+    FUNCTION        UNIT                    Rate        NOTES
     -------------------------------------------------------------------------------------
     Put pixel       million per sec         125
     Put pixel       million per sec         95          Alpha blended
