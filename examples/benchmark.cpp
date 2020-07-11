@@ -1,3 +1,4 @@
+#include "df_bmp.h"
 #include "df_time.h"
 #include "df_polygon.h"
 #include "df_font.h"
@@ -169,6 +170,25 @@ double CalcBillionRectFillPixelsPerSec(DfBitmap *bmp)
 }
 
 
+double CalcBillionBlitPixelsPerSec(DfBitmap *bmp)
+{
+    DfBitmap *dog = LoadBmp("../../marlieses_dog.bmp");
+    if (!dog) 
+        dog = LoadBmp("marlieses_dog.bmp");
+    ReleaseAssert(dog, "Couldn't load marlieses_dog.bmp");
+    g_iterations = 1000 * 30;
+    double startTime = GetRealTime();
+    for (unsigned i = 0; i < g_iterations; i++)
+        QuickBlit(bmp, 0, 0, dog);
+    double endTime = GetRealTime();
+    g_duration = endTime - startTime;
+    g_testFmtString = "Billion rect fill pixels per sec";
+    double numPixels = dog->width * dog->height * (double)g_iterations;
+    BitmapDelete(dog);
+    return (numPixels / g_duration) / 1e9;
+}
+
+
 double CalcMillionCharsPerSec(DfBitmap *bmp, DfFont *font)
 {
     static char const *str = "Here's some interesting text []£# !";
@@ -324,6 +344,10 @@ void BenchmarkMain()
 
     // Rect fill
     score = CalcBillionRectFillPixelsPerSec(backBmp);
+    END_TEST;
+
+    // Blit
+    score = CalcBillionBlitPixelsPerSec(backBmp);
     END_TEST;
 
     // Text render
