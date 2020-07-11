@@ -4,7 +4,6 @@
 #include "df_font.h"
 #include "df_font_aa.h"
 #include "df_window.h"
-#include "fonts/deadfrog_mono.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -310,7 +309,9 @@ void BenchmarkMain()
 	CreateWin(1024, 768, WT_WINDOWED, "Benchmark");
     BitmapClear(g_window->bmp, g_colourBlack);
 
-    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    DfFont *font = LoadFontFromFile("../../../src/fonts/deadfrog_mono.dfbf", 13);
+    if (!font)
+        font = LoadFontFromFile("../src/fonts/deadfrog_mono.dfbf", 13);
     DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
 
     DfBitmap *backBmp = BitmapCreate(1920, 1200);
