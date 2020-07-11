@@ -83,7 +83,8 @@ int main()
         // Blit back buffer to screen
         UpdateWin();
 
-        SleepMillisec(10);
+        // Wait until the window manager is ready for another frame.
+        WaitVsync();
     }
 
     return 0;

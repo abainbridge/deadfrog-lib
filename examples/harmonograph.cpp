@@ -242,6 +242,6 @@ void HarmonographMain()
         DrawTextSimple(font, g_colourWhite, g_window->bmp, 5, height - 20, "Keys: Space to restart  S to save");
 
         UpdateWin();
-        SleepMillisec(1);
+        WaitVsync();
     }
 }

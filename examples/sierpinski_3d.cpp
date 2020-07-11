@@ -111,6 +111,6 @@ void Sierpinski3DMain()
         DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
         UpdateWin();
-//        DfSleepMillisec(10);
+//        WaitVsync();
     }
 }

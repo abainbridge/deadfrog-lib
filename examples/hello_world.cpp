@@ -31,6 +31,6 @@ void HelloWorldMain()
         DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
         UpdateWin();
-        SleepMillisec(10);
+        WaitVsync();
     }
 }
