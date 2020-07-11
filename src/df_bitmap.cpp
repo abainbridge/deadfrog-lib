@@ -834,7 +834,16 @@ void MaskedBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp)
 }
 
 
-void QuickBlit(DfBitmap *destBmp, int x1, int y1, DfBitmap *srcBmp)
+#if _MSC_VER
+#include <intrin.h>
+#else
+static inline void __movsb(unsigned char *dst, unsigned char *src, size_t n) {
+    __asm__ __volatile__("rep movsb" : "+D"(dst), "+S"(src), "+c"(n) : : "memory");
+}
+#endif
+
+
+void QuickBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp)
 {
     int w, h, sx, sy;
     BlitClip(destBmp, &dx, &dy, srcBmp, &w, &h, &sx, &sy);
@@ -843,7 +852,10 @@ void QuickBlit(DfBitmap *destBmp, int x1, int y1, DfBitmap *srcBmp)
     {
         DfColour *srcLine = GetLine(srcBmp, sy + y) + sx;
         DfColour *destLine = GetLine(destBmp, dy + y) + dx;
-        memcpy(destLine, srcLine, w * sizeof(DfColour));
+
+        // I would like to call memcpy() here, but for some reason movsb is
+        // twice as fast on my machine, when built on Linux with GCC or Clang.
+        __movsb((unsigned char *)destLine, (unsigned char *)srcLine, w * sizeof(DfColour));
     }
 }
 
