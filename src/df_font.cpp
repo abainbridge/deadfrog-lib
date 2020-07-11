@@ -245,13 +245,13 @@ DfFont *LoadFontFromFile(char const *filename, int pixHeight)
     for (unsigned i = 0; i < numFonts; i++) {
         fseek(f, fileOffsets[i], SEEK_SET);
         int maxWidth = fgetc(f);
-        int pixHeight = fgetc(f);
-        if (pixHeight == pixHeight) {
+        int thisPixHeight = fgetc(f);
+        if (thisPixHeight == pixHeight) {
             fseek(f, fileOffsets[i], SEEK_SET);
             int fontBinSize = fileOffsets[i + 1] - fileOffsets[i];
             char *fontBuf = new char[fontBinSize];
             fread(fontBuf, 1, fontBinSize, f);
-            DfFont *fnt = LoadFontFromMemory((unsigned int *)fontBuf, fontBinSize / 4);
+            DfFont *fnt = LoadFontFromMemory((unsigned int *)fontBuf, fontBinSize);
             delete[] fontBuf;
             return fnt;
         }
