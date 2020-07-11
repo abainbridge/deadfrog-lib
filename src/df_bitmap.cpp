@@ -8,6 +8,13 @@
 #include <memory.h>
 #include <stdlib.h>
 
+#if _MSC_VER
+#include <intrin.h>
+#else
+static inline void __movsb(unsigned char *dst, unsigned char *src, size_t n) {
+    __asm__ __volatile__("rep movsb" : "+D"(dst), "+S"(src), "+c"(n) : : "memory");
+}
+#endif
 
 DfBitmap *BitmapCreate(int width, int height)
 {
@@ -832,16 +839,6 @@ void MaskedBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp)
 		}
 	}
 }
-
-
-#if _MSC_VER
-#include <intrin.h>
-#else
-static inline void __movsb(unsigned char *dst, unsigned char *src, size_t n) {
-    __asm__ __volatile__("rep movsb" : "+D"(dst), "+S"(src), "+c"(n) : : "memory");
-}
-#endif
-
 
 void QuickBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp)
 {
