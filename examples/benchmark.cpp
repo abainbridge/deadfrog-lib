@@ -11,7 +11,7 @@
 #include "df_master_glyph.h"
 
 
-char *g_testFmtString = NULL;
+const char *g_testFmtString = NULL;
 unsigned g_iterations;
 double g_duration;
 
