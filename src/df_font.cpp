@@ -243,8 +243,7 @@ DfFont *LoadFontFromFile(char const *filename, int pixHeight)
     fileOffsets[numFonts] = ftell(f);
 
     for (unsigned i = 0; i < numFonts; i++) {
-        fseek(f, fileOffsets[i], SEEK_SET);
-        int maxWidth = fgetc(f);
+        fseek(f, fileOffsets[i] + 1, SEEK_SET); // +1 skips the max width field.
         int thisPixHeight = fgetc(f);
         if (thisPixHeight == pixHeight) {
             fseek(f, fileOffsets[i], SEEK_SET);
