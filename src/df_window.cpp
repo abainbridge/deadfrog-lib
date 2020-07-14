@@ -26,8 +26,8 @@ struct InputPrivate
     int			m_mouseOldY;
     int			m_mouseOldZ;
 
-    signed char	m_keyNewDowns[KEY_MAX];
-    signed char	m_keyNewUps[KEY_MAX];
+    signed char	m_newKeyDowns[KEY_MAX];
+    signed char	m_newKeyUps[KEY_MAX];
     char		m_newKeysTyped[MAX_KEYS_TYPED_PER_FRAME];
     int			m_newNumKeysTyped;
 };
@@ -186,10 +186,10 @@ bool UntypeKey(char key)
 
 static void InputPollInternal()
 {
-    memcpy(g_input.keyDowns, g_priv.m_keyNewDowns, KEY_MAX);
-    memset(g_priv.m_keyNewDowns, 0, KEY_MAX);
-    memcpy(g_input.keyUps, g_priv.m_keyNewUps, KEY_MAX);
-    memset(g_priv.m_keyNewUps, 0, KEY_MAX);
+    memcpy(g_input.keyDowns, g_priv.m_newKeyDowns, KEY_MAX);
+    memset(g_priv.m_newKeyDowns, 0, KEY_MAX);
+    memcpy(g_input.keyUps, g_priv.m_newKeyUps, KEY_MAX);
+    memset(g_priv.m_newKeyUps, 0, KEY_MAX);
 
 	g_input.numKeysTyped = g_priv.m_newNumKeysTyped;
 	memcpy(g_input.keysTyped, g_priv.m_newKeysTyped, g_priv.m_newNumKeysTyped);

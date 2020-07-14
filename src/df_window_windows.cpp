@@ -30,8 +30,8 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 		case WM_NCACTIVATE:
 			g_input.windowHasFocus = true;
 			// Clear keyboard state when we regain focus
-            memset(g_priv.m_keyNewDowns, 0, KEY_MAX);
-            memset(g_priv.m_keyNewUps, 0, KEY_MAX);
+            memset(g_priv.m_newKeyDowns, 0, KEY_MAX);
+            memset(g_priv.m_newKeyUps, 0, KEY_MAX);
             memset(g_input.keys, 0, KEY_MAX);
             return -1;
 		case WM_KILLFOCUS:
@@ -125,7 +125,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
                 break;
 
             g_input.keys[wParam] = 0;
-            g_priv.m_keyNewUps[wParam] = 1;
+            g_priv.m_newKeyUps[wParam] = 1;
             break;
 
 		case WM_SYSKEYDOWN:
@@ -133,7 +133,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
 			//int flags = (short)HIWORD(lParam);
 			g_input.keys[wParam] = 1;
-			g_priv.m_keyNewDowns[wParam] = 1;
+			g_priv.m_newKeyDowns[wParam] = 1;
 			break;
 		}
 
@@ -143,7 +143,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			// Windows will generate a SYSKEYUP event for the release of F, and a
 			// normal KEYUP event for the release of the ALT. Very strange.
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYUP", wParam);
-            g_priv.m_keyNewUps[wParam] = 1;
+            g_priv.m_newKeyUps[wParam] = 1;
             g_input.keys[wParam] = 0;
 			break;
 		}
@@ -163,7 +163,7 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
                 // will be an event for the alt part too.
                 break;
             }
-			g_priv.m_keyNewDowns[wParam] = 1;
+			g_priv.m_newKeyDowns[wParam] = 1;
 			g_input.keys[wParam] = 1;
 			break;
 		}
