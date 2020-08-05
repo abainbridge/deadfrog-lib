@@ -27,7 +27,7 @@ typedef struct _DfBitmap
     int clipTop;
     int clipBottom;
 
-    DfColour *pixels;
+    DfColour *pixels;   // TODO: remove lines and embed pixels in-line. Then remove BitmapDelete().
 	DfColour **lines;
 } DfBitmap;
 
@@ -72,6 +72,7 @@ DLL_API void        EllipseFill     (DfBitmap *bmp, int x, int y, int rx, int ry
 DLL_API void        MaskedBlit      (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
 
 // Copies the source bitmap to the destination bitmap, including pixels whose source alpha values are 0
+// TODO rename this to just Blit().
 DLL_API void        QuickBlit       (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
 
 // Copies the source bitmap to the destination bitmap, scaling the result down by the specified scale factor
