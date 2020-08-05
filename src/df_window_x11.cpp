@@ -275,6 +275,10 @@ static void fatal_read(void *buf, size_t count) {
 }
 
 
+// TODO - This function needs to take into account which keymap is configured.
+// Also is should probably take the x11 keycode as input instead of the df one.
+// This article might be useful when attempting this work:
+// https://stackoverflow.com/questions/8970098/how-to-map-a-x11-keysym-to-a-unicode-character
 static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
     int shift = modifiers & 1;
     int caps_lock = modifiers & 2;
