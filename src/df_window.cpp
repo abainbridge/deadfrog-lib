@@ -13,6 +13,7 @@
 
 struct InputPrivate
 {
+    // TODO: Consider removing the m_ prefixes.
     bool        m_lmbPrivate;
     bool		m_lmbOld;				// Mouse button states from last frame. Only
     bool		m_mmbOld;				// used to computer the deltas.
