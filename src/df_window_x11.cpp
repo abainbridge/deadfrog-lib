@@ -123,7 +123,7 @@ typedef struct {
 static state_t g_state = { .socket_fd = -1 };
 
 
-static int ConvertX11Keycode(int i) {
+static int x11_keycode_to_df_keycode(int i) {
     switch (i) {
         case 9: return KEY_ESC;
         case 10: return KEY_1;
@@ -165,6 +165,7 @@ static int ConvertX11Keycode(int i) {
         case 46: return KEY_L;
         case 47: return KEY_COLON;
         case 48: return KEY_QUOTE;
+        case 49: return KEY_BACK_TICK;
         case 50: return KEY_SHIFT;
         case 51: return KEY_TILDE;
         case 52: return KEY_Z;
@@ -209,6 +210,7 @@ static int ConvertX11Keycode(int i) {
         case 94: return KEY_BACKSLASH;
         case 95: return KEY_F11;
         case 96: return KEY_F12;
+        case 104: return KEY_ENTER;
         case 106: return KEY_SLASH_PAD;
         case 110: return KEY_HOME;
         case 111: return KEY_UP;
@@ -260,7 +262,7 @@ static void send_buf(const void *_buf, int len) {
         len -= size_sent;
         // TODO, assert that (size_to_send >= 0)
         if (len == 0) break;
-        
+
         buf += size_sent;
     }
 }
@@ -273,71 +275,176 @@ static void fatal_read(void *buf, size_t count) {
 }
 
 
-static void read_response(void *buf, size_t expected_len) {
-    while (expected_len) {
-        ssize_t len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), 0);
-        if (len == 0) {
-            printf("X11 server closed the socket\n");
-            continue;
+static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
+    int shift = modifiers & 1;
+    int caps_lock = modifiers & 2;
+    int ctrl = modifiers & 4;
+    int alt = modifiers & 8;
+    int num_lock = modifiers & 0x10;
+    int windows_key = modifiers & 0x40;
+
+    if (ctrl || alt || windows_key) {
+        return 0;
+    }
+
+    if (keycode >= KEY_BACKSPACE && keycode <= KEY_ENTER) {
+        return keycode;
+    }
+
+    if (keycode == KEY_SPACE) {
+        return keycode;
+    }
+
+    if (keycode == KEY_BACK_TICK) {
+        if (shift) {
+            return '¬';
         }
-        if (len < 0) {
-            if (errno == EAGAIN) {
-                continue;
+        return '`';
+    }
+
+    if (keycode >= KEY_0 && keycode <= KEY_9) {
+        if (shift) {
+            return keycode - 16;   // TODO Fix £.
+        }
+        return keycode;
+    }
+
+    if (keycode >= KEY_A && keycode <= KEY_Z) {
+        if (!shift && !caps_lock) {
+            return keycode ^ 32;
+        }
+        return keycode;
+    }
+
+    if (keycode >= KEY_0_PAD && keycode <= KEY_9_PAD) {
+        if (num_lock) {
+            return keycode - 48;
+        }
+        else {
+            return 0;
+        }
+    }
+
+    if (keycode >= KEY_ASTERISK && keycode <= KEY_SLASH_PAD) {
+        if (keycode == KEY_DEL_PAD && !num_lock) {
+            return 0;
+        }
+        return keycode - 64;
+    }
+
+    if (shift) {
+        switch (keycode) {
+            case KEY_COLON: return ':';
+            case KEY_EQUALS: return '+';
+            case KEY_COMMA: return '<';
+            case KEY_MINUS: return '_';
+            case KEY_STOP: return '>';
+            case KEY_SLASH: return '?';
+            case KEY_QUOTE: return '@';
+            case KEY_OPENBRACE: return '{';
+            case KEY_BACKSLASH: return '|';
+            case KEY_CLOSEBRACE: return '}';
+            case KEY_TILDE: return '~';
+        }
+    }
+    else {
+        switch (keycode) {
+            case KEY_COLON: return ';';
+            case KEY_EQUALS: return '=';
+            case KEY_COMMA: return ',';
+            case KEY_MINUS: return '-';
+            case KEY_STOP: return '.';
+            case KEY_SLASH: return '/';
+            case KEY_QUOTE: return '\'';
+            case KEY_OPENBRACE: return '[';
+            case KEY_BACKSLASH: return '\\';
+            case KEY_CLOSEBRACE: return ']';
+            case KEY_TILDE: return '#';
+        }
+    }
+
+    return 0;
+}
+
+
+static void poll_socket(void *buf, size_t expected_len) {
+    // TODO. Why have we got both buf and g_state.recv_buf?
+    ssize_t len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), 0);
+    if (len == 0) {
+        printf("X11 server closed the socket\n");
+        return;
+    }
+    if (len < 0) {
+        if (errno == EAGAIN) {
+            return;
+        }
+
+        perror("");
+        FATAL_ERROR("Couldn't read from socket. Len = %i", (int)len);
+    }
+
+    g_state.recv_buf_num_bytes += len;
+    if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
+        FATAL_ERROR("bad num bytes");
+    }
+
+    int keep_going = 1;
+    while (keep_going && g_state.recv_buf_num_bytes) {
+        int keycode;
+        switch (g_state.recv_buf[0]) {
+        case 0: HandleErrorEvent(); break;
+        case 1:
+            // Handle reply.
+            if (g_state.recv_buf_num_bytes >= expected_len) {
+                memcpy(buf, g_state.recv_buf, expected_len);
+                ConsumeMessage(expected_len);
+                expected_len = 0;   // Store the fact that we've received the expected reply.
             }
-            
-            perror("");
-            FATAL_ERROR("Couldn't read from socket. Len = %i", (int)len);
-        }
-
-        g_state.recv_buf_num_bytes += len;
-        if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
-            FATAL_ERROR("bad num bytes");
-        }
-
-        int keep_going = 1;
-        while (keep_going && g_state.recv_buf_num_bytes) {
-            int key_code;
-            switch (g_state.recv_buf[0]) {
-            case 0: HandleErrorEvent(); break;
-            case 1:
-                // Handle reply.
-                if (g_state.recv_buf_num_bytes >= expected_len) {
-                    memcpy(buf, g_state.recv_buf, expected_len);
-                    ConsumeMessage(expected_len);
-                    expected_len = 0;   // Store the fact that we've received the expected reply.
-                }
-                else {
-                    keep_going = 0;
-                }
-                break;
-            case 2:
-                if (g_state.recv_buf_num_bytes >= 32) {
-                    key_code = ConvertX11Keycode(g_state.recv_buf[1]);
-                    g_input.keyDowns[key_code] = 1;
-                    ConsumeMessage(8 * 4);
-                }
-                else {
-                    keep_going = 0;
-                }
-                break;
-            case 3:
-                if (g_state.recv_buf_num_bytes >= 32) {
-                    key_code = ConvertX11Keycode(g_state.recv_buf[1]);
-                    g_input.keyUps[key_code] = 1;
-                    ConsumeMessage(8 * 4);
-                }
-                else {
-                    keep_going = 0;
-                }                    
-                break;
-            default:
-                FATAL_ERROR("Got an unknown message type (%i).\n", g_state.recv_buf[0]);
+            else {
+                keep_going = 0;
             }
-        }
+            break;
+        case 2:
+            if (g_state.recv_buf_num_bytes >= 32) {
+                // Key down.
+                unsigned char x11_keycode = g_state.recv_buf[1];
+                unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
+                g_priv.m_newKeyDowns[df_keycode] = 1;
+                g_input.keys[df_keycode] = 1;
+                int modifiers = g_state.recv_buf[28];
+                char ascii = df_keycode_to_ascii(df_keycode, modifiers);
+//printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
 
-        if (g_state.recv_buf_num_bytes != 0) {
-            FATAL_ERROR("Received incomplete packet");
+                if (ascii)
+                {
+    				g_priv.m_newKeysTyped[g_priv.m_newNumKeysTyped] = ascii;
+    				g_priv.m_newNumKeysTyped++;
+                }
+
+                ConsumeMessage(8 * 4);
+            }
+            else {
+                keep_going = 0;
+            }
+            break;
+        case 3:
+            if (g_state.recv_buf_num_bytes >= 32) {
+                keycode = x11_keycode_to_df_keycode(g_state.recv_buf[1]);
+                g_priv.m_newKeyUps[keycode] = 1;
+                g_input.keys[keycode] = 0;
+                ConsumeMessage(8 * 4);
+            }
+            else {
+                keep_going = 0;
+            }
+            break;
+        default:
+            FATAL_ERROR("Got an unknown message type (%i).\n", g_state.recv_buf[0]);
         }
+    }
+
+    if (g_state.recv_buf_num_bytes != 0) {
+        FATAL_ERROR("Received incomplete packet");
     }
 }
 
@@ -435,7 +542,7 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
     wd->bmp = BitmapCreate(width, height);
 
     ensure_state();
-    
+
     g_state.window_id = generate_id();
 
     int const len = 9;
@@ -482,8 +589,8 @@ static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp) {
         if (y + num_rows_in_chunk > H) {
             num_rows_in_chunk = H - y;
         }
-        
-        uint32_t packet[6];   
+
+        uint32_t packet[6];
         uint32_t bmp_format = 2 << 8;
         uint32_t request_len = (uint32_t)(W * num_rows_in_chunk + 6) << 16;
         packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
@@ -518,26 +625,8 @@ bool InputPoll()
 {
     InputPollInternal();
 
-    uint32_t packet = X11_OPCODE_QUERY_KEYMAP | (1<<16);
-    send_buf(&packet, sizeof(packet));
-
     uint8_t resp[40];
-    read_response(resp, sizeof(resp));
-
-    for (int i = 0; i < 32; i++) {
-        uint8_t bits = resp[8 + i];
-        
-        for (int j = 0; j < 8; j++) {
-            int x11_keycode = i * 8 + j;
-
-//            if (bits & 1 && x11_keycode)
-//                printf("%i\n", x11_keycode);
-
-            int df_keycode = ConvertX11Keycode(x11_keycode);
-            g_input.keys[df_keycode] = bits & 1;
-            bits >>= 1;
-        }
-    }
+    poll_socket(resp, sizeof(resp));
 
     return true;
 }
