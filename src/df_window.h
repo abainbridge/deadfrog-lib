@@ -1,9 +1,9 @@
 // This module implements window creation and mouse and keyboard input.
 
-// You can test if any specific key has been pressed this frame using 
+// You can test if any specific key has been pressed this frame using
 // g_input.keyDowns[KEY_ESC].
 
-// You can see how much the mouse has moved along the X axis this frame using 
+// You can see how much the mouse has moved along the X axis this frame using
 // g_input.mouseVelX.
 
 // It also creates a bitmap the same size as the window to use as the back
@@ -31,15 +31,15 @@ typedef struct
     bool		windowHasFocus;
     bool        eventSinceAdvance;  // True if we've seen any events since the last advance
 
-    bool		lmb;				// Mouse button states now. These can change in the 
+    bool		lmb;				// Mouse button states now. These can change in the
 	bool		mmb;				// middle of the frame.
     bool		rmb;
 
 	bool		lmbDoubleClicked;
 
     bool		lmbClicked;			// Mouse went from up to down this frame
-	bool		mmbClicked;			
-    bool		rmbClicked;			
+	bool		mmbClicked;
+    bool		rmbClicked;
 
     bool		lmbUnClicked;		// Mouse went from down to up this frame
 	bool		mmbUnClicked;
