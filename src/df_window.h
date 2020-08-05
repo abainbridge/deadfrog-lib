@@ -166,7 +166,8 @@ DLL_API bool	    InputPoll();  // Returns true if any events occurred since last
 #define KEY_F11               122
 #define KEY_F12               123
 #define KEY_ESC               27
-#define KEY_TILDE             223
+#define KEY_BACK_TICK         223
+#define KEY_TILDE             222
 #define KEY_MINUS             189
 #define KEY_EQUALS            187
 #define KEY_BACKSPACE         8
