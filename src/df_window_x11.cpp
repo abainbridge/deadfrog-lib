@@ -275,10 +275,6 @@ static void fatal_read(void *buf, size_t count) {
 }
 
 
-// TODO - This function needs to take into account which keymap is configured.
-// Also is should probably take the x11 keycode as input instead of the df one.
-// This article might be useful when attempting this work:
-// https://stackoverflow.com/questions/8970098/how-to-map-a-x11-keysym-to-a-unicode-character
 static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
     int shift = modifiers & 1;
     int caps_lock = modifiers & 2;
@@ -371,8 +367,15 @@ static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
 }
 
 
+// This function is the only way that data is received from the X11 server.
+// Because the X11 protocol is asynchronous, we might receive events here when
+// we are waiting for a response.
+//
+// buf should be a pointer to an array if you expect a response, otherwise it
+// should be NULL.
+//
+// expected_len is the length of the expected reply. It is ignored if buf == NULL.
 static void poll_socket(void *buf, size_t expected_len) {
-    // TODO. Why have we got both buf and g_state.recv_buf?
     ssize_t len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), 0);
     if (len == 0) {
         printf("X11 server closed the socket\n");
@@ -394,10 +397,9 @@ static void poll_socket(void *buf, size_t expected_len) {
 
     int keep_going = 1;
     while (keep_going && g_state.recv_buf_num_bytes) {
-        int keycode;
         switch (g_state.recv_buf[0]) {
         case 0: HandleErrorEvent(); break;
-        case 1:
+        case 1: // Response of some kind.
             // Handle reply.
             if (g_state.recv_buf_num_bytes >= expected_len) {
                 memcpy(buf, g_state.recv_buf, expected_len);
@@ -408,9 +410,8 @@ static void poll_socket(void *buf, size_t expected_len) {
                 keep_going = 0;
             }
             break;
-        case 2:
+        case 2: // KeyPress event.
             if (g_state.recv_buf_num_bytes >= 32) {
-                // Key down.
                 unsigned char x11_keycode = g_state.recv_buf[1];
                 unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
                 g_priv.m_newKeyDowns[df_keycode] = 1;
@@ -419,8 +420,7 @@ static void poll_socket(void *buf, size_t expected_len) {
                 char ascii = df_keycode_to_ascii(df_keycode, modifiers);
 //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
 
-                if (ascii)
-                {
+                if (ascii) {
     				g_priv.m_newKeysTyped[g_priv.m_newNumKeysTyped] = ascii;
     				g_priv.m_newNumKeysTyped++;
                 }
@@ -431,11 +431,14 @@ static void poll_socket(void *buf, size_t expected_len) {
                 keep_going = 0;
             }
             break;
-        case 3:
+        case 3: // KeyRelease event.
             if (g_state.recv_buf_num_bytes >= 32) {
-                keycode = x11_keycode_to_df_keycode(g_state.recv_buf[1]);
-                g_priv.m_newKeyUps[keycode] = 1;
-                g_input.keys[keycode] = 0;
+                unsigned char x11_keycode = g_state.recv_buf[1];
+                unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
+                g_priv.m_newKeyUps[df_keycode] = 1;
+                g_input.keys[df_keycode] = 0;
+//printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
+
                 ConsumeMessage(8 * 4);
             }
             else {
@@ -628,10 +631,7 @@ bool WaitVsync() {
 bool InputPoll()
 {
     InputPollInternal();
-
-    uint8_t resp[40];
-    poll_socket(resp, sizeof(resp));
-
+    poll_socket(NULL, 0);
     return true;
 }
 
