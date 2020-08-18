@@ -3,7 +3,7 @@
 #include "df_font.h"
 #include "df_font_aa.h"
 #include "df_window.h"
-#include "fonts/deadfrog_mono.h"
+#include "fonts/df_mono.h"
 
 #include <stdint.h>
 #include <string.h>

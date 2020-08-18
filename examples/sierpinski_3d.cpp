@@ -1,6 +1,6 @@
 #include "df_font.h"
 #include "df_window.h"
-#include "fonts/deadfrog_mono.h"
+#include "fonts/df_mono.h"
 
 #include <math.h>
 #include <stdlib.h>
