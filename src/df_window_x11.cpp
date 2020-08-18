@@ -31,6 +31,34 @@ enum {
     X11_EVENT_MASK_POINTER_MOTION = 1<<6,
 };
 
+enum {
+     X11_EVENT_KEYPRESS = 1,
+     X11_EVENT_KEYRELEASE = 2,
+     X11_EVENT_BUTTONPRESS = 4,
+     X11_EVENT_BUTTONRELEASE = 8,
+     X11_EVENT_ENTERWINDOW = 0x10,
+     X11_EVENT_LEAVEWINDOW = 0x20,
+     X11_EVENT_POINTERMOTION = 0x40,
+     X11_EVENT_POINTERMOTIONHINT = 0x80
+//      #x00000100     Button1Motion
+//      #x00000200     Button2Motion
+//      #x00000400     Button3Motion
+//      #x00000800     Button4Motion
+//      #x00001000     Button5Motion
+//      #x00002000     ButtonMotion
+//      #x00004000     KeymapState
+//      #x00008000     Exposure
+//      #x00010000     VisibilityChange
+//      #x00020000     StructureNotify
+//      #x00040000     ResizeRedirect
+//      #x00080000     SubstructureNotify
+//      #x00100000     SubstructureRedirect
+//      #x00200000     FocusChange
+//      #x00400000     PropertyChange
+//      #x00800000     ColormapChange
+//      #x01000000     OwnerGrabButton
+//      #xFE000000     unused but must be zero
+};
 
 typedef struct __attribute__((packed)) {
     uint8_t order;
@@ -105,7 +133,7 @@ typedef struct __attribute__((packed)) {
 
 typedef struct {
     int socket_fd;
-    char recv_buf[10000];
+    unsigned char recv_buf[10000];
     int recv_buf_num_bytes;
 
     connection_reply_header_t connection_reply_header;
@@ -445,6 +473,56 @@ static void poll_socket(void *buf, size_t expected_len) {
                 keep_going = 0;
             }
             break;
+        case 4: // Mouse down button event (includes scroll motion).
+            if (g_state.recv_buf_num_bytes >= 32) {
+                switch (g_state.recv_buf[1]) {
+                    case 1:
+                        g_input.lmbClicked = 1;
+            			g_priv.m_lmbPrivate = true;
+                        break;
+                    case 2: g_input.mmbClicked = 1; break;
+                    case 3: g_input.rmbClicked = 1; break;
+                    case 4: g_input.mouseZ++; break;
+                    case 5: g_input.mouseZ--; break;
+                }
+                //printf("down:%i\n", g_state.recv_buf[1]);
+                ConsumeMessage(8 * 4);
+            }
+            else {
+                keep_going = 0;
+            }
+            break;
+        case 5: // Mouse button up event.
+            if (g_state.recv_buf_num_bytes >= 32) {
+                switch (g_state.recv_buf[1]) {
+                    case 1:
+                        g_input.lmbUnClicked = 1;
+            			g_priv.m_lmbPrivate = false;
+                        break;
+                    case 2: g_input.mmbUnClicked = 1; break;
+                    case 3: g_input.rmbUnClicked = 1; break;
+                }
+                //printf("up:%i\n", g_state.recv_buf[1]);
+                ConsumeMessage(8 * 4);
+            }
+            else {
+                keep_going = 0;
+            }
+            break;
+        case 6: // Pointer motion event.
+            if (g_state.recv_buf_num_bytes >= 32) {
+                int x = g_state.recv_buf[24] + (g_state.recv_buf[25] << 8);
+                int y = g_state.recv_buf[26] + (g_state.recv_buf[27] << 8);
+                //printf("detail:%i rx=%i ry=%i\n", g_state.recv_buf[1], x, y);
+                g_input.mouseX = x;
+                g_input.mouseY = y;
+
+                ConsumeMessage(8 * 4);
+            }
+            else {
+                keep_going = 0;
+            }
+            break;
         default:
             FATAL_ERROR("Got an unknown message type (%i).\n", g_state.recv_buf[0]);
         }
@@ -562,8 +640,9 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
     packet[5] = 0; // DEFAULT_BORDER and DEFAULT_GROUP.
     packet[6] = 0; // Visual: Copy from parent.
     packet[7] = 0x800; // value_mask = event-mask
-    packet[8] = 1 | 2; // event-mask = keypress and key release
-
+    packet[8] = X11_EVENT_KEYPRESS | X11_EVENT_KEYRELEASE | X11_EVENT_POINTERMOTION |
+                X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE;
+    
     send_buf(packet, sizeof(packet));
 
     create_gc();
