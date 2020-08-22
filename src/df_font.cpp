@@ -300,7 +300,6 @@ static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x
     return x - _x;
 }
 
-
 int DrawTextSimpleLen(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
 {
     int x = _x;
@@ -314,7 +313,10 @@ int DrawTextSimpleLen(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, ch
     {
         unsigned char c = text[j];
         if (x + (int)tr->glyphs[c]->m_width > bmp->clipRight)
+        {
+            DrawTextSimpleClipped(tr, col, bmp, x, y, text + j, 1);
             break;
+        }
 
         // Copy the glyph onto the stack for better cache performance. This increased the 
         // performance from 13.8 to 14.4 million chars per second. Madness.
