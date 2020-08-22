@@ -102,26 +102,26 @@ struct MemBuf
 DfFont *LoadFontFromMemory(void *_buf, int bufLen)
 {
     MemBuf buf((unsigned int *)_buf, bufLen);
-    DfFont *tr = new DfFont;
-    memset(tr, 0, sizeof(DfFont));
+    DfFont *fnt = new DfFont;
+    memset(fnt, 0, sizeof(DfFont));
 
-    tr->maxCharWidth = buf.ReadByte();
-    tr->charHeight = buf.ReadByte();
-    tr->fixedWidth = !buf.ReadByte();
+    fnt->maxCharWidth = buf.ReadByte();
+    fnt->charHeight = buf.ReadByte();
+    fnt->fixedWidth = !buf.ReadByte();
 
     char glyphWidths[224];
-    if (!tr->fixedWidth)
+    if (!fnt->fixedWidth)
     {
         for (int i = 0; i < 224; i++) glyphWidths[i] = buf.ReadByte();
     }
     else 
     {
-        for (int i = 0; i < 224; i++) glyphWidths[i] = tr->maxCharWidth;
+        for (int i = 0; i < 224; i++) glyphWidths[i] = fnt->maxCharWidth;
     }
 
     // Decode the RLE data into a bitmap with one char per pixel.
-    int bmpWidth = tr->maxCharWidth * 16;
-    int bmpHeight = tr->charHeight * 14;
+    int bmpWidth = fnt->maxCharWidth * 16;
+    int bmpHeight = fnt->charHeight * 14;
     char *tmpBitmap = new char [bmpWidth * bmpHeight];
     {
         int runVal = 1;
@@ -161,7 +161,7 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
     // Worst case is if the whole glyph is encoded as runs of one pixel. There has
     // to be a gap of one pixel between each run, so there can only be half as many
     // runs as there are pixels.
-    unsigned tempRunsSize = tr->charHeight * (tr->maxCharWidth / 2 + 1);
+    unsigned tempRunsSize = fnt->charHeight * (fnt->maxCharWidth / 2 + 1);
     EncodedRun *tempRuns = new EncodedRun [tempRunsSize];
 
     // Run-length encode each ASCII character
@@ -170,24 +170,24 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
         // Read back the bitmap and construct a run-length encoding
         memset(tempRuns, 0, tempRunsSize);
         EncodedRun *run = tempRuns;
-        for (int y = 0; y < tr->charHeight; y++)
+        for (int y = 0; y < fnt->charHeight; y++)
         {
             int x = 0;
-            int bmpY = (i - 32) / 16 * tr->charHeight + y;
-            while (x < tr->maxCharWidth)
+            int bmpY = (i - 32) / 16 * fnt->charHeight + y;
+            while (x < fnt->maxCharWidth)
             {
                 // Skip blank pixels               
-                int bmpX = i % 16 * tr->maxCharWidth + x;
+                int bmpX = i % 16 * fnt->maxCharWidth + x;
                 while (GetPixel(tmpBitmap, bmpWidth, bmpX, bmpY) == 0)
                 {
                     x++;
-                    if (x >= tr->maxCharWidth)
+                    if (x >= fnt->maxCharWidth)
                         break;
                     bmpX++;
                 }
 
                 // Have we got to the end of the line?
-                if (x >= tr->maxCharWidth)
+                if (x >= fnt->maxCharWidth)
                     continue;
 
                 run->startX = x;
@@ -199,7 +199,7 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
                 {
                     x++;
                     run->runLen++;
-                    if (x >= tr->maxCharWidth)
+                    if (x >= fnt->maxCharWidth)
                         break;
                     bmpX++;
                 }
@@ -210,7 +210,7 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
 
         // Create the glyph to store the encoded runs we've made
         Glyph *glyph = new Glyph(glyphWidths[i - 32]);
-        tr->glyphs[i] = glyph;
+        fnt->glyphs[i] = glyph;
 
         // Copy the runs into the glyph
         glyph->m_numRuns = run - tempRuns;
@@ -221,7 +221,7 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
     delete [] tempRuns;
     delete [] tmpBitmap;
 
-    return tr;
+    return fnt;
 }
 
 
@@ -260,13 +260,13 @@ DfFont *LoadFontFromFile(char const *filename, int pixHeight)
 }
 
 
-static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
+static int DrawTextSimpleClipped(DfFont *fnt, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
 {
     int x = _x;
     DfColour *startRow = bmp->pixels + y * bmp->width;
     int width = bmp->width;
 
-    if (y + tr->charHeight < bmp->clipTop || y > bmp->clipBottom)
+    if (y + fnt->charHeight < bmp->clipTop || y > bmp->clipBottom)
         return 0;
 
     for (int j = 0; text[j] && j < maxChars; j++)
@@ -275,7 +275,7 @@ static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x
             break;
 
         unsigned char c = text[j];
-        Glyph *glyph = tr->glyphs[c];
+        Glyph *glyph = fnt->glyphs[c];
 
         EncodedRun *rleBuf = glyph->m_pixelRuns;
         for (int i = 0; i < glyph->m_numRuns; i++)
@@ -300,27 +300,27 @@ static int DrawTextSimpleClipped(DfFont *tr, DfColour col, DfBitmap *bmp, int _x
     return x - _x;
 }
 
-int DrawTextSimpleLen(DfFont *tr, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
+int DrawTextSimpleLen(DfFont *fnt, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
 {
     int x = _x;
     int width = bmp->width;
 
-    if (x < bmp->clipLeft || y < bmp->clipTop || (y + tr->charHeight) > bmp->clipBottom)
-        return DrawTextSimpleClipped(tr, col, bmp, _x, y, text, maxChars);
+    if (x < bmp->clipLeft || y < bmp->clipTop || (y + fnt->charHeight) > bmp->clipBottom)
+        return DrawTextSimpleClipped(fnt, col, bmp, _x, y, text, maxChars);
 
     DfColour *startRow = bmp->pixels + y * bmp->width;
     for (int j = 0; text[j] && j < maxChars; j++)
     {
         unsigned char c = text[j];
-        if (x + (int)tr->glyphs[c]->m_width > bmp->clipRight)
+        if (x + (int)fnt->glyphs[c]->m_width > bmp->clipRight)
         {
-            DrawTextSimpleClipped(tr, col, bmp, x, y, text + j, 1);
+            DrawTextSimpleClipped(fnt, col, bmp, x, y, text + j, 1);
             break;
         }
 
         // Copy the glyph onto the stack for better cache performance. This increased the 
         // performance from 13.8 to 14.4 million chars per second. Madness.
-        Glyph glyph = *tr->glyphs[c];
+        Glyph glyph = *fnt->glyphs[c];
         EncodedRun *rleBuf = glyph.m_pixelRuns;
         for (int i = 0; i < glyph.m_numRuns; i++)
         {
@@ -343,52 +343,52 @@ int DrawTextSimple(DfFont *f, DfColour col, DfBitmap *bmp, int x, int y, char co
 }
 
 
-int DrawTextLeft(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
+int DrawTextLeft(DfFont *fnt, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
     va_start(ap, text);
     vsprintf(buf, text, ap);
-    return DrawTextSimple(tr, c, bmp, x, y, buf);
+    return DrawTextSimple(fnt, c, bmp, x, y, buf);
 }
 
 
-int DrawTextRight(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
-{
-    char buf[512];
-    va_list ap;
-    va_start(ap, text);
-    vsprintf(buf, text, ap);
-
-    int width = GetTextWidth(tr, buf);
-    return DrawTextSimple(tr, c, bmp, x - width, y, buf);
-}
-
-
-int DrawTextCentre(DfFont *tr, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
+int DrawTextRight(DfFont *fnt, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
 {
     char buf[512];
     va_list ap;
     va_start(ap, text);
     vsprintf(buf, text, ap);
 
-    int width = GetTextWidth(tr, buf);
-    return DrawTextSimple(tr, c, bmp, x - width/2, y, buf);
+    int width = GetTextWidth(fnt, buf);
+    return DrawTextSimple(fnt, c, bmp, x - width, y, buf);
 }
 
 
-int GetTextWidth(DfFont *tr, char const *text, int len)
+int DrawTextCentre(DfFont *fnt, DfColour c, DfBitmap *bmp, int x, int y, char const *text, ...)
+{
+    char buf[512];
+    va_list ap;
+    va_start(ap, text);
+    vsprintf(buf, text, ap);
+
+    int width = GetTextWidth(fnt, buf);
+    return DrawTextSimple(fnt, c, bmp, x - width/2, y, buf);
+}
+
+
+int GetTextWidth(DfFont *fnt, char const *text, int len)
 {
     len = IntMin((int)strlen(text), len);
-    if (tr->fixedWidth)
+    if (fnt->fixedWidth)
     {
-        return len * tr->maxCharWidth;
+        return len * fnt->maxCharWidth;
     }
     else
     {
         int width = 0;
         for (int i = 0; i < len; i++)
-            width += tr->glyphs[text[i] & 0xff]->m_width;
+            width += fnt->glyphs[text[i] & 0xff]->m_width;
 
         return width;
     }
