@@ -30,6 +30,13 @@ typedef struct _DfFont
 } DfFont;
 
 
+// Finds the pixel heights of all the fonts in the file and writes them into
+// the results array. If file contains more than 16 fonts, only the first 16
+// sizes will be returned. The results array will be sorted, with the lowest
+// value first. Return value is the number of items written into the results
+// array, or -1 on error.
+int ListFontSizesInFile(char const *filename, int result[16]);
+
 // Loads a font from a .dfbf file. Files typically contain multiple font sizes,
 // so you must specify the pixel height of the one you want. If the specified
 // size is not present, or there is an error, NULL will be returned.

@@ -225,6 +225,40 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
 }
 
 
+int ListFontSizesInFile(char const *filename, int result[16])
+{
+    FILE *f = fopen(filename, "rb");
+    if (!f) return 0;
+
+    char buf[5];
+    fread(buf, 1, 5, f);
+    if (memcmp(buf, "dfbf\0", 5) != 0) goto error;
+
+    unsigned char numFonts = 0;
+    fread(&numFonts, 1, 1, f);
+    if (numFonts > 15) numFonts = 15;
+
+    unsigned int fileOffsets[257];
+    if (fread(fileOffsets, 4, numFonts, f) != numFonts) goto error;
+    if (fseek(f, 0, SEEK_END) != 0) goto error;
+    fileOffsets[numFonts] = ftell(f);
+    if (fileOffsets[numFonts] == -1) goto error;
+
+    for (unsigned i = 0; i < numFonts; i++) {
+        int err = fseek(f, fileOffsets[i] + 1, SEEK_SET); // +1 skips the max width field.
+        if (err != 0) goto error;
+        result[i] = fgetc(f);
+    }
+
+    fclose(f);
+    return numFonts;
+
+error:
+    fclose(f);
+    return -1;
+}
+
+
 DfFont *LoadFontFromFile(char const *filename, int pixHeight)
 {
     FILE *f = fopen(filename, "rb");
@@ -232,30 +266,38 @@ DfFont *LoadFontFromFile(char const *filename, int pixHeight)
 
     char buf[5];
     fread(buf, 1, 5, f);
-    if (memcmp(buf, "dfbf\0", 5) != 0) return NULL;
+    if (memcmp(buf, "dfbf\0", 5) != 0) goto error;
 
     unsigned char numFonts = 0;
     fread(&numFonts, 1, 1, f);
     
     unsigned int fileOffsets[257];
-    fread(fileOffsets, 4, numFonts, f);
-    fseek(f, 0, SEEK_END);
+    if (fread(fileOffsets, 4, numFonts, f) != numFonts) goto error;
+    if (fseek(f, 0, SEEK_END) != 0) goto error;
     fileOffsets[numFonts] = ftell(f);
+    if (fileOffsets[numFonts] == -1) goto error;
 
     for (unsigned i = 0; i < numFonts; i++) {
-        fseek(f, fileOffsets[i] + 1, SEEK_SET); // +1 skips the max width field.
+        int err = fseek(f, fileOffsets[i] + 1, SEEK_SET); // +1 skips the max width field.
+        if (err != 0) goto error;
+
         int thisPixHeight = fgetc(f);
         if (thisPixHeight == pixHeight) {
-            fseek(f, fileOffsets[i], SEEK_SET);
+            err = fseek(f, fileOffsets[i], SEEK_SET);
+            if (err != 0) goto error;
+
             int fontBinSize = fileOffsets[i + 1] - fileOffsets[i];
             char *fontBuf = new char[fontBinSize];
-            fread(fontBuf, 1, fontBinSize, f);
+            if (fread(fontBuf, 1, fontBinSize, f) != fontBinSize) goto error;
             DfFont *fnt = LoadFontFromMemory((unsigned int *)fontBuf, fontBinSize);
             delete[] fontBuf;
+            fclose(f);
             return fnt;
         }
     }
 
+error:
+    fclose(f);
     return NULL;
 }
 
