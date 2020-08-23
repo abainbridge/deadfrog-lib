@@ -123,7 +123,9 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
             if (nextVertLeft == vertRight) {      // all y's same?
                 goto done;                      // (null polygon)
             }
-            leftSlope = ((nextVertLeft->x - vertLeft->x) << 16) / (nextVertLeft->y - vertLeft->y);
+            if (nextVertLeft->y - vertLeft->y != 0) {
+                leftSlope = ((nextVertLeft->x - vertLeft->x) << 16) / (nextVertLeft->y - vertLeft->y);
+            }
         }
 
         // Have we reached the end of the right hand edge we are following?
@@ -132,7 +134,9 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
             if (nextVertRight < verts) {          // wraparound
                 nextVertRight = endVert;
             }
-            rightSlope = ((nextVertRight->x - vertRight->x) << 16) / (nextVertRight->y - vertRight->y);
+            if (nextVertRight->y - vertRight->y != 0) {
+                rightSlope = ((nextVertRight->x - vertRight->x) << 16) / (nextVertRight->y - vertRight->y);
+            }
         }
 
         if (y > nextVertLeft->y || y > nextVertRight->y) {
