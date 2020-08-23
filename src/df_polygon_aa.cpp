@@ -82,7 +82,7 @@ static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 }
 
 
-void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
+void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
 {
     // Convert the verts passed in into the format we use internally. 
     for (int i = 0; i < numVerts; i++) {
@@ -90,16 +90,16 @@ void FillPolygonAa(DfBitmap *bmp, Vertex *verts, int numVerts, DfColour col)
     }
 
     // Find the vertex with minimum y.
-    Vertex *vertLeft = verts;
+    DfVertex *vertLeft = verts;
     for (int i = 1; i < numVerts; i++) {
         if (verts[i].y < vertLeft->y) {
             vertLeft = &verts[i];
         }
     }
-    Vertex *endVert = &verts[numVerts - 1];
+    DfVertex *endVert = &verts[numVerts - 1];
 
     // Initialize scanning edges.
-    Vertex *nextVertLeft, *vertRight, *nextVertRight;
+    DfVertex *nextVertLeft, *vertRight, *nextVertRight;
     vertRight = nextVertRight = nextVertLeft = vertLeft;
 
     // Initialize the extents for each row of subpixels.
