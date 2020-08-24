@@ -4,6 +4,7 @@ void DrawLine2(BitmapRGBA *bmp, int x1, int y1, int x2, int y2, RGBAColour colou
 {
 //     The code below is adapted from a Bresenham implementation by David
 //     Brackeen (http://www.brackeen.com/vga/shapes.html).
+    // It is about half as fast as the one in df_bitmap.cpp
 
     int dx = x2 - x1;
     int dy = y2 - y1;
