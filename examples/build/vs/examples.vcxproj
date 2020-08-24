@@ -187,6 +187,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\aa_poly_test.cpp" />
     <ClCompile Include="..\..\all.cpp" />
     <ClCompile Include="..\..\benchmark.cpp" />
     <ClCompile Include="..\..\colour_whirl.cpp" />

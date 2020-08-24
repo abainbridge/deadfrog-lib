@@ -1,6 +1,4 @@
-#include <windows.h>
-
-
+void AaPolyTestMain();
 void BenchmarkMain();
 void ColourWhirlMain();
 void FractalFernMain();
@@ -14,6 +12,7 @@ void TestMain();
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
+    AaPolyTestMain();
 //     BenchmarkMain();
 //     ColourWhirlMain();
 //     FractalFernMain();
@@ -22,7 +21,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 //     HelloWorldMain();
 //     MandelbrotMain();
 //     Sierpinski3DMain();
-    TestMain();
+//     TestMain();
 
     return 0;
 }
