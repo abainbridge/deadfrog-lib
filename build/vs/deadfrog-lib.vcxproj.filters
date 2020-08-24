@@ -30,5 +30,16 @@
     <ClInclude Include="..\..\src\df_time.h" />
     <ClInclude Include="..\..\src\df_window.h" />
     <ClInclude Include="..\..\src\df_polygon_aa.h" />
+    <ClInclude Include="..\..\src\fonts\df_mono.h">
+      <Filter>fonts</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\fonts\df_prop.h">
+      <Filter>fonts</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="fonts">
+      <UniqueIdentifier>{8d2ac3e2-7b77-4706-8aaf-e630f72728f8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

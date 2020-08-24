@@ -48,6 +48,8 @@
     <ClInclude Include="..\..\src\df_sized_glyph.h" />
     <ClInclude Include="..\..\src\df_time.h" />
     <ClInclude Include="..\..\src\df_window.h" />
+    <ClInclude Include="..\..\src\fonts\df_mono.h" />
+    <ClInclude Include="..\..\src\fonts\df_prop.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0DD52A68-E8AA-418A-A4A1-D09E74C6934C}</ProjectGuid>
