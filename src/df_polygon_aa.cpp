@@ -136,7 +136,7 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
     leftMin = INT_MAX;
     rightMax = -1;
     int leftSlope = ((nextVertLeft->x - vertLeft->x) << 16) / (nextVertLeft->y - vertLeft->y);
-    int rightSlope = ((nextVertRight->x - vertRight->x) << 16) / (nextVertRight->y - vertRight->y);;
+    int rightSlope = ((nextVertRight->x - vertRight->x) << 16) / (nextVertRight->y - vertRight->y);
 
     // Consider each row of subpixels from top to bottom.
     for (int y = vertLeft->y; y < maxY; y++) {
