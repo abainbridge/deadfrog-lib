@@ -59,25 +59,30 @@ static int ComputePixelCoverage(int x)
 
 static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 {
+    int hlineStartX = 0;
+    int hlineEndX = 0;
     int x;
     for (x = leftMin / SUBXRES; x <= (rightMax / SUBXRES); x++) {
         col.a = ComputePixelCoverage(x);
-        PutPix(bmp, x, y, col);
         if (col.a == 255) {
+            hlineStartX = x;
             break;
         }
+        PutPix(bmp, x, y, col);
     }
     int x2;
     for (x2 = (rightMax / SUBXRES); x2 > x; x2--) {
         col.a = ComputePixelCoverage(x2);
-        PutPix(bmp, x2, y, col);
         if (col.a == 255) {
+            hlineEndX = x2;
             break;
         }
+        PutPix(bmp, x2, y, col);
     }
 
-    if (x2 > x) {
-        HLine(bmp, x, y, x2 - x, col);
+    if (x2 >= x) {
+        col.a = 255;
+        HLine(bmp, x, y, x2 - x + 1, col);
     }
 }
 
