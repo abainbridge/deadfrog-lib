@@ -230,11 +230,11 @@ int ListFontSizesInFile(char const *filename, int result[16])
     FILE *f = fopen(filename, "rb");
     if (!f) return 0;
 
+    unsigned char numFonts = 0;
     char buf[5];
     fread(buf, 1, 5, f);
     if (memcmp(buf, "dfbf\0", 5) != 0) goto error;
 
-    unsigned char numFonts = 0;
     fread(&numFonts, 1, 1, f);
     if (numFonts > 15) numFonts = 15;
 
@@ -264,11 +264,11 @@ DfFont *LoadFontFromFile(char const *filename, int pixHeight)
     FILE *f = fopen(filename, "rb");
     if (!f) return NULL;
 
+    unsigned char numFonts = 0;
     char buf[5];
     fread(buf, 1, 5, f);
     if (memcmp(buf, "dfbf\0", 5) != 0) goto error;
 
-    unsigned char numFonts = 0;
     fread(&numFonts, 1, 1, f);
     
     unsigned int fileOffsets[257];
