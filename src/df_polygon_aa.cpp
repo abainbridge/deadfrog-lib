@@ -85,15 +85,12 @@ static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 
 void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
 {
-    // Convert the verts passed in into the format we use internally. 
-    for (int i = 0; i < numVerts; i++) {
-        verts[i].y /= SUBXRES / SUBYRES;
-    }
-
-    // Find the max vertex y value and the vertex with minimum y.
+    // Convert the verts passed in into the format we use internally,
+    // find the max vertex y value and the vertex with minimum y.
     DfVertex *vertLeft = verts;
     int maxY = -1;
-    for (int i = 1; i < numVerts; i++) {
+    for (int i = 0; i < numVerts; i++) {
+        verts[i].y /= SUBXRES / SUBYRES;
         if (verts[i].y < vertLeft->y) {
             vertLeft = &verts[i];
         }
