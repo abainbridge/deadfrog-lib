@@ -32,7 +32,7 @@ static SubpixelRowExtents subpixelRowExtents[SUBYRES];
 
 // Min and max X values of subpixels in the current pixel. Can be found by
 // searching subpixelRowExtents. Only stored as an optimization.
-static int leftMin, leftMax, rightMin, rightMax;
+static int leftMin, rightMax;
 
 
 // Compute number of subpixels covered by polygon at current pixel.
@@ -59,25 +59,25 @@ static int ComputePixelCoverage(int x)
 
 static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 {
-    int solidRunStartX = leftMax / SUBXRES;
-    int solidRunEndX = rightMin / SUBXRES;
-    if (solidRunStartX < solidRunEndX) {
-        for (int x = leftMin / SUBXRES; x <= solidRunStartX; x++) {
-            col.a = ComputePixelCoverage(x);
-            PutPix(bmp, x, y, col);
-        }
-		col.a = 255;
-        HLine(bmp, solidRunStartX + 1, y, (solidRunEndX - solidRunStartX) - 1, col);
-        for (int x = solidRunEndX; x <= (rightMax / SUBXRES); x++) {
-            col.a = ComputePixelCoverage(x);
-            PutPix(bmp, x, y, col);
+    int x;
+    for (x = leftMin / SUBXRES; x <= (rightMax / SUBXRES); x++) {
+        col.a = ComputePixelCoverage(x);
+        PutPix(bmp, x, y, col);
+        if (col.a == 255) {
+            break;
         }
     }
-    else {
-        for (int x = leftMin / SUBXRES; x <= (rightMax / SUBXRES); x++) {
-            col.a = ComputePixelCoverage(x);
-            PutPix(bmp, x, y, col);
+    int x2;
+    for (x2 = (rightMax / SUBXRES); x2 > x; x2--) {
+        col.a = ComputePixelCoverage(x2);
+        PutPix(bmp, x2, y, col);
+        if (col.a == 255) {
+            break;
         }
+    }
+
+    if (x2 > x) {
+        HLine(bmp, x, y, x2 - x, col);
     }
 }
 
@@ -89,12 +89,14 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
         verts[i].y /= SUBXRES / SUBYRES;
     }
 
-    // Find the vertex with minimum y.
+    // Find the max vertex y value and the vertex with minimum y.
     DfVertex *vertLeft = verts;
+    int maxY = -1;
     for (int i = 1; i < numVerts; i++) {
         if (verts[i].y < vertLeft->y) {
             vertLeft = &verts[i];
         }
+        maxY = IntMax(maxY, verts[i].y);
     }
     DfVertex *endVert = &verts[numVerts - 1];
 
@@ -102,50 +104,52 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
     DfVertex *nextVertLeft, *vertRight, *nextVertRight;
     vertRight = nextVertRight = nextVertLeft = vertLeft;
 
+#define NEXT_LEFT_EDGE() \
+    vertLeft = nextVertLeft; \
+    nextVertLeft++; \
+    if (nextVertLeft > endVert) nextVertLeft = verts; // Wrap.
+
+#define NEXT_RIGHT_EDGE() \
+    vertRight = nextVertRight; \
+    nextVertRight--; \
+    if (nextVertRight < verts) nextVertRight = endVert; // Wrap.
+
+    // Skip any initial horizontal edges because they would cause a divide by
+    // zero in the slope calculation. We know once we've got over the initial
+    // horizontal edges that there cannot be anymore in a convex poly, other
+    // than those that would form the bottom of the poly. We'll never
+    // encounter those either because the main loop will terminate just before
+    // we get to those (because y will have become equal to maxY).
+    while (vertLeft->y == nextVertLeft->y) {
+        NEXT_LEFT_EDGE();
+    }
+    while (vertRight->y == nextVertRight->y) {
+        NEXT_RIGHT_EDGE();
+    }
+
     // Initialize the extents for each row of subpixels.
     for (int i = 0; i < SUBYRES; i++) {
         subpixelRowExtents[i].left = -1;
         subpixelRowExtents[i].right = -1;
     }
 
-    leftMin = rightMin = INT_MAX;
-    leftMax = rightMax = -1;
-    int leftSlope = 0, rightSlope = 0;
+    leftMin = INT_MAX;
+    rightMax = -1;
+    int leftSlope = ((nextVertLeft->x - vertLeft->x) << 16) / (nextVertLeft->y - vertLeft->y);
+    int rightSlope = ((nextVertRight->x - vertRight->x) << 16) / (nextVertRight->y - vertRight->y);;
 
-    // Consider for each row of subpixels from top to bottom.
-    for (int y = vertLeft->y; ; y++) {
+    // Consider each row of subpixels from top to bottom.
+    for (int y = vertLeft->y; y < maxY; y++) {
         // Have we reached the end of the left hand edge we are following?
-        while (y == nextVertLeft->y) {
-            nextVertLeft = (vertLeft=nextVertLeft) + 1;  // advance 
-            if (nextVertLeft > endVert) {            // wraparound
-                nextVertLeft = verts;
-            }
-            if (nextVertLeft == vertRight) {      // all y's same?
-                goto done;                      // (null polygon)
-            }
-            if (nextVertLeft->y - vertLeft->y != 0) {
-                leftSlope = ((nextVertLeft->x - vertLeft->x) << 16) / (nextVertLeft->y - vertLeft->y);
-            }
+        if (y == nextVertLeft->y) {
+            NEXT_LEFT_EDGE();
+            leftSlope = ((nextVertLeft->x - vertLeft->x) << 16) / (nextVertLeft->y - vertLeft->y);
         }
 
         // Have we reached the end of the right hand edge we are following?
-        while (y == nextVertRight->y) {
-            nextVertRight = (vertRight=nextVertRight) - 1;
-            if (nextVertRight < verts) {          // wraparound
-                nextVertRight = endVert;
-            }
-            if (nextVertRight->y - vertRight->y != 0) {
-                rightSlope = ((nextVertRight->x - vertRight->x) << 16) / (nextVertRight->y - vertRight->y);
-            }
-        }
-
-        if (y > nextVertLeft->y || y > nextVertRight->y) {
-            // Done. Mark remaining subpixel rows as empty.
-            for (; MOD_Y_RES(y); y++) {
-                subpixelRowExtents[MOD_Y_RES(y)].left = subpixelRowExtents[MOD_Y_RES(y)].right = -1;
-            }
-            RenderScanline(bmp, y / SUBYRES, col);
-            goto done;
+        if (y == nextVertRight->y) {
+            NEXT_RIGHT_EDGE();
+            rightSlope = ((nextVertRight->x - vertRight->x) << 16) / (nextVertRight->y - vertRight->y);
         }
 
         // Interpolate sub-pixel x endpoints at this y and update extremes.
@@ -153,21 +157,24 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
         SubpixelRowExtents *sre = &subpixelRowExtents[MOD_Y_RES(y)];
         sre->left = vertLeft->x + (((y - vertLeft->y) * leftSlope) >> 16);
         leftMin = IntMin(leftMin, sre->left); 
-        leftMax = IntMax(leftMax, sre->left);
 
         sre->right = vertRight->x + (((y - vertRight->y) * rightSlope) >> 16);
-        rightMin = IntMin(rightMin, sre->right);
         rightMax = IntMax(rightMax, sre->right);
 
         // Is this the last row of subpixels for this scanline?
         if (MOD_Y_RES(y) == SUBYRES - 1) { 
             RenderScanline(bmp, y / SUBYRES, col);
-            leftMin = rightMin = INT_MAX;
-            leftMax = rightMax = -1;
+            leftMin = INT_MAX;
+            rightMax = -1;
         }
     }
 
-done:
+    // Mark remaining subpixel rows as empty.
+    for (int yy = MOD_Y_RES(maxY); MOD_Y_RES(yy); yy++) {
+        subpixelRowExtents[yy].left = subpixelRowExtents[yy].right = -1;
+    }
+    RenderScanline(bmp, maxY / SUBYRES, col);
+
     // Convert the verts back into the format the caller uses. 
     for (int i = 0; i < numVerts; i++) {
         verts[i].y *= SUBXRES / SUBYRES;
