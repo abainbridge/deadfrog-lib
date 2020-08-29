@@ -218,6 +218,11 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
         memcpy(glyph->m_pixelRuns, tempRuns, glyph->m_numRuns * sizeof(EncodedRun));
     }
 
+    // Copy the space glyph into all the unprintable chars, so that DrawTextSimpleLen()
+    // doesn't crash when asked to draw one.
+    for (int i = 0; i < 32; i++)
+        fnt->glyphs[i] = fnt->glyphs[' '];
+
     delete [] tempRuns;
     delete [] tmpBitmap;
 
