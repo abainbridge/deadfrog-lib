@@ -4,6 +4,7 @@
 #include "df_font.h"
 #include "df_font_aa.h"
 #include "df_window.h"
+#include "fonts/df_mono.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -181,7 +182,7 @@ double CalcBillionBlitPixelsPerSec(DfBitmap *bmp)
         QuickBlit(bmp, 0, 0, dog);
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
-    g_testFmtString = "Billion rect fill pixels per sec";
+    g_testFmtString = "Billion blit pixels per sec";
     double numPixels = dog->width * dog->height * (double)g_iterations;
     BitmapDelete(dog);
     return (numPixels / g_duration) / 1e9;
@@ -309,9 +310,7 @@ void BenchmarkMain()
 	CreateWin(1024, 768, WT_WINDOWED, "Benchmark");
     BitmapClear(g_window->bmp, g_colourBlack);
 
-    DfFont *font = LoadFontFromFile("../../../src/fonts/deadfrog_mono.dfbf", 13);
-    if (!font)
-        font = LoadFontFromFile("../src/fonts/deadfrog_mono.dfbf", 13);
+    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
     DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
 
     DfBitmap *backBmp = BitmapCreate(1920, 1200);
