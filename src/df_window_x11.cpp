@@ -621,7 +621,12 @@ static void map_window() {
 }
 
 
-bool CreateWin(int width, int height, WindowType windowed, char const *winName) {
+bool CreateWin(int width, int height, WindowType winType, char const *winName) {
+    return CreateWinPos(0, 0, width, height, winType, winName);
+}
+
+
+bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
     wd->bmp = BitmapCreate(width, height);
@@ -635,14 +640,14 @@ bool CreateWin(int width, int height, WindowType windowed, char const *winName) 
     packet[0] = X11_OPCODE_CREATE_WINDOW | (len<<16);
     packet[1] = g_state.window_id;
     packet[2] = g_state.screens[0].root_id;
-    packet[3] = 0; // x,y pos. System will position window.
+    packet[3] = 0; // x,y pos. System will position window. TODO - use x and y
     packet[4] = width | (height<<16);
     packet[5] = 0; // DEFAULT_BORDER and DEFAULT_GROUP.
     packet[6] = 0; // Visual: Copy from parent.
     packet[7] = 0x800; // value_mask = event-mask
     packet[8] = X11_EVENT_KEYPRESS | X11_EVENT_KEYRELEASE | X11_EVENT_POINTERMOTION |
                 X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE;
-    
+
     send_buf(packet, sizeof(packet));
 
     create_gc();

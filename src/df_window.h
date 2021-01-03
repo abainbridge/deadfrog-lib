@@ -90,6 +90,7 @@ DLL_API bool GetDesktopRes(int *width, int *height);
 // Creates a Window (fullscreen is really just a big window) and a bitmap the size of the window
 // to use as the back buffer of a double buffer.
 DLL_API bool CreateWin(int width, int height, WindowType windowed, char const *winName);
+DLL_API bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName);
 
 // Blit back buffer to screen and update FPS counter.
 DLL_API void UpdateWin();

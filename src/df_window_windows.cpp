@@ -272,6 +272,12 @@ bool GetDesktopRes(int *width, int *height)
 
 bool CreateWin(int width, int height, WindowType winType, char const *winName)
 {
+    return CreateWinPos(CW_USEDEFAULT, CW_USEDEFAULT, width, height, winType, winName);
+}
+
+
+bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char const *winName)
+{
 	if (g_window)
         return false;
 
@@ -322,7 +328,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName)
 
 	// Create main window
 	g_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName,
-		windowStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height,
+		windowStyle, x, y, width, height,
 		NULL, NULL, 0/*g_hInstance*/, NULL);
 
     double now = GetRealTime();
