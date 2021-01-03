@@ -16,11 +16,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     int rv = -1;
     if (type != -1)
     {
- 		HWND hwnd = NULL;
-// 		if (g_window)
-// 			hwnd = g_window->m_hWnd;
-
-        switch (MessageBox(hwnd, message, title, type))
+        switch (MessageBox(NULL, message, title, type))
         {
             case IDABORT: rv = MsgDlgRtnCode_Abort; break;
             case IDCANCEL: rv = MsgDlgRtnCode_Cancel; break;
