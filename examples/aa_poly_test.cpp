@@ -9,12 +9,6 @@
 #include <math.h>
 
 
-inline int Round(float a)
-{
-    return floorf(a + 0.5f);
-}
-
-
 void Chevron(DfBitmap *bmp, int xOffset, int yOffset, float zoom) {
     // The left arrow is drawn as two convex polygons with anti-clockwise winding order.
     //
@@ -40,13 +34,13 @@ void Chevron(DfBitmap *bmp, int xOffset, int yOffset, float zoom) {
     int left = 10 * 16 + xOffset;
     int top = 10 * 16 + yOffset;
     int width = 15;
-    int x0 = left + Round(width * 5.1f * zoom);
-    int x1 = left + Round(width * 7.1f * zoom);
-    int x2 = left + Round(width * 8.3f * zoom);
-    int x3 = left + Round(width * 10.5f * zoom);
-    int y0 = top + Round(width * 4.2f * zoom);
-    int y1 = top + Round(width * 8.0f * zoom);
-    int y2 = top + Round(width * 11.5f * zoom);
+    int x0 = left + RoundToInt(width * 5.1f * zoom);
+    int x1 = left + RoundToInt(width * 7.1f * zoom);
+    int x2 = left + RoundToInt(width * 8.3f * zoom);
+    int x3 = left + RoundToInt(width * 10.5f * zoom);
+    int y0 = top + RoundToInt(width * 4.2f * zoom);
+    int y1 = top + RoundToInt(width * 8.0f * zoom);
+    int y2 = top + RoundToInt(width * 11.5f * zoom);
 
     {
         DfVertex verts[4] = {
