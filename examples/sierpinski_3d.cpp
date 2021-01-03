@@ -75,7 +75,7 @@ static void Render()
         {
             unsigned brightness = 15;
             unsigned char invA = 255 - brightness;
-            DfColour *pixel = g_window->bmp->lines[y] + x;
+            DfColour *pixel = &g_window->bmp->pixels[y * g_window->bmp->width] + x;
             pixel->r = (pixel->r * invA + 255 * brightness) >> 8;
             pixel->g = pixel->r;
             pixel->b = pixel->r;
@@ -87,6 +87,7 @@ static void Render()
 void Sierpinski3DMain()
 {
     CreateWin(800, 600, WT_WINDOWED, "Sierpinski Gasket Example");
+    BitmapClear(g_window->bmp, g_colourBlack);
     DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
     CreateSierpinski3D();
