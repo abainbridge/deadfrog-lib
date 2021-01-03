@@ -361,7 +361,7 @@ int DrawTextSimpleLen(DfFont *fnt, DfColour col, DfBitmap *bmp, int _x, int y, c
         unsigned char c = text[j];
         if (x + (int)fnt->glyphs[c]->m_width > bmp->clipRight)
         {
-            DrawTextSimpleClipped(fnt, col, bmp, x, y, text + j, 1);
+            x += DrawTextSimpleClipped(fnt, col, bmp, x, y, text + j, 1);
             break;
         }
 
