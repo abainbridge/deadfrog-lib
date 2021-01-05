@@ -8,7 +8,7 @@
 void HelloWorldMain()
 {
 	CreateWin(800, 600, WT_WINDOWED, "Hello World Example");
-    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
     unsigned x = 100;
     unsigned y = 100;
@@ -25,10 +25,10 @@ void HelloWorldMain()
             y = 0;
 
         DfColour col = Colour(x & 255, y & 255, (x*y) & 255);
-        DrawTextSimple(font, col, g_window->bmp, x, y, "Hello World!");
+        DrawTextSimple(g_defaultFont, col, g_window->bmp, x, y, "Hello World!");
 
         // Draw frames per second counter
-        DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
+        DrawTextRight(g_defaultFont, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
 
         UpdateWin();
         WaitVsync();
