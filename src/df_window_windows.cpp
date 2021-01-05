@@ -83,17 +83,14 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			g_priv.m_lmbPrivate = true;
 			g_priv.m_lastClickWasNC = true;
 			return -1;
-			break;
 		case WM_NCMBUTTONDOWN:
 			g_input.mmb = true;
 			g_priv.m_lastClickWasNC = true;
 			return -1;
-			break;
 		case WM_NCRBUTTONDOWN:
 			g_input.rmb = true;
 			g_priv.m_lastClickWasNC = true;
 			return -1;
-			break;
 
 		case WM_MOUSEWHEEL:
 		{
