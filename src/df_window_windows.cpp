@@ -223,21 +223,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     switch (message)
 	{
-        case WM_SIZE:
+    case WM_SIZE:
         {
-            int w = lParam & 0xffff;
-            int h = (lParam & 0xffff0000) >> 16;
-            if (w != win->bmp->width || h != win->bmp->height)
+            BitmapDelete(win->bmp);
+            int w = LOWORD(lParam);
+            int h = HIWORD(lParam);
+            win->bmp = BitmapCreate(w, h);
+            if (g_window->redrawCallback)
             {
-                BitmapDelete(win->bmp);
-                win->bmp = BitmapCreate(w, h);
+                g_window->redrawCallback();
             }
             break;
         }
-
-        case WM_PAINT:
-            return DefWindowProc(hWnd, message, wParam, lParam);
-            break;
 
         case WM_CLOSE:
             if (win)
@@ -392,4 +389,10 @@ bool WaitVsync()
     }
 
     return false;
+}
+
+
+void RegisterRedrawCallback(RedrawCallback *proc)
+{
+    g_window->redrawCallback = proc;
 }

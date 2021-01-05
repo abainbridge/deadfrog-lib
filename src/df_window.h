@@ -25,6 +25,8 @@ extern "C"
 #define MAX_KEYS_TYPED_PER_FRAME 16
 #define KEY_MAX 256
 
+typedef void (RedrawCallback)(void);
+
 
 typedef struct
 {
@@ -71,6 +73,7 @@ typedef struct _DfWindow
     bool                windowClosed;
     unsigned int	    fps;
     double              advanceTime; // Time between last two calls of UpdateWin().
+    RedrawCallback      *redrawCallback;
     // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
 } DfWindow;
 
@@ -99,6 +102,12 @@ DLL_API void ShowMouse();
 DLL_API void HideMouse();
 
 DLL_API bool WaitVsync();   // Returns false if not supported.
+
+// Register a callback that will be called when the window is resized. This gives the
+// app a chance to redraw the window contents immediately. Without this, when the
+// window is enlarged, the new part of the window will appear blank until the resize
+// drag ends.
+DLL_API void RegisterRedrawCallback(RedrawCallback *proc);
 
 
 DLL_API char const *GetKeyName(int i);
