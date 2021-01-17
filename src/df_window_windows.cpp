@@ -99,20 +99,6 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			break;
 		}
 
-		case WM_NCMOUSEMOVE:
-			g_input.mouseX = -1;
-			g_input.mouseY = -1;
-			break;
-
-		case WM_MOUSEMOVE:
-		{
-			short newPosX = lParam & 0xFFFF;
-			short newPosY = short(lParam >> 16);
-			g_input.mouseX = newPosX;
-			g_input.mouseY = newPosY;
-			break;
-		}
-
 		case WM_SYSKEYUP:
             ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYUP", wParam);
 
@@ -183,6 +169,20 @@ bool InputPoll()
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     } 
+
+    // We request the mouse position every InputPoll instead of listening
+    // for WM_MOUSEMOVE events because Windows doesn't send us those once
+    // the cursor is outside the client rectangle. Using GetCursorPos()
+    // gives us correct and up-to-date cursor position info all the time.
+    POINT point;
+    if (GetCursorPos(&point) != 0)
+    {
+        if (ScreenToClient(g_hWnd, &point))
+        {
+            g_input.mouseX = point.x;
+            g_input.mouseY = point.y;
+        }
+    }
 
     InputPollInternal();
 
