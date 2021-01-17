@@ -24,8 +24,6 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 
 	switch (message)
 	{
-        case WM_ACTIVATE:
-            break;
 		case WM_SETFOCUS:
 		case WM_NCACTIVATE:
 			g_input.windowHasFocus = true;
@@ -39,9 +37,6 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
             g_input.mouseX = -1;
             g_input.mouseY = -1;
 			break;
-
-        case WM_SYSCHAR:
-            break;
 
 		case WM_CHAR:
 			if (g_input.numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
@@ -220,7 +215,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     switch (message)
 	{
-    case WM_SIZE:
+        case WM_WINDOWPOSCHANGED:
+        {
+            WINDOWPOS *wp = (WINDOWPOS *)lParam;
+            win->left = wp->x;
+            win->top = wp->y;
+            break;
+        }
+
+        case WM_SIZE:
         {
             BitmapDelete(win->bmp);
             int w = LOWORD(lParam);

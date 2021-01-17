@@ -70,6 +70,14 @@ typedef struct
 typedef struct _DfWindow
 {
     DfBitmap            *bmp;
+
+    // Position of the window on the desktop. This is the top left of the
+    // non-client rectangle. The main use is to allow your app to restore its
+    // window to the same position is was at on the previous run. eg store
+    // top,left in a config file before your app is closed, load them back in
+	// next time the app starts and pass them to CreateWinPos().
+    int                 left, top;
+
     bool                windowClosed;
     unsigned int	    fps;
     double              advanceTime; // Time between last two calls of UpdateWin().
