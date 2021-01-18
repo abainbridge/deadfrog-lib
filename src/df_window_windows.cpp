@@ -14,6 +14,7 @@ typedef void (WINAPI DwmFlushFunc)();
 
 static HWND g_hWnd = 0;
 static DwmFlushFunc *g_dwmFlush = NULL;
+static MouseCursorType g_currentMouseCursorType = MCT_ARROW;
 
 
 
@@ -216,9 +217,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
 	{
         case WM_SETCURSOR:
-            // Handling this prevents Windows from constantly reverting the
-            // mouse cursor to the arrow cursor.
-            return 0;
+            if (LOWORD(lParam) == HTCLIENT)
+            {
+                // Ignore set cursor messages, otherwise Windows will restore the
+                // cursor to the arrow bitmap every time the mouse moves. We must
+                // only do this if the mouse is in our client area, otherwise we
+                // will prevent things like the Window Manager setting the correct
+                // resize cursor when the user attempts to resize the window by
+                // dragging the frame. We know the cursor is in our client area,
+                // rather than someone else's, because this event is only sent if
+                // the cursor is over our window.
+                SetMouseCursor(g_currentMouseCursorType);
+                break;
+            }
+            else
+            {
+                return DefWindowProc(hWnd, message, wParam, lParam);
+            }
 
         case WM_WINDOWPOSCHANGED:
         {
@@ -339,8 +354,6 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
     HMODULE dwm = LoadLibrary("dwmapi.dll");
     g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
 
-    SetMouseCursor(MCT_ARROW);
-
     InitInput();
 	return true;
 }
@@ -404,6 +417,8 @@ void SetMouseCursor(MouseCursorType t)
         SetCursor(LoadCursor(NULL, IDC_SIZENS));
         break;
     }
+
+    g_currentMouseCursorType = t;
 }
 
 
