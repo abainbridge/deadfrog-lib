@@ -215,6 +215,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     switch (message)
 	{
+        case WM_SETCURSOR:
+            // Handling this prevents Windows from constantly reverting the
+            // mouse cursor to the arrow cursor.
+            return 0;
+
         case WM_WINDOWPOSCHANGED:
         {
             WINDOWPOS *wp = (WINDOWPOS *)lParam;
@@ -290,7 +295,6 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
     WNDCLASS wc = { 0 };
 	wc.lpfnWndProc = WndProc;
 	wc.hInstance = GetModuleHandle(0);
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.lpszClassName = winName;
 	RegisterClass(&wc);
 
@@ -326,7 +330,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 	// Create main window
 	g_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName,
 		windowStyle, x, y, width, height,
-		NULL, NULL, 0/*g_hInstance*/, NULL);
+		NULL, NULL, 0, NULL);
 
     double now = GetRealTime();
     g_lastUpdateTime = now;
@@ -334,6 +338,8 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 
     HMODULE dwm = LoadLibrary("dwmapi.dll");
     g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
+
+    SetMouseCursor(MCT_ARROW);
 
     InitInput();
 	return true;
@@ -381,9 +387,37 @@ void HideMouse()
 }
 
 
+void SetMouseCursor(MouseCursorType t)
+{
+    switch (t)
+    {
+    case MCT_ARROW:
+        SetCursor(LoadCursor(NULL, IDC_ARROW));
+        break;
+    case MCT_IBEAM:
+        SetCursor(LoadCursor(NULL, IDC_IBEAM));
+        break;
+    case MCT_RESIZE_WIDTH:
+        SetCursor(LoadCursor(NULL, IDC_SIZEWE));
+        break;
+    case MCT_RESIZE_HEIGHT:
+        SetCursor(LoadCursor(NULL, IDC_SIZENS));
+        break;
+    }
+}
+
+
+void BringWindowToFront()
+{
+    BringWindowToTop(g_hWnd);
+    SetForegroundWindow(g_hWnd);
+}
+
+
 bool WaitVsync()
 {
-    if (g_dwmFlush) {
+    if (g_dwmFlush)
+    {
         g_dwmFlush();
         return true;
     }

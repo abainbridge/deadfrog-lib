@@ -93,6 +93,15 @@ typedef enum
 } WindowType;
 
 
+typedef enum
+{
+    MCT_ARROW,
+    MCT_IBEAM,
+    MCT_RESIZE_WIDTH,
+    MCT_RESIZE_HEIGHT
+} MouseCursorType;
+
+
 DLL_API DfWindow *g_window;
 DLL_API DfInput g_input;
 
@@ -108,6 +117,10 @@ DLL_API void UpdateWin();
 
 DLL_API void ShowMouse();
 DLL_API void HideMouse();
+
+DLL_API void SetMouseCursor(MouseCursorType t);
+
+DLL_API void BringWindowToFront();
 
 DLL_API bool WaitVsync();   // Returns false if not supported.
 
