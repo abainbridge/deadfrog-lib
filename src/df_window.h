@@ -120,6 +120,8 @@ DLL_API void HideMouse();
 
 DLL_API void SetMouseCursor(MouseCursorType t);
 
+DLL_API bool IsWindowMaximized();
+DLL_API void SetMaximizedState(bool maximize);
 DLL_API void BringWindowToFront();
 
 DLL_API bool WaitVsync();   // Returns false if not supported.

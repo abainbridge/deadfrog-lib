@@ -434,6 +434,28 @@ void SetMouseCursor(MouseCursorType t)
 }
 
 
+bool IsWindowMaximized()
+{
+    WINDOWPLACEMENT winPlacement;
+    winPlacement.length = sizeof(WINDOWPLACEMENT);
+    GetWindowPlacement(g_hWnd, &winPlacement);
+    return winPlacement.showCmd == SW_SHOWMAXIMIZED;
+}
+
+
+void SetMaximizedState(bool maximize)
+{
+    if (maximize)
+    {
+        ShowWindow(g_hWnd, SW_MAXIMIZE);
+    }
+    else
+    {
+        ShowWindow(g_hWnd, SW_RESTORE);
+    }
+}
+
+
 void BringWindowToFront()
 {
     BringWindowToTop(g_hWnd);
