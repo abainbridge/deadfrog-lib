@@ -47,8 +47,8 @@ typedef struct
 	bool		mmbUnClicked;
     bool		rmbUnClicked;
 
-    int			mouseX;				// Mouse pos now. Can changes through the course of the frame
-    int			mouseY;
+    int			mouseX;				// Mouse pos captured the when InputPoll() was called last.
+    int			mouseY;             // Coords are relative to the top left of g_window->bmp.
     int			mouseZ;
 
     int			mouseVelX;

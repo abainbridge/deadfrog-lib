@@ -402,6 +402,18 @@ void HideMouse()
 
 void SetMouseCursor(MouseCursorType t)
 {
+    // Ignore the request if the cursor is outside the client rectangle because
+    // otherwise if your app sets the mouse cursor repeatedly, in the main loop 
+    // say, then this would clash with the Windows' window manager setting the 
+    // resizing cursor when the mouse was in the non-client rectangle.
+    if (g_input.mouseX < 0 ||
+        g_input.mouseX >= g_window->bmp->width ||
+        g_input.mouseY < 0 ||
+        g_input.mouseY >= g_window->bmp->height)
+    {
+        return;
+    }
+
     switch (t)
     {
     case MCT_ARROW:
