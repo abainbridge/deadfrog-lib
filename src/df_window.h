@@ -108,8 +108,11 @@ DLL_API DfInput g_input;
 DLL_API bool GetDesktopRes(int *width, int *height);
 
 // Creates a Window (fullscreen is really just a big window) and a bitmap the size of the window
-// to use as the back buffer of a double buffer.
+// to use as the back buffer of a double buffer. Position of the window is determined by the
+// system.
 DLL_API bool CreateWin(int width, int height, WindowType windowed, char const *winName);
+
+// Same as above but position of the window is specified as x, y.
 DLL_API bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName);
 
 // Blit back buffer to screen and update FPS counter.
@@ -123,6 +126,7 @@ DLL_API void SetMouseCursor(MouseCursorType t);
 DLL_API bool IsWindowMaximized();
 DLL_API void SetMaximizedState(bool maximize);
 DLL_API void BringWindowToFront();
+DLL_API void SetWindowTitle(char const *title);
 
 DLL_API bool WaitVsync();   // Returns false if not supported.
 

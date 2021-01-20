@@ -463,6 +463,12 @@ void BringWindowToFront()
 }
 
 
+void SetWindowTitle(char const *title)
+{
+    SetWindowText(g_hWnd, title);
+}
+
+
 bool WaitVsync()
 {
     if (g_dwmFlush)
