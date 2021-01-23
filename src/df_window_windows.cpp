@@ -235,6 +235,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
 
+        case WM_DROPFILES:
+            if (g_window->fileDropCallback)
+            {
+                HDROP drop = (HDROP)wParam;
+                int numFiles = DragQueryFile(drop, -1, NULL, 0);
+                for (int i = 0; i < numFiles; ++i)
+                {
+                    char buf[MAX_PATH + 1];
+                    DragQueryFile(drop, i, buf, MAX_PATH);
+                    g_window->fileDropCallback(buf);
+                }
+            }
+            break;
+
         case WM_WINDOWPOSCHANGED:
         {
             WINDOWPOS *wp = (WINDOWPOS *)lParam;
@@ -353,6 +367,9 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 
     HMODULE dwm = LoadLibrary("dwmapi.dll");
     g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
+
+    // Register as a drag-and-drop target.
+    DragAcceptFiles(g_hWnd, true);
 
     InitInput();
 	return true;

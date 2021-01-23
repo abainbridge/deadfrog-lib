@@ -26,6 +26,7 @@ extern "C"
 #define KEY_MAX 256
 
 typedef void (RedrawCallback)(void);
+typedef void (FileDropCallback)(char const *path);
 
 
 typedef struct
@@ -82,6 +83,9 @@ typedef struct _DfWindow
     unsigned int	    fps;
     double              advanceTime; // Time between last two calls of UpdateWin().
     RedrawCallback      *redrawCallback;
+
+    // A callback that will be called when files are drag-and-dropped onto the window.
+    FileDropCallback    *fileDropCallback;
     // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
 } DfWindow;
 
