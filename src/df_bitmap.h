@@ -36,6 +36,7 @@ DLL_API DfBitmap   *BitmapCreate(int width, int height);
 DLL_API void        BitmapDelete(DfBitmap *bmp);
 
 DLL_API void        SetClipRect     (DfBitmap *bmp, int x, int y, int w, int h);
+DLL_API void        GetClipRect     (DfBitmap *bmp, int *x, int *y, int *w, int *h);
 DLL_API void        ClearClipRect   (DfBitmap *bmp); // Sets bitmap's full size as the clip rect.
 
 DLL_API void        BitmapClear     (DfBitmap *bmp, DfColour c);

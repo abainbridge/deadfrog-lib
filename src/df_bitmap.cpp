@@ -59,6 +59,15 @@ void SetClipRect(DfBitmap *bmp, int x, int y, int w, int h)
 }
 
 
+void GetClipRect(DfBitmap *bmp, int *x, int *y, int *w, int *h)
+{
+    *x = bmp->clipLeft;
+    *y = bmp->clipTop;
+    *w = bmp->clipRight - bmp->clipLeft;
+    *h = bmp->clipBottom - bmp->clipTop;
+}
+
+
 void ClearClipRect(DfBitmap *bmp)
 {
     bmp->clipLeft = bmp->clipTop = 0;
