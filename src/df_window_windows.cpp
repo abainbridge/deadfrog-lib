@@ -230,10 +230,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 SetMouseCursor(g_currentMouseCursorType);
                 break;
             }
-            else
-            {
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
+            goto _default; // Pretend we didn't handle this message.
 
         case WM_DROPFILES:
             if (g_window->fileDropCallback)
@@ -254,7 +251,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             WINDOWPOS *wp = (WINDOWPOS *)lParam;
             win->left = wp->x;
             win->top = wp->y;
-            break;
+            goto _default; // Pretend we didn't handle this message.
         }
 
         case WM_SIZE:
@@ -275,6 +272,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			    win->windowClosed = true;
 			return 0;
 
+        _default:
 		default:
 			if (!win || EventHandler(message, wParam, lParam) == -1)
 				return DefWindowProc(hWnd, message, wParam, lParam);
