@@ -202,7 +202,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         SendMessage(hWnd, WM_CLOSE, 0, 0);
 
     switch (message)
-    {
+	{
     case WM_LBUTTONDOWN:
     case WM_MBUTTONDOWN:
     case WM_RBUTTONDOWN:
@@ -401,6 +401,12 @@ static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp)
     );
 
     ReleaseDC(g_hWnd, dc);
+}
+
+
+void *GetWindowHandle()
+{
+    return g_hWnd;
 }
 
 

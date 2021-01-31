@@ -122,6 +122,9 @@ DLL_API bool CreateWinPos(int x, int y, int width, int height, WindowType window
 // Blit back buffer to screen and update FPS counter.
 DLL_API void UpdateWin();
 
+// Windows only. Returns the Window handle because lots of things on Windows need this.
+DLL_API void *GetWindowHandle();
+
 DLL_API void ShowMouse();
 DLL_API void HideMouse();
 
