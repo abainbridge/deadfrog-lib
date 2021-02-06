@@ -10,7 +10,7 @@
 #include <stdlib.h>
 
 
-void DebugOut(char *fmt, ...)
+void DebugOut(char const *fmt, ...)
 {
     char buf[512];
     va_list ap;

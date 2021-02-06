@@ -28,7 +28,7 @@ extern "C"
 #endif
 
 
-void DebugOut(char *fmt, ...);
+void DebugOut(char const *fmt, ...);
 
 void ReleaseAssert(bool condition, char const *fmt, ...);
 void ReleaseWarn(bool condition, char const *fmt, ...);
