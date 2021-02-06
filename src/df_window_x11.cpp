@@ -720,6 +720,17 @@ bool InputPoll()
 }
 
 
+bool IsWindowMaximized()
+{
+    return false;
+}
+
+
+void SetMaximizedState(bool maximize)
+{
+}
+
+
 #if 0
 void Sierpinski3DMain();
 int main() {

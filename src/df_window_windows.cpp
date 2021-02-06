@@ -110,7 +110,6 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 		case WM_SYSKEYDOWN:
 		{
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
-			//int flags = (short)HIWORD(lParam);
 			g_input.keys[wParam] = 1;
 			g_priv.m_newKeyDowns[wParam] = 1;
 			break;
@@ -200,7 +199,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     if (message == WM_SYSKEYDOWN && wParam == 115)
         SendMessage(hWnd, WM_CLOSE, 0, 0);
-
     switch (message)
 	{
     case WM_LBUTTONDOWN:
@@ -217,6 +215,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     switch (message)
 	{
+// TODO. Handle WM_SYSCOMMAND, and implement own window resizing code.
+// Remove resize callback.
+// Remove all the mouse button msg handlers and 
+// set/release capture stuff and use GetAsyncKeyState(VK_LBUTTON) instead.
+// Merge the two WndProc functions.
+//         case WM_SYSCOMMAND:
+//             if ((wParam & 0xfff0) == SC_SIZE)
+//             {
+//                 GetWindowRect(g_hWnd, &g_rect);
+//                 xx = g_input.mouseX;
+//                 yy = g_input.mouseY;
+//                 moving = 1;
+//                 return 0;
+//             }
+//             return DefWindowProc(hWnd, message, wParam, lParam);
+
         case WM_SETCURSOR:
             if (LOWORD(lParam) == HTCLIENT)
             {
@@ -500,10 +514,4 @@ bool WaitVsync()
     }
 
     return false;
-}
-
-
-void RegisterRedrawCallback(RedrawCallback *proc)
-{
-    g_window->redrawCallback = proc;
 }

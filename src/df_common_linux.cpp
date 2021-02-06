@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 
-void DebugOut(char *fmt, ...)
+void DebugOut(char const *fmt, ...)
 {
     va_list ap;
     va_start (ap, fmt);

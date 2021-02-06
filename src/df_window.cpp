@@ -282,3 +282,9 @@ void UpdateWin()
 
     BlitBitmapToWindow(g_window, g_window->bmp);
 }
+
+
+void RegisterRedrawCallback(RedrawCallback *proc)
+{
+    g_window->redrawCallback = proc;
+}
