@@ -714,9 +714,14 @@ bool WaitVsync() {
 
 bool InputPoll()
 {
-    InputPollInternal();
     poll_socket(NULL, 0);
+    InputPollInternal();
     return true;
+}
+
+
+void SetMouseCursor(MouseCursorType t)
+{
 }
 
 
@@ -729,6 +734,17 @@ bool IsWindowMaximized()
 void SetMaximizedState(bool maximize)
 {
 }
+
+
+void BringWindowToFront()
+{
+}
+
+
+void SetWindowTitle(char const *title)
+{
+}
+
 
 
 #if 0
