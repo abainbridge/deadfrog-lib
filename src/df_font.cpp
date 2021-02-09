@@ -316,7 +316,7 @@ static int DrawTextSimpleClipped(DfFont *fnt, DfColour col, DfBitmap *bmp, int _
     if (y + fnt->charHeight < bmp->clipTop || y > bmp->clipBottom)
         return 0;
 
-    for (int j = 0; text[j] && j < maxChars; j++)
+    for (int j = 0; j < maxChars && text[j]; j++)
     {
         if (x > bmp->clipRight)
             break;
