@@ -356,7 +356,7 @@ int DrawTextSimpleLen(DfFont *fnt, DfColour col, DfBitmap *bmp, int _x, int y, c
         return DrawTextSimpleClipped(fnt, col, bmp, _x, y, text, maxChars);
 
     DfColour *startRow = bmp->pixels + y * bmp->width;
-    for (int j = 0; text[j] && j < maxChars; j++)
+    for (int j = 0; j < maxChars && text[j]; j++)
     {
         unsigned char c = text[j];
         if (x + (int)fnt->glyphs[c]->m_width > bmp->clipRight)
