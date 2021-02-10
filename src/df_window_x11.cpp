@@ -16,12 +16,24 @@
 
 
 
+// To debug what we send to the xserver, change the following line:
+//    strcpy(serv_addr.sun_path, "/tmp/.X11-unix/X0");
+// to:
+//    strcpy(serv_addr.sun_path, "/tmp/.X11-unix/X1");
+//
+// Then, in another terminal, run:
+//    xtrace -D:1 -d:0 -k -w
+
+
+
+
 //
 // X11 protocol definitions
 
 enum {
     X11_OPCODE_CREATE_WINDOW = 1,
     X11_OPCODE_MAP_WINDOW = 8,
+    X11_OPCODE_CHANGE_PROPERTY = 18,
     X11_OPCODE_QUERY_KEYMAP = 44,
     X11_OPCODE_CREATE_GC = 55,
     X11_OPCODE_PUT_IMAGE = 72,
@@ -29,6 +41,8 @@ enum {
     X11_CW_EVENT_MASK = 1<<11,
     X11_EVENT_MASK_KEY_PRESS = 1,
     X11_EVENT_MASK_POINTER_MOTION = 1<<6,
+
+    X11_ATOM_WM_NAME = 39
 };
 
 enum {
@@ -652,6 +666,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 
     create_gc();
     map_window();
+    SetWindowTitle(winName);
 
     // Make socket non-blocking.
     int flags = fcntl(g_state.socket_fd, F_GETFL, 0);
@@ -712,37 +727,49 @@ bool WaitVsync() {
 }
 
 
-bool InputPoll()
-{
+bool InputPoll() {
     poll_socket(NULL, 0);
     InputPollInternal();
     return true;
 }
 
 
-void SetMouseCursor(MouseCursorType t)
-{
+void SetMouseCursor(MouseCursorType t) {
 }
 
 
-bool IsWindowMaximized()
-{
+bool IsWindowMaximized() {
     return false;
 }
 
 
-void SetMaximizedState(bool maximize)
-{
+void SetMaximizedState(bool maximize) {
 }
 
 
-void BringWindowToFront()
-{
+void BringWindowToFront() {
 }
 
 
-void SetWindowTitle(char const *title)
-{
+void SetWindowTitle(char const *title) {
+    int headerNumBytes = 24;
+    int titleLen = strlen(title);
+
+    uint32_t packet[64];
+    int maxTitleLen = sizeof(packet) - headerNumBytes;
+    if (titleLen > maxTitleLen)
+        titleLen = maxTitleLen;
+
+    int len = (headerNumBytes + titleLen + 3) / 4;
+    packet[0] = X11_OPCODE_CHANGE_PROPERTY | (len << 16);
+    packet[1] = g_state.window_id;
+    packet[2] = X11_ATOM_WM_NAME; // Property
+    packet[3] = 0x1f; // Type
+    packet[4] = 8; // Format
+    packet[5] = titleLen;
+    memcpy(&packet[6], title, titleLen);
+
+    send_buf(packet, len * 4);
 }
 
 
