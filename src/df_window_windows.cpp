@@ -26,7 +26,6 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 	switch (message)
 	{
 		case WM_SETFOCUS:
-		case WM_NCACTIVATE:
 			g_input.windowHasFocus = true;
 			// Clear keyboard state when we regain focus
             memset(g_priv.m_newKeyDowns, 0, KEY_MAX);
