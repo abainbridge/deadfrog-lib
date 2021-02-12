@@ -34,8 +34,6 @@ int EventHandler(unsigned int message, unsigned int wParam, int lParam)
             return -1;
 		case WM_KILLFOCUS:
 			g_input.windowHasFocus = false;
-            g_input.mouseX = -1;
-            g_input.mouseY = -1;
 			break;
 
 		case WM_CHAR:
