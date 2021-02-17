@@ -47,6 +47,7 @@ void BitmapDelete(DfBitmap *bmp)
 	delete [] bmp->lines;
 	bmp->pixels = NULL;
 	bmp->lines = NULL;
+    delete bmp;
 }
 
 
