@@ -19,7 +19,7 @@ static MouseCursorType g_currentMouseCursorType = MCT_ARROW;
 
 
 // Returns 0 if the event is handled here, -1 otherwise
-int EventHandler(unsigned int message, unsigned int wParam, int lParam)
+static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 {
     static char const *s_keypressOutOfRangeMsg = "Keypress value out of range (%s: wParam = %d)";
 
