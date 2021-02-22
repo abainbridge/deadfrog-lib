@@ -54,6 +54,7 @@ enum {
      X11_EVENT_LEAVEWINDOW = 0x20,
      X11_EVENT_POINTERMOTION = 0x40,
      X11_EVENT_POINTERMOTIONHINT = 0x80
+//     X11_EVENT_RESIZEREDIRECT = 0x40000
 //      #x00000100     Button1Motion
 //      #x00000200     Button2Motion
 //      #x00000400     Button3Motion
@@ -684,7 +685,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 }
 
 
-static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp) {
+static void BlitBitmapToWindow(DfWindow *wd) {
     // *** Send back-buffer to Xserver.
     int W = wd->bmp->width;
     int H = wd->bmp->height;

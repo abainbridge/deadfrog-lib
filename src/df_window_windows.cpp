@@ -209,7 +209,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         ReleaseCapture();
         break;
     }
-
+    
     switch (message)
 	{
 // TODO. Handle WM_SYSCOMMAND, and implement own window resizing code.
@@ -388,8 +388,9 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 
 // This function copies a DfBitmap to the window, so you can actually see it.
 // SetBIBitsToDevice seems to be the fastest way to achieve this on most hardware.
-static void BlitBitmapToWindow(DfWindow *wd, DfBitmap *bmp)
+static void BlitBitmapToWindow(DfWindow *wd)
 {
+    DfBitmap *bmp = wd->bmp;
     BITMAPINFO binfo;
     binfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     binfo.bmiHeader.biWidth = bmp->width;

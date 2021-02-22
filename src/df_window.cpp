@@ -280,7 +280,7 @@ void UpdateWin()
 
     // *** Swap buffers ***
 
-    BlitBitmapToWindow(g_window, g_window->bmp);
+    BlitBitmapToWindow(g_window);
 }
 
 
