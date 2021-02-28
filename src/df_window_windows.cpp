@@ -23,9 +23,17 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 {
     static char const *s_keypressOutOfRangeMsg = "Keypress value out of range (%s: wParam = %d)";
 
-	switch (message)
+    switch (message)
 	{
-		case WM_SETFOCUS:
+        case WM_SYSCHAR:
+            // We get one of these if the user presses alt+c. I don't understand exactly
+            // what is going on here. If we don't handle it, we will then get a WM_SYSCOMMAND
+            // message and if we don't handle that, the system's default handler will play the
+            // "Asterisk" sound which we don't want. If we do handle it and return 0,
+            // everything is fine. Weird.
+            break;
+
+        case WM_SETFOCUS:
 			g_input.windowHasFocus = true;
 			// Clear keyboard state when we regain focus
             memset(g_priv.m_newKeyDowns, 0, KEY_MAX);
@@ -155,7 +163,7 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 	}
 
     g_input.eventSinceAdvance = true;
-    
+
     return 0;
 }
 
