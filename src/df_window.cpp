@@ -123,13 +123,13 @@ char const *GetKeyName(int i)
 		case 39:  return "Right";
 		case 40:  return "Down";
 		case 45:  return "Insert";
-		case 46:  return "Del";
 		case 106: return "*";
 		case 107: return "KeypadPlus";
 		case 109: return "KeypadMinus";
 		case 110: return "KeypadDel";
 		case 111: return "KeypadSlash";
-		case 144: return "NumLock";
+        case 127: return "Del";
+        case 144: return "NumLock";
 		case 145: return "ScrLock";
 		case 186: return ":";
 		case 187: return "=";
