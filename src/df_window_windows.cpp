@@ -126,14 +126,21 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 		case WM_KEYDOWN:
 		{
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYDOWN", wParam);
-			if (wParam == KEY_DEL)
+
+            // The Windows key code for the DELETE key is 46. This is also the ASCII value of '.'
+            // This is a problem because we need to put delete and backspace keypresses into the
+            // typed text array (so that they are processed in the correct order with other
+            // typed text). So, we convert 46 into KEY_DEL (127).
+            if (wParam == 46)
+                wParam = KEY_DEL;
+
+            if (wParam == KEY_DEL)
 			{
-				g_priv.m_newKeysTyped[g_input.numKeysTyped] = 127;
+                g_priv.m_newKeysTyped[g_input.numKeysTyped] = KEY_DEL;
 				g_priv.m_newNumKeysTyped++;
 			}
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
             {
-                //int res = GetAsyncKeyState(VK_MENU);
                 // Key event is the Control part of Alt_Gr, so throw it away. There
                 // will be an event for the alt part too.
                 break;
@@ -141,7 +148,7 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			g_priv.m_newKeyDowns[wParam] = 1;
 			g_input.keys[wParam] = 1;
 			break;
-		}
+        }
 
 		default:
 			return -1;

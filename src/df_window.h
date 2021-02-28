@@ -177,7 +177,6 @@ enum
     KEY_UP = 38,
     KEY_DOWN = 40,
     KEY_INSERT = 45,
-    KEY_DEL = 46,
 
     KEY_0 = 48,
     KEY_1 = 49,
@@ -248,6 +247,8 @@ enum
     KEY_F10 = 121,
     KEY_F11 = 122,
     KEY_F12 = 123,
+
+    KEY_DEL = 127,
 
     KEY_NUMLOCK = 144,
     KEY_SCRLOCK = 145,
