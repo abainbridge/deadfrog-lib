@@ -772,7 +772,7 @@ void SetWindowTitle(char const *title) {
     int headerNumBytes = 24;
     int titleLen = strlen(title);
 
-    uint32_t packet[64];
+    uint32_t packet[64] = { 0 };
     int maxTitleLen = sizeof(packet) - headerNumBytes;
     if (titleLen > maxTitleLen)
         titleLen = maxTitleLen;
