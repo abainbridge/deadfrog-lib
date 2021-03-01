@@ -411,6 +411,24 @@ static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
 }
 
 
+static void map_window() {
+    int const len = 2;
+    uint32_t packet[len];
+    packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
+    packet[1] = g_state.window_id;
+    send_buf(packet, 8);
+}
+
+
+// static void unmap_window() {
+//     int const len = 2;
+//     uint32_t packet[len];
+//     packet[0] = X11_OPCODE_UNMAP_WINDOW | (len<<16);
+//     packet[1] = g_state.window_id;
+//     send_buf(packet, 8);
+// }
+
+
 // This function is the only way that data is received from the X11 server.
 static void poll_socket(void *buf, size_t expected_len) {
     ssize_t len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), 0);
@@ -623,15 +641,6 @@ static void create_gc() {
     packet[3] = 0; // Value mask.
 
     send_buf(packet, sizeof(packet));
-}
-
-
-static void map_window() {
-    int const len = 2;
-    uint32_t packet[len];
-    packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
-    packet[1] = g_state.window_id;
-    send_buf(packet, 8);
 }
 
 
