@@ -272,7 +272,7 @@ static int x11_keycode_to_df_keycode(int i) {
 }
 
 
-static void HandleErrorEvent() {
+static void HandleErrorMessage() {
     switch (g_state.recv_buf[1]) {
         case 9: printf("Bad drawable\n"); break;
         case 16: printf("Bad length\n"); break;
@@ -303,7 +303,8 @@ static void send_buf(const void *_buf, int len) {
         }
 
         len -= size_sent;
-        // TODO, assert that (size_to_send >= 0)
+
+        if (len < 0) FATAL_ERROR("send_buf bug");
         if (len == 0) break;
 
         buf += size_sent;
@@ -411,22 +412,20 @@ static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
 
 
 // This function is the only way that data is received from the X11 server.
-// Because the X11 protocol is asynchronous, we might receive events here when
-// we are waiting for a response.
-//
-// buf should be a pointer to an array if you expect a response, otherwise it
-// should be NULL.
-//
-// expected_len is the length of the expected reply. It is ignored if buf == NULL.
 static void poll_socket(void *buf, size_t expected_len) {
     ssize_t len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), 0);
     if (len == 0) {
         printf("X11 server closed the socket\n");
         return;
-    }
+}
     if (len < 0) {
         if (errno == EAGAIN) {
             return;
+//     int const len = 2;
+//     uint32_t packet[len];
+//     packet[0] = X11_OPCODE_UNMAP_WINDOW | (len<<16);
+//     packet[1] = g_state.window_id;
+//     send_buf(packet, 8);
         }
 
         perror("");
@@ -441,7 +440,7 @@ static void poll_socket(void *buf, size_t expected_len) {
     int keep_going = 1;
     while (keep_going && g_state.recv_buf_num_bytes) {
         switch (g_state.recv_buf[0]) {
-        case 0: HandleErrorEvent(); break;
+        case 0: HandleErrorMessage(); break;
         case 1: // Response of some kind.
             // Handle reply.
             if (g_state.recv_buf_num_bytes >= expected_len) {
@@ -634,6 +633,7 @@ static void map_window() {
     packet[1] = g_state.window_id;
     send_buf(packet, 8);
 }
+
 
 bool CreateWin(int width, int height, WindowType winType, char const *winName) {
     return CreateWinPos(0, 0, width, height, winType, winName);
