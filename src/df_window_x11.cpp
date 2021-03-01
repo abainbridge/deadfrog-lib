@@ -53,7 +53,8 @@ enum {
      X11_EVENT_ENTERWINDOW = 0x10,
      X11_EVENT_LEAVEWINDOW = 0x20,
      X11_EVENT_POINTERMOTION = 0x40,
-     X11_EVENT_POINTERMOTIONHINT = 0x80
+     X11_EVENT_POINTERMOTIONHINT = 0x80,
+     X11_EVENT_STRUCTURE_NOTIFY = 0x20000
 //     X11_EVENT_RESIZEREDIRECT = 0x40000
 //      #x00000100     Button1Motion
 //      #x00000200     Button2Motion
@@ -429,139 +430,146 @@ static void map_window() {
 // }
 
 
+static bool handle_event() {
+    if (g_state.recv_buf_num_bytes < 32) {
+        return false;
+    }
+
+    switch (g_state.recv_buf[0]) {
+    case 2: // KeyPress event.
+        {
+            unsigned char x11_keycode = g_state.recv_buf[1];
+            unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
+            g_priv.m_newKeyDowns[df_keycode] = 1;
+            g_input.keys[df_keycode] = 1;
+            int modifiers = g_state.recv_buf[28];
+            char ascii = df_keycode_to_ascii(df_keycode, modifiers);
+    //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
+
+            if (ascii) {
+    			g_priv.m_newKeysTyped[g_priv.m_newNumKeysTyped] = ascii;
+    			g_priv.m_newNumKeysTyped++;
+            }
+            break;
+        }
+
+    case 3: // KeyRelease event.
+        {
+            unsigned char x11_keycode = g_state.recv_buf[1];
+            unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
+            g_priv.m_newKeyUps[df_keycode] = 1;
+            g_input.keys[df_keycode] = 0;
+    //printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
+            break;
+        }
+
+    case 4: // Mouse down button event (includes scroll motion).
+        switch (g_state.recv_buf[1]) {
+            case 1:
+                g_input.lmbClicked = 1;
+    			g_priv.m_lmbPrivate = true;
+                break;
+            case 2: g_input.mmbClicked = 1; break;
+            case 3: g_input.rmbClicked = 1; break;
+            case 4: g_input.mouseZ++; break;
+            case 5: g_input.mouseZ--; break;
+        }
+        //printf("down:%i\n", g_state.recv_buf[1]);
+        break;
+
+    case 5: // Mouse button up event.
+        switch (g_state.recv_buf[1]) {
+            case 1:
+                g_input.lmbUnClicked = 1;
+    			g_priv.m_lmbPrivate = false;
+                break;
+            case 2: g_input.mmbUnClicked = 1; break;
+            case 3: g_input.rmbUnClicked = 1; break;
+        }
+        //printf("up:%i\n", g_state.recv_buf[1]);
+        break;
+
+    case 6: // Pointer motion event.
+        {
+            int x = g_state.recv_buf[24] + (g_state.recv_buf[25] << 8);
+            int y = g_state.recv_buf[26] + (g_state.recv_buf[27] << 8);
+            //printf("detail:%i rx=%i ry=%i\n", g_state.recv_buf[1], x, y);
+            g_input.mouseX = x;
+            g_input.mouseY = y;
+            break;
+        }
+
+    case 22: // Configure notify event.
+        {
+            int w = g_state.recv_buf[20] + (g_state.recv_buf[21] << 8);
+            int h = g_state.recv_buf[22] + (g_state.recv_buf[23] << 8);
+            BitmapDelete(g_window->bmp);
+            g_window->bmp = BitmapCreate(w, h);
+            if (g_window->redrawCallback) {
+                g_window->redrawCallback();
+            }
+            break;
+        }
+
+    case 150:
+        break;
+        
+    default:
+        printf("Got an unknown message type (%i).\n", g_state.recv_buf[0]);
+    }
+
+    ConsumeMessage(32);
+    return true;
+}
+
+
 // This function is the only way that data is received from the X11 server.
-static void poll_socket(void *buf, size_t expected_len) {
-    ssize_t len = recv(g_state.socket_fd, g_state.recv_buf, sizeof(g_state.recv_buf), 0);
-    if (len == 0) {
+// Because the X11 protocol is asynchronous, we might receive events here when
+// we are waiting for a response.
+//
+// buf should be a pointer to an array if you expect a response, otherwise it
+// should be NULL.
+//
+// expected_len is the length of the expected reply. It is ignored if buf == NULL.
+static void poll_socket(void *return_buf, size_t expected_len) {
+    unsigned char *buf = g_state.recv_buf + g_state.recv_buf_num_bytes;
+    ssize_t buf_len = sizeof(g_state.recv_buf) - g_state.recv_buf_num_bytes;
+    ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, buf_len, 0);
+    if (num_bytes_recvd == 0) {
         printf("X11 server closed the socket\n");
         return;
-}
-    if (len < 0) {
+    }
+    if (num_bytes_recvd < 0) {
         if (errno == EAGAIN) {
             return;
-//     int const len = 2;
-//     uint32_t packet[len];
-//     packet[0] = X11_OPCODE_UNMAP_WINDOW | (len<<16);
-//     packet[1] = g_state.window_id;
-//     send_buf(packet, 8);
         }
 
         perror("");
-        FATAL_ERROR("Couldn't read from socket. Len = %i", (int)len);
+        FATAL_ERROR("Couldn't read from socket. Len = %i", (int)num_bytes_recvd);
     }
 
-    g_state.recv_buf_num_bytes += len;
-    if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
-        FATAL_ERROR("bad num bytes");
-    }
+    g_state.recv_buf_num_bytes += num_bytes_recvd;
 
     int keep_going = 1;
     while (keep_going && g_state.recv_buf_num_bytes) {
-        switch (g_state.recv_buf[0]) {
-        case 0: HandleErrorMessage(); break;
-        case 1: // Response of some kind.
+        if (g_state.recv_buf[0] == 0) {
+            HandleErrorMessage();
+        } else if (g_state.recv_buf[0] == 1) {
             // Handle reply.
             if (g_state.recv_buf_num_bytes >= expected_len) {
-                memcpy(buf, g_state.recv_buf, expected_len);
-                ConsumeMessage(expected_len);
+                memcpy(return_buf, g_state.recv_buf, expected_len);
+                if (expected_len >= 0) {
+                    ConsumeMessage(expected_len);
+                }
                 expected_len = 0;   // Store the fact that we've received the expected reply.
             }
             else {
                 keep_going = 0;
             }
-            break;
-        case 2: // KeyPress event.
-            if (g_state.recv_buf_num_bytes >= 32) {
-                unsigned char x11_keycode = g_state.recv_buf[1];
-                unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
-                g_priv.m_newKeyDowns[df_keycode] = 1;
-                g_input.keys[df_keycode] = 1;
-                int modifiers = g_state.recv_buf[28];
-                char ascii = df_keycode_to_ascii(df_keycode, modifiers);
-//printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
-
-                if (ascii) {
-    				g_priv.m_newKeysTyped[g_priv.m_newNumKeysTyped] = ascii;
-    				g_priv.m_newNumKeysTyped++;
-                }
-
-                ConsumeMessage(8 * 4);
-            }
-            else {
-                keep_going = 0;
-            }
-            break;
-        case 3: // KeyRelease event.
-            if (g_state.recv_buf_num_bytes >= 32) {
-                unsigned char x11_keycode = g_state.recv_buf[1];
-                unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
-                g_priv.m_newKeyUps[df_keycode] = 1;
-                g_input.keys[df_keycode] = 0;
-//printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
-
-                ConsumeMessage(8 * 4);
-            }
-            else {
-                keep_going = 0;
-            }
-            break;
-        case 4: // Mouse down button event (includes scroll motion).
-            if (g_state.recv_buf_num_bytes >= 32) {
-                switch (g_state.recv_buf[1]) {
-                    case 1:
-                        g_input.lmbClicked = 1;
-            			g_priv.m_lmbPrivate = true;
-                        break;
-                    case 2: g_input.mmbClicked = 1; break;
-                    case 3: g_input.rmbClicked = 1; break;
-                    case 4: g_input.mouseZ++; break;
-                    case 5: g_input.mouseZ--; break;
-                }
-                //printf("down:%i\n", g_state.recv_buf[1]);
-                ConsumeMessage(8 * 4);
-            }
-            else {
-                keep_going = 0;
-            }
-            break;
-        case 5: // Mouse button up event.
-            if (g_state.recv_buf_num_bytes >= 32) {
-                switch (g_state.recv_buf[1]) {
-                    case 1:
-                        g_input.lmbUnClicked = 1;
-            			g_priv.m_lmbPrivate = false;
-                        break;
-                    case 2: g_input.mmbUnClicked = 1; break;
-                    case 3: g_input.rmbUnClicked = 1; break;
-                }
-                //printf("up:%i\n", g_state.recv_buf[1]);
-                ConsumeMessage(8 * 4);
-            }
-            else {
-                keep_going = 0;
-            }
-            break;
-        case 6: // Pointer motion event.
-            if (g_state.recv_buf_num_bytes >= 32) {
-                int x = g_state.recv_buf[24] + (g_state.recv_buf[25] << 8);
-                int y = g_state.recv_buf[26] + (g_state.recv_buf[27] << 8);
-                //printf("detail:%i rx=%i ry=%i\n", g_state.recv_buf[1], x, y);
-                g_input.mouseX = x;
-                g_input.mouseY = y;
-
-                ConsumeMessage(8 * 4);
-            }
-            else {
-                keep_going = 0;
-            }
-            break;
-        default:
-            FATAL_ERROR("Got an unknown message type (%i).\n", g_state.recv_buf[0]);
         }
-    }
-
-    if (g_state.recv_buf_num_bytes != 0) {
-        FATAL_ERROR("Received incomplete packet");
+        else {
+            keep_going = handle_event();
+        }
     }
 }
 
@@ -669,7 +677,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
     packet[6] = 0; // Visual: Copy from parent.
     packet[7] = 0x800; // value_mask = event-mask
     packet[8] = X11_EVENT_KEYPRESS | X11_EVENT_KEYRELEASE | X11_EVENT_POINTERMOTION |
-                X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE;
+                X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE | X11_EVENT_STRUCTURE_NOTIFY;
 
     send_buf(packet, sizeof(packet));
 
