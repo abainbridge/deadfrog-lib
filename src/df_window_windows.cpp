@@ -483,6 +483,24 @@ void SetMouseCursor(MouseCursorType t)
 }
 
 
+void SetWindowIcon()
+{
+    HINSTANCE hInstance = GetModuleHandle(0);
+	HANDLE hIcon = LoadImageA(hInstance, "#101", IMAGE_ICON, 16, 16, 0);
+    if (hIcon)
+    {
+        SendMessage(g_hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage(g_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+    }
+	hIcon = LoadImageA(hInstance, "#101", IMAGE_ICON, 32, 32, 0);
+    if (hIcon)
+    {
+        SendMessage(g_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+	}
+}
+
+
+
 bool IsWindowMaximized()
 {
     WINDOWPLACEMENT winPlacement;

@@ -131,6 +131,10 @@ DLL_API void HideMouse();
 
 DLL_API void SetMouseCursor(MouseCursorType t);
 
+// Currently Windows only. Assumes that you have a 16x16 and optionally a 32x32 icon
+// resource in your executable and that the id is 101.
+DLL_API void SetWindowIcon();
+
 DLL_API bool IsWindowMaximized();
 DLL_API void SetMaximizedState(bool maximize);
 DLL_API void BringWindowToFront();
