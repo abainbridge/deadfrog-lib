@@ -505,9 +505,9 @@ static bool handle_event() {
             int h = g_state.recv_buf[22] + (g_state.recv_buf[23] << 8);
             BitmapDelete(g_window->bmp);
             g_window->bmp = BitmapCreate(w, h);
-            if (g_window->redrawCallback) {
-                g_window->redrawCallback();
-            }
+//             if (g_window->redrawCallback) {
+//                 g_window->redrawCallback();
+//             }
             break;
         }
 
@@ -790,10 +790,5 @@ void SetWindowTitle(char const *title) {
 }
 
 
+void SetWindowIcon() {}
 
-#if 0
-void Sierpinski3DMain();
-int main() {
-    Sierpinski3DMain();
-}
-#endif
