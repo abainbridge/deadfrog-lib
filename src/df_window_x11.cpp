@@ -635,7 +635,6 @@ static void map_window() {
     send_buf(packet, 8);
 }
 
-
 bool CreateWin(int width, int height, WindowType winType, char const *winName) {
     return CreateWinPos(0, 0, width, height, winType, winName);
 }
@@ -689,8 +688,8 @@ static void BlitBitmapToWindow(DfWindow *wd) {
     // *** Send back-buffer to Xserver.
     int W = wd->bmp->width;
     int H = wd->bmp->height;
-    enum { MAX_BYTES_PER_REQUEST = 262140 }; // Value from www.x.org/releases/X11R7.7/doc/bigreqsproto/bigreq.html
-    int num_rows_in_chunk = MAX_BYTES_PER_REQUEST / 4 / W;
+    enum { MAX_BYTES_PER_REQUEST = 65535 }; // Len field is 16-bits
+    int num_rows_in_chunk = (MAX_BYTES_PER_REQUEST - 6) / W; // -6 because of packet header
     DfColour *row = wd->bmp->pixels;
     for (int y = 0; y < H; y += num_rows_in_chunk) {
         if (y + num_rows_in_chunk > H) {
@@ -723,7 +722,7 @@ bool GetDesktopRes(int *width, int *height) {
 
 
 bool WaitVsync() {
-    usleep(16667);
+    usleep(6667);
     return true;
 }
 
