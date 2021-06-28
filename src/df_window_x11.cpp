@@ -1,4 +1,5 @@
 // Platform includes
+#include <linux/limits.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -591,11 +592,21 @@ static void ensure_state() {
     }
 
     // Read Xauthority.
-    char xauth_cookie[4096];
-    FILE *xauth_file = fopen("/home/andy/.Xauthority", "rb");
-    if (!xauth_file) {
-        FATAL_ERROR("Couldn't open .Xauthority.");
+    char const *home_dir = getenv("HOME");
+    size_t home_dir_len = strlen(home_dir);
+    char const *xauth_appender = "/.Xauthority";
+    size_t xauth_appender_len = sizeof(xauth_appender);
+    if (home_dir_len + xauth_appender_len + 1 > PATH_MAX) {
+        FATAL_ERROR("HOME too long");
     }
+    char xauth_filename[PATH_MAX];
+    memcpy(xauth_filename, home_dir, home_dir_len);
+    strcpy(xauth_filename + home_dir_len, xauth_appender);
+    FILE *xauth_file = fopen(xauth_filename, "rb");
+    if (!xauth_file) {
+        FATAL_ERROR("Couldn't open '%s'.", xauth_filename);
+    }
+    char xauth_cookie[4096];
     size_t xauth_len = fread(xauth_cookie, 1, sizeof(xauth_cookie), xauth_file);
     if (xauth_len < 0) {
         FATAL_ERROR("Couldn't read from .Xauthority.");
