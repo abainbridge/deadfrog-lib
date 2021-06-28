@@ -294,6 +294,12 @@ static void ConsumeMessage(int len) {
 
 
 static void send_buf(const void *_buf, int len) {
+    // Early exit if socket isn't open. This typically happens if the remote
+    // end closes the connection when we're in the middle of our main loop.
+    if (g_state.socket_fd == -1) {
+        return;
+    }
+
     const char *buf = (const char *)_buf;
     while (1) {
         struct pollfd poll_fd = { g_state.socket_fd, POLLOUT };
@@ -315,6 +321,12 @@ static void send_buf(const void *_buf, int len) {
 
 
 static void fatal_read(void *buf, size_t count) {
+    // Early exit if socket isn't open. This typically happens if the remote
+    // end closes the connection when we're in the middle of our main loop.
+    if (g_state.socket_fd == -1) {
+        return;
+    }
+
     if (recvfrom(g_state.socket_fd, buf, count, 0, NULL, NULL) != count) {
         FATAL_ERROR("Failed to read.");
     }
@@ -533,11 +545,20 @@ static bool handle_event() {
 //
 // expected_len is the length of the expected reply. It is ignored if buf == NULL.
 static void poll_socket(void *return_buf, size_t expected_len) {
+    // Early exit if socket isn't open. This typically happens if the remote
+    // end closes the connection when we're in the middle of our main loop.
+    if (g_state.socket_fd == -1) {
+        return;
+    }
+
     unsigned char *buf = g_state.recv_buf + g_state.recv_buf_num_bytes;
     ssize_t buf_len = sizeof(g_state.recv_buf) - g_state.recv_buf_num_bytes;
     ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, buf_len, 0);
     if (num_bytes_recvd == 0) {
         printf("X11 server closed the socket\n");
+        close(g_state.socket_fd);
+        g_state.socket_fd = -1;
+        g_window->windowClosed = true;
         return;
     }
     if (num_bytes_recvd < 0) {
@@ -546,7 +567,8 @@ static void poll_socket(void *return_buf, size_t expected_len) {
         }
 
         perror("");
-        FATAL_ERROR("Couldn't read from socket. Len = %i", (int)num_bytes_recvd);
+        printf("Couldn't read from socket. Len = %i.\n", (int)num_bytes_recvd);
+        return;
     }
 
     g_state.recv_buf_num_bytes += num_bytes_recvd;
