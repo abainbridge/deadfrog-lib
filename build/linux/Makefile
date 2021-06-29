@@ -2,7 +2,7 @@ src_dir=../../src
 obj_dir=obj
 inc_dirs=
 
-cxxflags=-MMD -g -march=native -Wno-unused-result
+cxxflags=-MMD -g -march=native -Wno-unused-result -fno-strict-aliasing
 
 c_files_raw=df_bitmap.cpp df_bmp.cpp df_colour.cpp df_common_linux.cpp \
 	df_font.cpp df_message_dialog_linux.cpp df_polygon_aa.cpp df_time.cpp \
