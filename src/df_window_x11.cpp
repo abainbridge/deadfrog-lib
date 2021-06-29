@@ -15,7 +15,8 @@
 
 #define FATAL_ERROR(msg, ...) { fprintf(stderr, msg "\n", ##__VA_ARGS__); __asm__("int3"); exit(-1); }
 
-
+// X11 protocol specs:
+//    https://www.x.org/releases/X11R7.7/doc/index.html
 
 // To debug what we send to the xserver, change the following line:
 //    strcpy(serv_addr.sun_path, "/tmp/.X11-unix/X0");
@@ -24,7 +25,12 @@
 //
 // Then, in another terminal, run:
 //    xtrace -D:1 -d:0 -k -w
-
+//
+// To see what another X11 application's traffic looks like:
+//    In one terminal, run:
+//        xtrace -D:1 -d:0 -k -w
+//    In another, run something like:
+//        DISPLAY=:1.0 xclock
 
 
 
@@ -275,7 +281,10 @@ static int x11_keycode_to_df_keycode(int i) {
 
 
 static void HandleErrorMessage() {
+    // See https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#Encoding::Errors
+    printf("Error message from X11 server - ");
     switch (g_state.recv_buf[1]) {
+        case 2: printf("Bad value. %x %x", g_state.recv_buf[2], g_state.recv_buf[3]); break;
         case 9: printf("Bad drawable\n"); break;
         case 16: printf("Bad length\n"); break;
         default: printf("Unknown error code %i\n", g_state.recv_buf[1]);
@@ -294,16 +303,12 @@ static void ConsumeMessage(int len) {
 
 
 static void send_buf(const void *_buf, int len) {
-    // Early exit if socket isn't open. This typically happens if the remote
-    // end closes the connection when we're in the middle of our main loop.
-    if (g_state.socket_fd == -1) {
-        return;
-    }
-
     const char *buf = (const char *)_buf;
     while (1) {
         struct pollfd poll_fd = { g_state.socket_fd, POLLOUT };
-        poll(&poll_fd, 1, -1);
+        int poll_result = poll(&poll_fd, 1, -1);
+        if (poll_result == -1)
+            FATAL_ERROR("Poll gave an error %i", poll_result);
 
         int size_sent = write(g_state.socket_fd, buf, len);
         if (size_sent < 0) {
@@ -321,12 +326,6 @@ static void send_buf(const void *_buf, int len) {
 
 
 static void fatal_read(void *buf, size_t count) {
-    // Early exit if socket isn't open. This typically happens if the remote
-    // end closes the connection when we're in the middle of our main loop.
-    if (g_state.socket_fd == -1) {
-        return;
-    }
-
     if (recvfrom(g_state.socket_fd, buf, count, 0, NULL, NULL) != count) {
         FATAL_ERROR("Failed to read.");
     }
@@ -526,6 +525,11 @@ static bool handle_event() {
 
     case 150:
         break;
+
+    case 161:
+        // Window Manager wants us to close.
+        g_window->windowClosed = true;
+        break;
         
     default:
         printf("Got an unknown message type (%i).\n", g_state.recv_buf[0]);
@@ -545,22 +549,17 @@ static bool handle_event() {
 //
 // expected_len is the length of the expected reply. It is ignored if buf == NULL.
 static void poll_socket(void *return_buf, size_t expected_len) {
-    // Early exit if socket isn't open. This typically happens if the remote
-    // end closes the connection when we're in the middle of our main loop.
-    if (g_state.socket_fd == -1) {
-        return;
-    }
-
     unsigned char *buf = g_state.recv_buf + g_state.recv_buf_num_bytes;
     ssize_t buf_len = sizeof(g_state.recv_buf) - g_state.recv_buf_num_bytes;
     ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, buf_len, 0);
     if (num_bytes_recvd == 0) {
-        printf("X11 server closed the socket\n");
-        close(g_state.socket_fd);
-        g_state.socket_fd = -1;
-        g_window->windowClosed = true;
-        return;
+        // Treat this as a FATAL_ERROR because if it happened when we were
+        // doing a write to the socket, we'd get a SIGPIPE fatal exception. In
+        // other words, the Xserver closing the socket will normally cause us
+        // to crash anyway.
+        FATAL_ERROR("Xserver closed the socket");
     }
+
     if (num_bytes_recvd < 0) {
         if (errno == EAGAIN) {
             return;
@@ -690,6 +689,21 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName) {
 }
 
 
+static void enable_delete_window_event() {
+    int requestLen = 7;
+    uint32_t packet[requestLen];
+    packet[0] = X11_OPCODE_CHANGE_PROPERTY | (requestLen << 16);
+    packet[1] = g_state.window_id;
+    packet[2] = 0x144; // Property = WM_PROTOCOLS.
+    packet[3] = 4; // Type = ATOM.
+    packet[4] = 32; // Format = 32 bits per item.
+    packet[5] = 1; // Length = 1 item.
+    packet[6] = 0x143; // Item data = WM_DELETE_WINDOW.
+
+    send_buf(packet, sizeof(packet));
+}
+
+
 bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
@@ -717,6 +731,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
     create_gc();
     map_window();
     SetWindowTitle(winName);
+    enable_delete_window_event();
 
     // Make socket non-blocking.
     int flags = fcntl(g_state.socket_fd, F_GETFL, 0);
