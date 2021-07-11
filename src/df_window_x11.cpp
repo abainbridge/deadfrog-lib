@@ -19,9 +19,9 @@
 //    https://www.x.org/releases/X11R7.7/doc/index.html
 
 // To debug what we send to the xserver, change the following line:
-//    strcpy(serv_addr.sun_path, "/tmp/.X11-unix/X0");
+//    strcpy(servAddr.sun_path, "/tmp/.X11-unix/X0");
 // to:
-//    strcpy(serv_addr.sun_path, "/tmp/.X11-unix/X1");
+//    strcpy(servAddr.sun_path, "/tmp/.X11-unix/X1");
 //
 // Then, in another terminal, run:
 //    xtrace -D:1 -d:0 -k -w
@@ -124,14 +124,14 @@ typedef struct __attribute__((packed)) {
     uint16_t vendor_len;
     uint16_t request_max;
     uint8_t num_screens;
-    uint8_t num_pixmap_formats;
+    uint8_t num_pixmapFormats;
     uint8_t image_byte_order;
     uint8_t bitmap_bit_order;
     uint8_t scanline_unit, scanline_pad;
     uint8_t keycode_min, keycode_max;
     uint32_t pad;
     char vendor_string[1];
-} connection_reply_success_body_t;
+} connectionReplySuccessBody_t;
 
 
 typedef struct __attribute__((packed)) {
@@ -139,7 +139,7 @@ typedef struct __attribute__((packed)) {
     uint8_t pad;
     uint16_t major_version, minor_version;
     uint16_t len;
-} connection_reply_header_t;
+} connectionReplyHeader_t;
 
 
 typedef struct __attribute__((packed)) {
@@ -156,26 +156,26 @@ typedef struct __attribute__((packed)) {
 
 
 typedef struct {
-    int socket_fd;
-    unsigned char recv_buf[10000];
-    int recv_buf_num_bytes;
+    int socketFd;
+    unsigned char recvBuf[10000];
+    int recvBufNumBytes;
 
-    connection_reply_header_t connection_reply_header;
-    connection_reply_success_body_t *connection_reply_success_body;
+    connectionReplyHeader_t connectionReplyHeader;
+    connectionReplySuccessBody_t *connectionReplySuccessBody;
 
-    pixmap_format_t *pixmap_formats; // Points into connection_reply_success_body.
-    screen_t *screens; // Points into connection_reply_success_body.
+    pixmap_format_t *pixmapFormats; // Points into connectionReplySuccessBody.
+    screen_t *screens; // Points into connectionReplySuccessBody.
 
-    uint32_t next_resource_id;
-    uint32_t graphics_context_id;
-    uint32_t window_id;
-} state_t;
-
-
-static state_t g_state = { .socket_fd = -1 };
+    uint32_t nextResourceId;
+    uint32_t graphicsContextId;
+    uint32_t windowId;
+} X11State;
 
 
-static int x11_keycode_to_df_keycode(int i) {
+static X11State g_state = { .socketFd = -1 };
+
+
+static int x11KeycodeToDfKeycode(int i) {
     switch (i) {
         case 9: return KEY_ESC;
         case 10: return KEY_1;
@@ -281,15 +281,15 @@ static int x11_keycode_to_df_keycode(int i) {
 }
 
 
-static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
+static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
     int shift = modifiers & 1;
     int caps_lock = modifiers & 2;
     int ctrl = modifiers & 4;
     int alt = modifiers & 8;
-    int num_lock = modifiers & 0x10;
-    int windows_key = modifiers & 0x40;
+    int numLock = modifiers & 0x10;
+    int windowsKey = modifiers & 0x40;
 
-    if (ctrl || alt || windows_key) {
+    if (ctrl || alt || windowsKey) {
         return 0;
     }
 
@@ -323,7 +323,7 @@ static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
     }
 
     if (keycode >= KEY_0_PAD && keycode <= KEY_9_PAD) {
-        if (num_lock) {
+        if (numLock) {
             return keycode - 48;
         }
         else {
@@ -332,7 +332,7 @@ static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
     }
 
     if (keycode >= KEY_ASTERISK && keycode <= KEY_SLASH_PAD) {
-        if (keycode == KEY_DEL_PAD && !num_lock) {
+        if (keycode == KEY_DEL_PAD && !numLock) {
             return 0;
         }
         return keycode - 64;
@@ -388,10 +388,10 @@ static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
 //
 // Returns the number of bytes received.
 static int ReadFromXServer() {
-    unsigned char *buf = g_state.recv_buf + g_state.recv_buf_num_bytes;
-    ssize_t buf_len = sizeof(g_state.recv_buf) - g_state.recv_buf_num_bytes;
-    ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, buf_len, 0);
-    if (num_bytes_recvd == 0) {
+    unsigned char *buf = g_state.recvBuf + g_state.recvBufNumBytes;
+    ssize_t bufLen = sizeof(g_state.recvBuf) - g_state.recvBufNumBytes;
+    ssize_t numBytesRecvd = recv(g_state.socketFd, buf, bufLen, 0);
+    if (numBytesRecvd == 0) {
         // Treat this as a FATAL_ERROR because if it happened when we were
         // doing a write to the socket, we'd get a SIGPIPE fatal exception. In
         // other words, the Xserver closing the socket will normally cause us
@@ -399,57 +399,56 @@ static int ReadFromXServer() {
         FATAL_ERROR("Xserver closed the socket");
     }
 
-    if (num_bytes_recvd < 0) {
+    if (numBytesRecvd < 0) {
         if (errno == EAGAIN) {
             return 0;
         }
 
         perror("");
-        printf("Couldn't read from socket. Len = %i.\n", (int)num_bytes_recvd);
+        printf("Couldn't read from socket. Len = %i.\n", (int)numBytesRecvd);
         return 0;
     }
 
-    g_state.recv_buf_num_bytes += num_bytes_recvd;
+    g_state.recvBufNumBytes += numBytesRecvd;
 
-    return num_bytes_recvd;
+    return numBytesRecvd;
 }
 
 
 static void ConsumeMessage(int len) {
-    memmove(g_state.recv_buf, g_state.recv_buf + len, g_state.recv_buf_num_bytes - len);
-    g_state.recv_buf_num_bytes -= len;
-    if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
+    memmove(g_state.recvBuf, g_state.recvBuf + len, g_state.recvBufNumBytes - len);
+    g_state.recvBufNumBytes -= len;
+    if (g_state.recvBufNumBytes > sizeof(g_state.recvBuf)) {
         FATAL_ERROR("bad num bytes");
     }
 }
 
 
-static void send_buf(const void *_buf, int len) {
+static void SendBuf(const void *_buf, int len) {
     const char *buf = (const char *)_buf;
     while (1) {
-        struct pollfd poll_fd = { g_state.socket_fd, POLLOUT };
-        int poll_result = poll(&poll_fd, 1, -1);
-        if (poll_result == -1)
-            FATAL_ERROR("Poll gave an error %i", poll_result);
+        struct pollfd pollFd = { g_state.socketFd, POLLOUT };
+        int pollResult = poll(&pollFd, 1, -1);
+        if (pollResult == -1)
+            FATAL_ERROR("Poll gave an error %i", pollResult);
 
-        int size_sent = write(g_state.socket_fd, buf, len);
-        if (size_sent < 0) {
+        int sizeSent = write(g_state.socketFd, buf, len);
+        if (sizeSent < 0) {
             FATAL_ERROR("Couldn't send buf");
         }
 
-        len -= size_sent;
+        len -= sizeSent;
 
-        if (len < 0) FATAL_ERROR("send_buf bug");
+        if (len < 0) FATAL_ERROR("SendBuf bug");
         if (len == 0) break;
 
-        buf += size_sent;
+        buf += sizeSent;
     }
 }
 
 
-// TODO: I think we should replace this with poll_socket().
-static void fatal_read(void *buf, size_t count) {
-    if (recvfrom(g_state.socket_fd, buf, count, 0, NULL, NULL) != count) {
+static void FatalRead(void *buf, size_t count) {
+    if (recvfrom(g_state.socketFd, buf, count, 0, NULL, NULL) != count) {
         FATAL_ERROR("Failed to read.");
     }
 }
@@ -458,24 +457,24 @@ static void fatal_read(void *buf, size_t count) {
 static void HandleErrorMessage() {
     // See https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#Encoding::Errors
     printf("Error message from X11 server - ");
-    switch (g_state.recv_buf[1]) {
-        case 2: printf("Bad value. %x %x", g_state.recv_buf[2], g_state.recv_buf[3]); break;
+    switch (g_state.recvBuf[1]) {
+        case 2: printf("Bad value. %x %x", g_state.recvBuf[2], g_state.recvBuf[3]); break;
         case 9: printf("Bad drawable\n"); break;
         case 16: printf("Bad length\n"); break;
-        default: printf("Unknown error code %i\n", g_state.recv_buf[1]);
+        default: printf("Unknown error code %i\n", g_state.recvBuf[1]);
     }
     exit(-1);
 }
 
 
 static bool IsEventPending() {
-    if (g_state.recv_buf_num_bytes >= 2 && g_state.recv_buf[0] == 0)
+    if (g_state.recvBufNumBytes >= 2 && g_state.recvBuf[0] == 0)
         return true; // Error message event is pending.
 
-    if (g_state.recv_buf[0] == 1)
+    if (g_state.recvBuf[0] == 1)
         return false;   // Reply is pending.
 
-    if (g_state.recv_buf_num_bytes >= 32)
+    if (g_state.recvBufNumBytes >= 32)
         return true;
 
     return false;
@@ -483,19 +482,19 @@ static bool IsEventPending() {
 
 
 static void handle_event() {
-    if (g_state.recv_buf[0] == 1) {
+    if (g_state.recvBuf[0] == 1) {
         FATAL_ERROR("Got unexpected reply.");
     }
             
-    switch (g_state.recv_buf[0]) {
+    switch (g_state.recvBuf[0]) {
     case 2: // KeyPress event.
         {
-            unsigned char x11_keycode = g_state.recv_buf[1];
-            unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
+            unsigned char x11_keycode = g_state.recvBuf[1];
+            unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
             g_priv.m_newKeyDowns[df_keycode] = 1;
             g_input.keys[df_keycode] = 1;
-            int modifiers = g_state.recv_buf[28];
-            char ascii = df_keycode_to_ascii(df_keycode, modifiers);
+            int modifiers = g_state.recvBuf[28];
+            char ascii = dfKeycodeToAscii(df_keycode, modifiers);
     //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
 
             if (ascii) {
@@ -507,8 +506,8 @@ static void handle_event() {
 
     case 3: // KeyRelease event.
         {
-            unsigned char x11_keycode = g_state.recv_buf[1];
-            unsigned char df_keycode = x11_keycode_to_df_keycode(x11_keycode);
+            unsigned char x11_keycode = g_state.recvBuf[1];
+            unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
             g_priv.m_newKeyUps[df_keycode] = 1;
             g_input.keys[df_keycode] = 0;
     //printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
@@ -516,7 +515,7 @@ static void handle_event() {
         }
 
     case 4: // Mouse down button event (includes scroll motion).
-        switch (g_state.recv_buf[1]) {
+        switch (g_state.recvBuf[1]) {
             case 1:
                 g_input.lmbClicked = 1;
     			g_priv.m_lmbPrivate = true;
@@ -526,11 +525,11 @@ static void handle_event() {
             case 4: g_input.mouseZ++; break;
             case 5: g_input.mouseZ--; break;
         }
-        //printf("down:%i\n", g_state.recv_buf[1]);
+        //printf("down:%i\n", g_state.recvBuf[1]);
         break;
 
     case 5: // Mouse button up event.
-        switch (g_state.recv_buf[1]) {
+        switch (g_state.recvBuf[1]) {
             case 1:
                 g_input.lmbUnClicked = 1;
     			g_priv.m_lmbPrivate = false;
@@ -538,14 +537,14 @@ static void handle_event() {
             case 2: g_input.mmbUnClicked = 1; break;
             case 3: g_input.rmbUnClicked = 1; break;
         }
-        //printf("up:%i\n", g_state.recv_buf[1]);
+        //printf("up:%i\n", g_state.recvBuf[1]);
         break;
 
     case 6: // Pointer motion event.
         {
-            int x = g_state.recv_buf[24] + (g_state.recv_buf[25] << 8);
-            int y = g_state.recv_buf[26] + (g_state.recv_buf[27] << 8);
-            //printf("detail:%i rx=%i ry=%i\n", g_state.recv_buf[1], x, y);
+            int x = g_state.recvBuf[24] + (g_state.recvBuf[25] << 8);
+            int y = g_state.recvBuf[26] + (g_state.recvBuf[27] << 8);
+            //printf("detail:%i rx=%i ry=%i\n", g_state.recvBuf[1], x, y);
             g_input.mouseX = x;
             g_input.mouseY = y;
             break;
@@ -553,8 +552,8 @@ static void handle_event() {
 
     case 22: // Configure notify event.
         {
-            int w = g_state.recv_buf[20] + (g_state.recv_buf[21] << 8);
-            int h = g_state.recv_buf[22] + (g_state.recv_buf[23] << 8);
+            int w = g_state.recvBuf[20] + (g_state.recvBuf[21] << 8);
+            int h = g_state.recvBuf[22] + (g_state.recvBuf[23] << 8);
             BitmapDelete(g_window->bmp);
             g_window->bmp = BitmapCreate(w, h);
 //             if (g_window->redrawCallback) {
@@ -572,7 +571,7 @@ static void handle_event() {
         break;
         
     default:
-        printf("Got an unknown message type (%i).\n", g_state.recv_buf[0]);
+        printf("Got an unknown message type (%i).\n", g_state.recvBuf[0]);
     }
 
     ConsumeMessage(32);
@@ -595,7 +594,7 @@ static void HandleEvents() {
 static bool GetReply(int expectedLen) {
     HandleEvents();
 
-    if (g_state.recv_buf[0] == 1 && g_state.recv_buf_num_bytes >= expectedLen)
+    if (g_state.recvBuf[0] == 1 && g_state.recvBufNumBytes >= expectedLen)
         return true;
 
     return false;
@@ -607,52 +606,52 @@ static bool GetReply(int expectedLen) {
 // ****************************************************************************
 
 
-static void map_window() {
+static void MapWindow() {
     int const len = 2;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
-    packet[1] = g_state.window_id;
-    send_buf(packet, 8);
+    packet[1] = g_state.windowId;
+    SendBuf(packet, 8);
 }
 
 
 // Initialize the connection to the Xserver if we haven't already.
-static void ensure_state() {
-    if (g_state.socket_fd >= 0) return;
+static void EnsureState() {
+    if (g_state.socketFd >= 0) return;
 
     // Open socket and connect.
-    g_state.socket_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (g_state.socket_fd < 0) {
+    g_state.socketFd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (g_state.socketFd < 0) {
         FATAL_ERROR("Create socket failed");
     }
-    struct sockaddr_un serv_addr = { 0 };
-    serv_addr.sun_family = AF_UNIX;
-    strcpy(serv_addr.sun_path, "/tmp/.X11-unix/X0");
-    if (connect(g_state.socket_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    struct sockaddr_un servAddr = { 0 };
+    servAddr.sun_family = AF_UNIX;
+    strcpy(servAddr.sun_path, "/tmp/.X11-unix/X0");
+    if (connect(g_state.socketFd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
         FATAL_ERROR("Couldn't connect");
     }
 
     // Read Xauthority.
-    char const *home_dir = getenv("HOME");
-    size_t home_dir_len = strlen(home_dir);
+    char const *homeDir = getenv("HOME");
+    size_t homeDirLen = strlen(homeDir);
     char const *xauth_appender = "/.Xauthority";
     size_t xauth_appender_len = sizeof(xauth_appender);
-    if (home_dir_len + xauth_appender_len + 1 > PATH_MAX) {
+    if (homeDirLen + xauth_appender_len + 1 > PATH_MAX) {
         FATAL_ERROR("HOME too long");
     }
-    char xauth_filename[PATH_MAX];
-    memcpy(xauth_filename, home_dir, home_dir_len);
-    strcpy(xauth_filename + home_dir_len, xauth_appender);
-    FILE *xauth_file = fopen(xauth_filename, "rb");
-    if (!xauth_file) {
-        FATAL_ERROR("Couldn't open '%s'.", xauth_filename);
+    char xauthFilename[PATH_MAX];
+    memcpy(xauthFilename, homeDir, homeDirLen);
+    strcpy(xauthFilename + homeDirLen, xauth_appender);
+    FILE *xauthFile = fopen(xauthFilename, "rb");
+    if (!xauthFile) {
+        FATAL_ERROR("Couldn't open '%s'.", xauthFilename);
     }
-    char xauth_cookie[4096];
-    size_t xauth_len = fread(xauth_cookie, 1, sizeof(xauth_cookie), xauth_file);
-    if (xauth_len < 0) {
+    char xauthCookie[4096];
+    size_t xauthLen = fread(xauthCookie, 1, sizeof(xauthCookie), xauthFile);
+    if (xauthLen < 0) {
         FATAL_ERROR("Couldn't read from .Xauthority.");
     }
-    fclose(xauth_file);
+    fclose(xauthFile);
 
     // Send connection request.
     connection_request_t request = { 0 };
@@ -661,46 +660,46 @@ static void ensure_state() {
     request.minor_version =  0;
     request.auth_proto_name_len = 18;
     request.auth_proto_data_len = 16;
-    send_buf(&request, sizeof(connection_request_t));
-    send_buf("MIT-MAGIC-COOKIE-1\0\0", 20);
-    send_buf(xauth_cookie + xauth_len - 16, 16);
+    SendBuf(&request, sizeof(connection_request_t));
+    SendBuf("MIT-MAGIC-COOKIE-1\0\0", 20);
+    SendBuf(xauthCookie + xauthLen - 16, 16);
 
     // Read connection reply header.
-    fatal_read(&g_state.connection_reply_header, sizeof(connection_reply_header_t));
-    if (g_state.connection_reply_header.success == 0) {
+    FatalRead(&g_state.connectionReplyHeader, sizeof(connectionReplyHeader_t));
+    if (g_state.connectionReplyHeader.success == 0) {
         FATAL_ERROR("Connection reply indicated failure.");
     }
 
     // Read rest of connection reply.
-    g_state.connection_reply_success_body = (connection_reply_success_body_t*)new char[g_state.connection_reply_header.len * 4];
-    fatal_read(g_state.connection_reply_success_body,
-               g_state.connection_reply_header.len * 4);
+    g_state.connectionReplySuccessBody = (connectionReplySuccessBody_t*)new char[g_state.connectionReplyHeader.len * 4];
+    FatalRead(g_state.connectionReplySuccessBody,
+               g_state.connectionReplyHeader.len * 4);
 
     // Set some pointers into the connection reply because they'll be convenient later.
-    g_state.pixmap_formats = (pixmap_format_t *)(g_state.connection_reply_success_body->vendor_string +
-                             g_state.connection_reply_success_body->vendor_len);
-    g_state.screens = (screen_t *)(g_state.pixmap_formats +
-                                  g_state.connection_reply_success_body->num_pixmap_formats);
+    g_state.pixmapFormats = (pixmap_format_t *)(g_state.connectionReplySuccessBody->vendor_string +
+                             g_state.connectionReplySuccessBody->vendor_len);
+    g_state.screens = (screen_t *)(g_state.pixmapFormats +
+                                  g_state.connectionReplySuccessBody->num_pixmapFormats);
 
-    g_state.next_resource_id = g_state.connection_reply_success_body->id_base;
+    g_state.nextResourceId = g_state.connectionReplySuccessBody->id_base;
 }
 
 
-static uint32_t generate_id() {
-    return g_state.next_resource_id++;
+static uint32_t generateId() {
+    return g_state.nextResourceId++;
 }
 
 
-static void create_gc() {
-    g_state.graphics_context_id = generate_id();
+static void CreateGc() {
+    g_state.graphicsContextId = generateId();
     int const len = 4;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_CREATE_GC | (len<<16);
-    packet[1] = g_state.graphics_context_id;
-    packet[2] = g_state.window_id;
+    packet[1] = g_state.graphicsContextId;
+    packet[2] = g_state.windowId;
     packet[3] = 0; // Value mask.
 
-    send_buf(packet, sizeof(packet));
+    SendBuf(packet, sizeof(packet));
 }
 
 
@@ -709,7 +708,7 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName) {
 }
 
 
-static int get_atom_id(char const *atomName) {
+static int GetAtomId(char const *atomName) {
     int atomNameLen = strlen(atomName);
     if (atomNameLen > 19) return 0;
 
@@ -722,28 +721,28 @@ static int get_atom_id(char const *atomName) {
     packet[4] = atomNameLen; // Atom name len in bytes.
     memcpy(packet + 8, atomName, atomNameLen);
 
-    send_buf(packet, requestLenBytes);
+    SendBuf(packet, requestLenBytes);
 
     while (!GetReply(32))
         ;
         
-    uint16_t *id = (uint16_t *)(g_state.recv_buf + 8);
+    uint16_t *id = (uint16_t *)(g_state.recvBuf + 8);
     return *id;
 }
 
 
-static void enable_delete_window_event() {
+static void EnableDeleteWindowEvent() {
     int requestLen = 7;
     uint32_t packet[requestLen];
     packet[0] = X11_OPCODE_CHANGE_PROPERTY | (requestLen << 16);
-    packet[1] = g_state.window_id;
+    packet[1] = g_state.windowId;
     packet[2] = 0x144; // Property = WM_PROTOCOLS.
     packet[3] = 4; // Type = ATOM.
     packet[4] = 32; // Format = 32 bits per item.
     packet[5] = 1; // Length = 1 item.
     packet[6] = 0x143; // Item data = WM_DELETE_WINDOW.
 
-    send_buf(packet, sizeof(packet));
+    SendBuf(packet, sizeof(packet));
 }
 
 
@@ -752,14 +751,14 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 	memset(wd, 0, sizeof(DfWindow));
     wd->bmp = BitmapCreate(width, height);
 
-    ensure_state();
+    EnsureState();
 
-    g_state.window_id = generate_id();
+    g_state.windowId = generateId();
 
     int const len = 9;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_CREATE_WINDOW | (len<<16);
-    packet[1] = g_state.window_id;
+    packet[1] = g_state.windowId;
     packet[2] = g_state.screens[0].root_id;
     packet[3] = 0; // x,y pos. System will position window. TODO - use x and y
     packet[4] = width | (height<<16);
@@ -769,29 +768,29 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
     packet[8] = X11_EVENT_KEYPRESS | X11_EVENT_KEYRELEASE | X11_EVENT_POINTERMOTION |
                 X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE | X11_EVENT_STRUCTURE_NOTIFY;
 
-    send_buf(packet, sizeof(packet));
+    SendBuf(packet, sizeof(packet));
 
-    create_gc();
-    map_window();
+    CreateGc();
+    MapWindow();
     SetWindowTitle(winName);
-    enable_delete_window_event();
+    EnableDeleteWindowEvent();
 
     // Make socket non-blocking.
-    int flags = fcntl(g_state.socket_fd, F_GETFL, 0);
+    int flags = fcntl(g_state.socketFd, F_GETFL, 0);
     if (flags == -1) {
         FATAL_ERROR("Couldn't get flags of socket");
     }
     flags |= O_NONBLOCK;
-    if (fcntl(g_state.socket_fd, F_SETFL, flags) != 0) {
+    if (fcntl(g_state.socketFd, F_SETFL, flags) != 0) {
         FATAL_ERROR("Couldn't set socket as non-blocking");
     }
 
     InitInput();
 
-//     int clipboard_id = get_atom_id("CLIPBOARD");
-//     int string_id = get_atom_id("STRING");
-//     int xsel_data_id = get_atom_id("XSEL_DATA");
-//     int incr_id = get_atom_id("INCR");
+//     int clipboard_id = GetAtomId("CLIPBOARD");
+//     int string_id = GetAtomId("STRING");
+//     int xsel_data_id = GetAtomId("XSEL_DATA");
+//     int incr_id = GetAtomId("INCR");
 // 
 //     usleep(100000);
 //     puts("Sending ConvertSelection request");
@@ -800,12 +799,12 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //     {
 //         uint32_t packet[6];
 //         packet[0] = 24 | 6 << 16;
-//         packet[1] = g_state.window_id; // requestor
+//         packet[1] = g_state.windowId; // requestor
 //         packet[2] = clipboard_id; // selection
 //         packet[3] = string_id; // target
 //         packet[4] = xsel_data_id; // property
 //         packet[5] = 0; // time
-//         send_buf(packet, sizeof(packet));
+//         SendBuf(packet, sizeof(packet));
 //     }
 // 
 //     usleep(100000);
@@ -817,12 +816,12 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //         puts("sending GetProperty request");
 //         uint32_t packet[6];
 //         packet[0] = 20 | 6 << 16;
-//         packet[1] = g_state.window_id; // window
+//         packet[1] = g_state.windowId; // window
 //         packet[2] = xsel_data_id;   // property
 //         packet[3] = 0; // Type = any
 //         packet[4] = 0; // offset = 0
 //         packet[5] = 0xfffffffful; // length
-//         send_buf(packet, sizeof(packet));
+//         SendBuf(packet, sizeof(packet));
 //     }
 // 
 //     usleep(100000);
@@ -831,7 +830,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //     printf("Getting GetProperty response\n");
 //     {
 //         unsigned char buf[1024];
-//         ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, sizeof(buf), 0);
+//         ssize_t numBytesRecvd = recv(g_state.socketFd, buf, sizeof(buf), 0);
 //             
 //         printf("is reply: %i\n", buf[0]);
 //         printf("format: %i\n", buf[1]);
@@ -856,7 +855,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //         uint32_t numBytesLeft = lenOfValueInFmtUnits;
 //         while (numBytesLeft > 0) {
 //             ssize_t numBytesToRequest = IntMin(sizeof(buf), numBytesLeft);
-//             ssize_t numBytesRecvd = recv(g_state.socket_fd, buf, numBytesToRequest, 0);
+//             ssize_t numBytesRecvd = recv(g_state.socketFd, buf, numBytesToRequest, 0);
 //             for (int i = 0; i < lenOfValueInFmtUnits; i++) {
 //                 if (buf[i] >= 32 && buf[i] < 128) {
 //                     putchar(buf[i]);
@@ -894,21 +893,21 @@ static void BlitBitmapToWindow(DfWindow *wd) {
         uint32_t bmp_format = 2 << 8;
         uint32_t request_len = (uint32_t)(W * num_rows_in_chunk + 6) << 16;
         packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
-        packet[1] = g_state.window_id;
-        packet[2] = g_state.graphics_context_id;
+        packet[1] = g_state.windowId;
+        packet[2] = g_state.graphicsContextId;
         packet[3] = W | (num_rows_in_chunk << 16); // Width and height.
         packet[4] = 0 | (y << 16); // Dst X and Y.
         packet[5] = 24 << 8; // Bit depth.
 
-        send_buf(packet, sizeof(packet));
-        send_buf(row, W * num_rows_in_chunk * 4);
+        SendBuf(packet, sizeof(packet));
+        SendBuf(row, W * num_rows_in_chunk * 4);
         row += W * num_rows_in_chunk;
     }
 }
 
 
 bool GetDesktopRes(int *width, int *height) {
-    ensure_state();
+    EnsureState();
     *width = g_state.screens[0].width;
     *height = g_state.screens[0].height;
     return true;
@@ -956,14 +955,14 @@ void SetWindowTitle(char const *title) {
 
     int len = (headerNumBytes + titleLen + 3) / 4;
     packet[0] = X11_OPCODE_CHANGE_PROPERTY | (len << 16);
-    packet[1] = g_state.window_id;
+    packet[1] = g_state.windowId;
     packet[2] = X11_ATOM_WM_NAME; // Property
     packet[3] = 0x1f; // Type
     packet[4] = 8; // Format
     packet[5] = titleLen;
     memcpy(&packet[6], title, titleLen);
 
-    send_buf(packet, len * 4);
+    SendBuf(packet, len * 4);
 }
 
 
