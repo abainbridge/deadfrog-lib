@@ -281,58 +281,6 @@ static int x11_keycode_to_df_keycode(int i) {
 }
 
 
-static void HandleErrorMessage() {
-    // See https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#Encoding::Errors
-    printf("Error message from X11 server - ");
-    switch (g_state.recv_buf[1]) {
-        case 2: printf("Bad value. %x %x", g_state.recv_buf[2], g_state.recv_buf[3]); break;
-        case 9: printf("Bad drawable\n"); break;
-        case 16: printf("Bad length\n"); break;
-        default: printf("Unknown error code %i\n", g_state.recv_buf[1]);
-    }
-    exit(-1);
-}
-
-
-static void ConsumeMessage(int len) {
-    memmove(g_state.recv_buf, g_state.recv_buf + len, g_state.recv_buf_num_bytes - len);
-    g_state.recv_buf_num_bytes -= len;
-    if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
-        FATAL_ERROR("bad num bytes");
-    }
-}
-
-
-static void send_buf(const void *_buf, int len) {
-    const char *buf = (const char *)_buf;
-    while (1) {
-        struct pollfd poll_fd = { g_state.socket_fd, POLLOUT };
-        int poll_result = poll(&poll_fd, 1, -1);
-        if (poll_result == -1)
-            FATAL_ERROR("Poll gave an error %i", poll_result);
-
-        int size_sent = write(g_state.socket_fd, buf, len);
-        if (size_sent < 0) {
-            FATAL_ERROR("Couldn't send buf");
-        }
-
-        len -= size_sent;
-
-        if (len < 0) FATAL_ERROR("send_buf bug");
-        if (len == 0) break;
-
-        buf += size_sent;
-    }
-}
-
-
-static void fatal_read(void *buf, size_t count) {
-    if (recvfrom(g_state.socket_fd, buf, count, 0, NULL, NULL) != count) {
-        FATAL_ERROR("Failed to read.");
-    }
-}
-
-
 static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
     int shift = modifiers & 1;
     int caps_lock = modifiers & 2;
@@ -425,29 +373,120 @@ static char df_keycode_to_ascii(unsigned char keycode, char modifiers) {
 }
 
 
-static void map_window() {
-    int const len = 2;
-    uint32_t packet[len];
-    packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
-    packet[1] = g_state.window_id;
-    send_buf(packet, 8);
+// ****************************************************************************
+// Socket handling code.
+// ****************************************************************************
+
+
+// This function is the only way that data is received from the X11 server. It:
+//
+// 1. Uses a large(ish) buffer on the heap to receive into. Callers read from
+// that buffer directly, rather than having to allocate their own.
+//
+// 2. In combination with ConsumeMessage, it allows PDUs that are split across
+// a recv() to be remerged into a single contiguous block.
+//
+// Returns the number of bytes received.
+static int ReadFromXServer() {
+    unsigned char *buf = g_state.recv_buf + g_state.recv_buf_num_bytes;
+    ssize_t buf_len = sizeof(g_state.recv_buf) - g_state.recv_buf_num_bytes;
+    ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, buf_len, 0);
+    if (num_bytes_recvd == 0) {
+        // Treat this as a FATAL_ERROR because if it happened when we were
+        // doing a write to the socket, we'd get a SIGPIPE fatal exception. In
+        // other words, the Xserver closing the socket will normally cause us
+        // to crash anyway.
+        FATAL_ERROR("Xserver closed the socket");
+    }
+
+    if (num_bytes_recvd < 0) {
+        if (errno == EAGAIN) {
+            return 0;
+        }
+
+        perror("");
+        printf("Couldn't read from socket. Len = %i.\n", (int)num_bytes_recvd);
+        return 0;
+    }
+
+    g_state.recv_buf_num_bytes += num_bytes_recvd;
+
+    return num_bytes_recvd;
 }
 
 
-// static void unmap_window() {
-//     int const len = 2;
-//     uint32_t packet[len];
-//     packet[0] = X11_OPCODE_UNMAP_WINDOW | (len<<16);
-//     packet[1] = g_state.window_id;
-//     send_buf(packet, 8);
-// }
-
-
-static bool handle_event() {
-    if (g_state.recv_buf_num_bytes < 32) {
-        return false;
+static void ConsumeMessage(int len) {
+    memmove(g_state.recv_buf, g_state.recv_buf + len, g_state.recv_buf_num_bytes - len);
+    g_state.recv_buf_num_bytes -= len;
+    if (g_state.recv_buf_num_bytes > sizeof(g_state.recv_buf)) {
+        FATAL_ERROR("bad num bytes");
     }
+}
 
+
+static void send_buf(const void *_buf, int len) {
+    const char *buf = (const char *)_buf;
+    while (1) {
+        struct pollfd poll_fd = { g_state.socket_fd, POLLOUT };
+        int poll_result = poll(&poll_fd, 1, -1);
+        if (poll_result == -1)
+            FATAL_ERROR("Poll gave an error %i", poll_result);
+
+        int size_sent = write(g_state.socket_fd, buf, len);
+        if (size_sent < 0) {
+            FATAL_ERROR("Couldn't send buf");
+        }
+
+        len -= size_sent;
+
+        if (len < 0) FATAL_ERROR("send_buf bug");
+        if (len == 0) break;
+
+        buf += size_sent;
+    }
+}
+
+
+// TODO: I think we should replace this with poll_socket().
+static void fatal_read(void *buf, size_t count) {
+    if (recvfrom(g_state.socket_fd, buf, count, 0, NULL, NULL) != count) {
+        FATAL_ERROR("Failed to read.");
+    }
+}
+
+
+static void HandleErrorMessage() {
+    // See https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#Encoding::Errors
+    printf("Error message from X11 server - ");
+    switch (g_state.recv_buf[1]) {
+        case 2: printf("Bad value. %x %x", g_state.recv_buf[2], g_state.recv_buf[3]); break;
+        case 9: printf("Bad drawable\n"); break;
+        case 16: printf("Bad length\n"); break;
+        default: printf("Unknown error code %i\n", g_state.recv_buf[1]);
+    }
+    exit(-1);
+}
+
+
+static bool IsEventPending() {
+    if (g_state.recv_buf_num_bytes >= 2 && g_state.recv_buf[0] == 0)
+        return true; // Error message event is pending.
+
+    if (g_state.recv_buf[0] == 1)
+        return false;   // Reply is pending.
+
+    if (g_state.recv_buf_num_bytes >= 32)
+        return true;
+
+    return false;
+}
+
+
+static void handle_event() {
+    if (g_state.recv_buf[0] == 1) {
+        FATAL_ERROR("Got unexpected reply.");
+    }
+            
     switch (g_state.recv_buf[0]) {
     case 2: // KeyPress event.
         {
@@ -537,67 +576,43 @@ static bool handle_event() {
     }
 
     ConsumeMessage(32);
-    return true;
 }
 
 
-// This function is the only way that data is received from the X11 server.
+static void HandleEvents() {
+    ReadFromXServer();
+    
+    while (IsEventPending()) {
+        handle_event();
+    }
+}
+
+
 // Because the X11 protocol is asynchronous, we might receive events here when
 // we are waiting for a response.
 //
-// buf should be a pointer to an array if you expect a response, otherwise it
-// should be NULL.
-//
-// expected_len is the length of the expected reply. It is ignored if buf == NULL.
-//
-// Returns true if the expect reply was found and false otherwise.
-static bool poll_socket(void *return_buf, size_t expected_len) {
-    unsigned char *buf = g_state.recv_buf + g_state.recv_buf_num_bytes;
-    ssize_t buf_len = sizeof(g_state.recv_buf) - g_state.recv_buf_num_bytes;
-    ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, buf_len, 0);
-    if (num_bytes_recvd == 0) {
-        // Treat this as a FATAL_ERROR because if it happened when we were
-        // doing a write to the socket, we'd get a SIGPIPE fatal exception. In
-        // other words, the Xserver closing the socket will normally cause us
-        // to crash anyway.
-        FATAL_ERROR("Xserver closed the socket");
-    }
+// Returns true if an event was found and false otherwise.
+static bool GetReply(int expectedLen) {
+    HandleEvents();
 
-    if (num_bytes_recvd < 0) {
-        if (errno == EAGAIN) {
-            return false;
-        }
+    if (g_state.recv_buf[0] == 1 && g_state.recv_buf_num_bytes >= expectedLen)
+        return true;
 
-        perror("");
-        printf("Couldn't read from socket. Len = %i.\n", (int)num_bytes_recvd);
-        return false;
-    }
+    return false;
+}
 
-    g_state.recv_buf_num_bytes += num_bytes_recvd;
 
-    int keep_going = 1;
-    while (keep_going && g_state.recv_buf_num_bytes) {
-        if (g_state.recv_buf[0] == 0) {
-            HandleErrorMessage();
-        } else if (g_state.recv_buf[0] == 1) {
-            // Handle reply.
-            if (g_state.recv_buf_num_bytes >= expected_len) {
-                memcpy(return_buf, g_state.recv_buf, expected_len);
-                if (expected_len >= 0) {
-                    ConsumeMessage(expected_len);
-                }
-                expected_len = 0;   // Store the fact that we've received the expected reply.
-            }
-            else {
-                keep_going = 0;
-            }
-        }
-        else {
-            keep_going = handle_event();
-        }
-    }
+// ****************************************************************************
+// End of socket handling code.
+// ****************************************************************************
 
-    return true;
+
+static void map_window() {
+    int const len = 2;
+    uint32_t packet[len];
+    packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
+    packet[1] = g_state.window_id;
+    send_buf(packet, 8);
 }
 
 
@@ -709,11 +724,10 @@ static int get_atom_id(char const *atomName) {
 
     send_buf(packet, requestLenBytes);
 
-    uint8_t reply[32];
-    while (!poll_socket(reply, sizeof(reply)))
+    while (!GetReply(32))
         ;
         
-    uint16_t *id = (uint16_t *)(reply + 8);
+    uint16_t *id = (uint16_t *)(g_state.recv_buf + 8);
     return *id;
 }
 
@@ -908,7 +922,7 @@ bool WaitVsync() {
 
 
 bool InputPoll() {
-    poll_socket(NULL, 0);
+    HandleEvents();
     InputPollInternal();
     return true;
 }
