@@ -150,6 +150,7 @@ typedef struct __attribute__((packed)) {
     uint32_t pad;
 } visual_t;
 
+
 // End of X11 protocol definitions
 //
 
@@ -548,7 +549,9 @@ static bool handle_event() {
 // should be NULL.
 //
 // expected_len is the length of the expected reply. It is ignored if buf == NULL.
-static void poll_socket(void *return_buf, size_t expected_len) {
+//
+// Returns true if the expect reply was found and false otherwise.
+static bool poll_socket(void *return_buf, size_t expected_len) {
     unsigned char *buf = g_state.recv_buf + g_state.recv_buf_num_bytes;
     ssize_t buf_len = sizeof(g_state.recv_buf) - g_state.recv_buf_num_bytes;
     ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, buf_len, 0);
@@ -562,12 +565,12 @@ static void poll_socket(void *return_buf, size_t expected_len) {
 
     if (num_bytes_recvd < 0) {
         if (errno == EAGAIN) {
-            return;
+            return false;
         }
 
         perror("");
         printf("Couldn't read from socket. Len = %i.\n", (int)num_bytes_recvd);
-        return;
+        return false;
     }
 
     g_state.recv_buf_num_bytes += num_bytes_recvd;
@@ -593,6 +596,8 @@ static void poll_socket(void *return_buf, size_t expected_len) {
             keep_going = handle_event();
         }
     }
+
+    return true;
 }
 
 
@@ -689,6 +694,30 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName) {
 }
 
 
+static int get_atom_id(char const *atomName) {
+    int atomNameLen = strlen(atomName);
+    if (atomNameLen > 19) return 0;
+
+    int requestLenWords = (11 + atomNameLen) / 4;
+    int requestLenBytes = requestLenWords * 4;
+    uint8_t packet[30] = { 0 };
+    packet[0] = 16; // opcode = InternAtom.
+    packet[1] = 0; // only_if_exists = 0.
+    packet[2] = requestLenWords;
+    packet[4] = atomNameLen; // Atom name len in bytes.
+    memcpy(packet + 8, atomName, atomNameLen);
+
+    send_buf(packet, requestLenBytes);
+
+    uint8_t reply[32];
+    while (!poll_socket(reply, sizeof(reply)))
+        ;
+        
+    uint16_t *id = (uint16_t *)(reply + 8);
+    return *id;
+}
+
+
 static void enable_delete_window_event() {
     int requestLen = 7;
     uint32_t packet[requestLen];
@@ -745,6 +774,92 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 
     InitInput();
 
+//     int clipboard_id = get_atom_id("CLIPBOARD");
+//     int string_id = get_atom_id("STRING");
+//     int xsel_data_id = get_atom_id("XSEL_DATA");
+//     int incr_id = get_atom_id("INCR");
+// 
+//     usleep(100000);
+//     puts("Sending ConvertSelection request");
+// 
+//     // Send ConvertSelection request.
+//     {
+//         uint32_t packet[6];
+//         packet[0] = 24 | 6 << 16;
+//         packet[1] = g_state.window_id; // requestor
+//         packet[2] = clipboard_id; // selection
+//         packet[3] = string_id; // target
+//         packet[4] = xsel_data_id; // property
+//         packet[5] = 0; // time
+//         send_buf(packet, sizeof(packet));
+//     }
+// 
+//     usleep(100000);
+//     puts("poll_socket");
+//     poll_socket(NULL, 0);
+// 
+//     // Send GetProperty request.
+//     {
+//         puts("sending GetProperty request");
+//         uint32_t packet[6];
+//         packet[0] = 20 | 6 << 16;
+//         packet[1] = g_state.window_id; // window
+//         packet[2] = xsel_data_id;   // property
+//         packet[3] = 0; // Type = any
+//         packet[4] = 0; // offset = 0
+//         packet[5] = 0xfffffffful; // length
+//         send_buf(packet, sizeof(packet));
+//     }
+// 
+//     usleep(100000);
+// 
+//     // Get response to GetProperty request.
+//     printf("Getting GetProperty response\n");
+//     {
+//         unsigned char buf[1024];
+//         ssize_t num_bytes_recvd = recv(g_state.socket_fd, buf, sizeof(buf), 0);
+//             
+//         printf("is reply: %i\n", buf[0]);
+//         printf("format: %i\n", buf[1]);
+// 
+//         uint16_t seqNum = *((uint16_t *)(buf + 2));
+//         printf("sequence num: %i\n", seqNum);
+// 
+//         uint32_t replyLen = *((uint32_t *)(buf + 4));
+//         printf("reply len: %i\n", replyLen);
+// 
+//         uint32_t type = *((uint32_t *)(buf + 8));
+//         printf("type: %i\n", type);
+//         
+//         uint32_t bytesAfter = *((uint32_t *)(buf + 12));
+//         printf("bytesAfter: %i\n", bytesAfter);
+//         
+//         uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
+//         printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
+// 
+//         // Then 12 bytes unused.
+// 
+//         uint32_t numBytesLeft = lenOfValueInFmtUnits;
+//         while (numBytesLeft > 0) {
+//             ssize_t numBytesToRequest = IntMin(sizeof(buf), numBytesLeft);
+//             ssize_t numBytesRecvd = recv(g_state.socket_fd, buf, numBytesToRequest, 0);
+//             for (int i = 0; i < lenOfValueInFmtUnits; i++) {
+//                 if (buf[i] >= 32 && buf[i] < 128) {
+//                     putchar(buf[i]);
+//                 }
+//                 else {
+//                     putchar('?');
+//                 }
+//                 putchar('.');
+//             }
+//             
+//             break;
+//         }
+//         usleep(100000);
+//     }
+// 
+//     exit(1);
+    
     return true;
 }
 
