@@ -791,11 +791,10 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 
     InitInput();
 
-//     int clipboard_id = GetAtomId("CLIPBOARD");
-//     int string_id = GetAtomId("STRING");
-//     int xsel_data_id = GetAtomId("XSEL_DATA");
-//     int incr_id = GetAtomId("INCR");
-//     printf("%d %d %d %d\n", clipboard_id, string_id, xsel_data_id, incr_id);
+//     int clipboardId = GetAtomId("CLIPBOARD");
+//     int stringId = GetAtomId("STRING");
+//     int xselDataId = GetAtomId("XSEL_DATA");
+//     printf("%d %d %d\n", clipboardId, stringId, xselDataId);
 // 
 //     usleep(100000);
 //     puts("Sending ConvertSelection request");
@@ -805,14 +804,14 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //         uint32_t packet[6];
 //         packet[0] = 24 | 6 << 16;
 //         packet[1] = g_state.windowId; // requestor
-//         packet[2] = clipboard_id; // selection
-//         packet[3] = string_id; // target
-//         packet[4] = xsel_data_id; // property
+//         packet[2] = clipboardId; // selection
+//         packet[3] = stringId; // target
+//         packet[4] = xselDataId; // property
 //         packet[5] = 0; // time
 //         SendBuf(packet, sizeof(packet));
 //     }
 // 
-//     // Wait for long enough the the SelectionNotify response will have arrived.
+//     // Wait for long enough that the SelectionNotify response will have arrived.
 //     usleep(100000);
 // 
 //     // Consume it, and assume it tells us that there is a selection.
@@ -824,14 +823,12 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //         uint32_t packet[6];
 //         packet[0] = 20 | 6 << 16;
 //         packet[1] = g_state.windowId; // window
-//         packet[2] = xsel_data_id;   // property
+//         packet[2] = xselDataId;   // property
 //         packet[3] = 0; // Type = any
 //         packet[4] = 0; // offset = 0
 //         packet[5] = 0xfffffffful; // length
 //         SendBuf(packet, sizeof(packet));
 //     }
-// 
-//     usleep(100000);
 // 
 //     // Get response to GetProperty request.
 //     printf("Getting GetProperty response\n");
@@ -841,9 +838,12 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 // 
 //         uint8_t *buf = g_state.recvBuf;
 //         uint32_t type = *((uint32_t *)(buf + 8));
-//         if (type == string_id) {
+//         if (type == stringId) {
+//             uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
+//         
 //             uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
 //             printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
+// 
 //             ConsumeMessage(32);
 // 
 //             uint32_t numBytesLeft = lenOfValueInFmtUnits;
@@ -863,10 +863,13 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //                 ConsumeMessage(stringLen);
 //                 numBytesLeft -= stringLen;
 //             }
+// 
+//             uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
+//             ConsumeMessage(amtPadding);
 //         }
 //     }
 // 
-//     exit(1);
+//    exit(1);
     
     return true;
 }
