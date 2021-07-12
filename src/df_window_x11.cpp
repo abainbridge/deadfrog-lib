@@ -154,7 +154,7 @@ typedef struct __attribute__((packed)) {
 typedef struct {
     int socketFd;
     unsigned char recvBuf[10000];
-    int recvBufNumBytes;
+    int recvBufNumBytesAvailable;
 
     connectionReplyHeader_t connectionReplyHeader;
     connectionReplySuccessBody_t *connectionReplySuccessBody;
@@ -384,8 +384,8 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
 //
 // Returns the number of bytes received.
 static int ReadFromXServer() {
-    unsigned char *buf = g_state.recvBuf + g_state.recvBufNumBytes;
-    ssize_t bufLen = sizeof(g_state.recvBuf) - g_state.recvBufNumBytes;
+    unsigned char *buf = g_state.recvBuf + g_state.recvBufNumBytesAvailable;
+    ssize_t bufLen = sizeof(g_state.recvBuf) - g_state.recvBufNumBytesAvailable;
     ssize_t numBytesRecvd = recv(g_state.socketFd, buf, bufLen, 0);
     if (numBytesRecvd == 0) {
         // Treat this as a FATAL_ERROR because if it happened when we were
@@ -405,16 +405,16 @@ static int ReadFromXServer() {
         return 0;
     }
 
-    g_state.recvBufNumBytes += numBytesRecvd;
+    g_state.recvBufNumBytesAvailable += numBytesRecvd;
 
     return numBytesRecvd;
 }
 
 
 static void ConsumeMessage(int len) {
-    memmove(g_state.recvBuf, g_state.recvBuf + len, g_state.recvBufNumBytes - len);
-    g_state.recvBufNumBytes -= len;
-    if (g_state.recvBufNumBytes > sizeof(g_state.recvBuf)) {
+    memmove(g_state.recvBuf, g_state.recvBuf + len, g_state.recvBufNumBytesAvailable - len);
+    g_state.recvBufNumBytesAvailable -= len;
+    if (g_state.recvBufNumBytesAvailable > sizeof(g_state.recvBuf)) {
         FATAL_ERROR("bad num bytes");
     }
 }
@@ -464,13 +464,13 @@ static void HandleErrorMessage() {
 
 
 static bool IsEventPending() {
-    if (g_state.recvBufNumBytes >= 2 && g_state.recvBuf[0] == 0)
+    if (g_state.recvBufNumBytesAvailable >= 2 && g_state.recvBuf[0] == 0)
         return true; // Error message event is pending.
 
     if (g_state.recvBuf[0] == 1)
         return false;   // Reply is pending.
 
-    if (g_state.recvBufNumBytes >= 32)
+    if (g_state.recvBufNumBytesAvailable >= 32)
         return true;
 
     return false;
@@ -590,7 +590,7 @@ static void HandleEvents() {
 static bool GetReply(int expectedLen) {
     HandleEvents();
 
-    if (g_state.recvBuf[0] == 1 && g_state.recvBufNumBytes >= expectedLen)
+    if (g_state.recvBuf[0] == 1 && g_state.recvBufNumBytesAvailable >= expectedLen)
         return true;
 
     return false;
@@ -728,6 +728,9 @@ static int GetAtomId(char const *atomName) {
         ;
         
     uint16_t *id = (uint16_t *)(g_state.recvBuf + 8);
+
+    ConsumeMessage(32);
+    
     return *id;
 }
 
@@ -792,6 +795,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //     int string_id = GetAtomId("STRING");
 //     int xsel_data_id = GetAtomId("XSEL_DATA");
 //     int incr_id = GetAtomId("INCR");
+//     printf("%d %d %d %d\n", clipboard_id, string_id, xsel_data_id, incr_id);
 // 
 //     usleep(100000);
 //     puts("Sending ConvertSelection request");
@@ -808,9 +812,11 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //         SendBuf(packet, sizeof(packet));
 //     }
 // 
+//     // Wait for long enough the the SelectionNotify response will have arrived.
 //     usleep(100000);
-//     puts("poll_socket");
-//     poll_socket(NULL, 0);
+// 
+//     // Consume it, and assume it tells us that there is a selection.
+//     HandleEvents();
 // 
 //     // Send GetProperty request.
 //     {
@@ -830,46 +836,34 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //     // Get response to GetProperty request.
 //     printf("Getting GetProperty response\n");
 //     {
-//         unsigned char buf[1024];
-//         ssize_t numBytesRecvd = recv(g_state.socketFd, buf, sizeof(buf), 0);
-//             
-//         printf("is reply: %i\n", buf[0]);
-//         printf("format: %i\n", buf[1]);
+//         while (!GetReply(32))
+//             ;
 // 
-//         uint16_t seqNum = *((uint16_t *)(buf + 2));
-//         printf("sequence num: %i\n", seqNum);
-// 
-//         uint32_t replyLen = *((uint32_t *)(buf + 4));
-//         printf("reply len: %i\n", replyLen);
-// 
+//         uint8_t *buf = g_state.recvBuf;
 //         uint32_t type = *((uint32_t *)(buf + 8));
-//         printf("type: %i\n", type);
-//         
-//         uint32_t bytesAfter = *((uint32_t *)(buf + 12));
-//         printf("bytesAfter: %i\n", bytesAfter);
-//         
-//         uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
-//         printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
+//         if (type == string_id) {
+//             uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
+//             printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
+//             ConsumeMessage(32);
 // 
-//         // Then 12 bytes unused.
+//             uint32_t numBytesLeft = lenOfValueInFmtUnits;
+//             while (numBytesLeft > 0) {
+//                 ReadFromXServer();
 // 
-//         uint32_t numBytesLeft = lenOfValueInFmtUnits;
-//         while (numBytesLeft > 0) {
-//             ssize_t numBytesToRequest = IntMin(sizeof(buf), numBytesLeft);
-//             ssize_t numBytesRecvd = recv(g_state.socketFd, buf, numBytesToRequest, 0);
-//             for (int i = 0; i < lenOfValueInFmtUnits; i++) {
-//                 if (buf[i] >= 32 && buf[i] < 128) {
-//                     putchar(buf[i]);
+//                 ssize_t stringLen = IntMin(g_state.recvBufNumBytesAvailable, numBytesLeft);
+//                 for (int i = 0; i < stringLen; i++) {
+//                     if (buf[i] >= 32 && buf[i] < 128) {
+//                         putchar(buf[i]);
+//                     }
+//                     else {
+//                         putchar('?');
+//                     }
 //                 }
-//                 else {
-//                     putchar('?');
-//                 }
-//                 putchar('.');
+// 
+//                 ConsumeMessage(stringLen);
+//                 numBytesLeft -= stringLen;
 //             }
-//             
-//             break;
 //         }
-//         usleep(100000);
 //     }
 // 
 //     exit(1);
