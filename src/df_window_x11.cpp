@@ -18,19 +18,15 @@
 // X11 protocol specs:
 //    https://www.x.org/releases/X11R7.7/doc/index.html
 
-// To debug what we send to the xserver, change the following line:
-//    strcpy(servAddr.sun_path, "/tmp/.X11-unix/X0");
-// to:
-//    strcpy(servAddr.sun_path, "/tmp/.X11-unix/X1");
-//
-// Then, in another terminal, run:
-//    xtrace -D:1 -d:0 -k -w
-//
-// To see what another X11 application's traffic looks like:
+// To debug what we send to the xserver:
 //    In one terminal, run:
 //        xtrace -D:1 -d:0 -k -w
-//    In another, run something like:
-//        DISPLAY=:1.0 xclock
+//    Then, in another terminal:  
+//        Set the DISPLAY env var to ":1"
+//        Run CodeTrowel
+//
+// You will also see other X11 applications' traffic if they are launched with
+// the same DISPLAY string.
 
 
 
@@ -619,6 +615,11 @@ static void MapWindow() {
 static void EnsureState() {
     if (g_state.socketFd >= 0) return;
 
+    char *displayString = getenv("DISPLAY");
+    char socketName[] = "/tmp/.X11-unix/X0";
+    if (displayString && displayString[0] == ':' && isdigit(displayString[1]))
+        socketName[16] = displayString[1];
+
     // Open socket and connect.
     g_state.socketFd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (g_state.socketFd < 0) {
@@ -626,7 +627,7 @@ static void EnsureState() {
     }
     struct sockaddr_un servAddr = { 0 };
     servAddr.sun_family = AF_UNIX;
-    strcpy(servAddr.sun_path, "/tmp/.X11-unix/X0");
+    strcpy(servAddr.sun_path, socketName);
     if (connect(g_state.socketFd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
         FATAL_ERROR("Couldn't connect");
     }
