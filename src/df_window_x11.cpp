@@ -513,11 +513,11 @@ static void handle_event() {
     case 4: // Mouse down button event (includes scroll motion).
         switch (g_state.recvBuf[1]) {
             case 1:
-                g_input.lmbClicked = 1;
+                g_input.lmb = 1;
     			g_priv.m_lmbPrivate = true;
                 break;
-            case 2: g_input.mmbClicked = 1; break;
-            case 3: g_input.rmbClicked = 1; break;
+            case 2: g_input.mmb = 1; break;
+            case 3: g_input.rmb = 1; break;
             case 4: g_input.mouseZ++; break;
             case 5: g_input.mouseZ--; break;
         }
@@ -527,11 +527,11 @@ static void handle_event() {
     case 5: // Mouse button up event.
         switch (g_state.recvBuf[1]) {
             case 1:
-                g_input.lmbUnClicked = 1;
+                g_input.lmb = 0;
     			g_priv.m_lmbPrivate = false;
                 break;
-            case 2: g_input.mmbUnClicked = 1; break;
-            case 3: g_input.rmbUnClicked = 1; break;
+            case 2: g_input.mmb = 0; break;
+            case 3: g_input.rmb = 0; break;
         }
         //printf("up:%i\n", g_state.recvBuf[1]);
         break;
