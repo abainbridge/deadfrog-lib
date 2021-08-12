@@ -11,6 +11,9 @@
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
     <ClCompile Include="..\..\fractal_fern.cpp" />
     <ClCompile Include="..\..\test.cpp" />
+    <ClCompile Include="..\..\fluid.cpp" />
+    <ClCompile Include="..\..\planimeter.cpp" />
+    <ClCompile Include="..\..\7guis.cpp" />
     <ClCompile Include="..\..\aa_poly_test.cpp" />
   </ItemGroup>
   <ItemGroup>
