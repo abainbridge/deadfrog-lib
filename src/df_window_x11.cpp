@@ -736,6 +736,8 @@ static int GetAtomId(char const *atomName) {
 
 
 static void EnableDeleteWindowEvent() {
+    // See InterClient Communication Conventions Manual v2.0. The section
+    // heading is "Window Deletion".
     int requestLen = 7;
     uint32_t packet[requestLen];
     packet[0] = X11_OPCODE_CHANGE_PROPERTY | (requestLen << 16);
