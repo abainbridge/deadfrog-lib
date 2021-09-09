@@ -27,40 +27,39 @@ Cell *cell(int x, int y) {
     return &g_cells[x + y * X_DIM];
 }
 
-float fluid_speed = 0.045;
-float viscosity = 0.01;
+float fluid_speed = 0.1;
+float viscosity = 0.02;
 int pxPerSquare = 4; // width of cell in pixels
 float four9ths = 4.0 / 9.0;					// abbreviations
 float one9th = 1.0 / 9.0;
 float one36th = 1.0 / 36.0;
 bool tracers_enabled = false;
 enum { NUM_COLS = 400 };							// there are actually NUM_COLS+2 colors
-DfColour hexColorList[NUM_COLS + 2];
+DfColour colourList[NUM_COLS + 2];
 
 
 // Set all densities in a cell to their equilibrium values for a given velocity and density:
-// (If density is omitted, it's left unchanged.)
-void setEquil(int x, int y, float newux, float newuy, float newrho) {
-    float ux3 = 3 * newux;
-    float uy3 = 3 * newuy;
-    float ux2 = newux * newux;
-    float uy2 = newuy * newuy;
-    float uxuy2 = 2 * newux * newuy;
+void setEquil(int x, int y, float new_ux, float new_uy, float new_rho) {
+    float ux3 = 3 * new_ux;
+    float uy3 = 3 * new_uy;
+    float ux2 = new_ux * new_ux;
+    float uy2 = new_uy * new_uy;
+    float uxuy2 = 2 * new_ux * new_uy;
     float u2 = ux2 + uy2;
     float u215 = 1.5 * u2;
     Cell *c = cell(x, y);
-    c->n0 = four9ths * newrho * (1 - u215);
-    c->nE = one9th * newrho * (1 + ux3 + 4.5 * ux2 - u215);
-    c->nW = one9th * newrho * (1 - ux3 + 4.5 * ux2 - u215);
-    c->nN = one9th * newrho * (1 + uy3 + 4.5 * uy2 - u215);
-    c->nS = one9th * newrho * (1 - uy3 + 4.5 * uy2 - u215);
-    c->nNE = one36th * newrho * (1 + ux3 + uy3 + 4.5 * (u2 + uxuy2) - u215);
-    c->nSE = one36th * newrho * (1 + ux3 - uy3 + 4.5 * (u2 - uxuy2) - u215);
-    c->nNW = one36th * newrho * (1 - ux3 + uy3 + 4.5 * (u2 - uxuy2) - u215);
-    c->nSW = one36th * newrho * (1 - ux3 - uy3 + 4.5 * (u2 + uxuy2) - u215);
-    c->rho = newrho;
-    c->ux = newux;
-    c->uy = newuy;
+    c->n0 = four9ths * new_rho * (1 - u215);
+    c->nE = one9th * new_rho * (1 + ux3 + 4.5 * ux2 - u215);
+    c->nW = one9th * new_rho * (1 - ux3 + 4.5 * ux2 - u215);
+    c->nN = one9th * new_rho * (1 + uy3 + 4.5 * uy2 - u215);
+    c->nS = one9th * new_rho * (1 - uy3 + 4.5 * uy2 - u215);
+    c->nNE = one36th * new_rho * (1 + ux3 + uy3 + 4.5 * (u2 + uxuy2) - u215);
+    c->nSE = one36th * new_rho * (1 + ux3 - uy3 + 4.5 * (u2 - uxuy2) - u215);
+    c->nNW = one36th * new_rho * (1 - ux3 + uy3 + 4.5 * (u2 - uxuy2) - u215);
+    c->nSW = one36th * new_rho * (1 - ux3 - uy3 + 4.5 * (u2 + uxuy2) - u215);
+    c->rho = new_rho;
+    c->ux = new_ux;
+    c->uy = new_uy;
 }
 
 // Set the fluid variables at the boundaries, according to the current slider value:
@@ -83,30 +82,30 @@ void collide() {
     for (int y = 1; y < Y_DIM - 1; y++) {
         for (int x = 1; x < X_DIM - 1; x++) {
             Cell *c = cell(x, y);
-            float thisrho = c->n0 + c->nN + c->nS + c->nE + c->nW + c->nNW + c->nNE + c->nSW + c->nSE;
-            c->rho = thisrho;
-            float thisux = (c->nE + c->nNE + c->nSE - c->nW - c->nNW - c->nSW) / thisrho;
-            c->ux = thisux;
-            float thisuy = (c->nN + c->nNE + c->nNW - c->nS - c->nSE - c->nSW) / thisrho;
-            c->uy = thisuy;
-            float one9thrho = one9th * thisrho;		// pre-compute a bunch of stuff for optimization
-            float one36thrho = one36th * thisrho;
-            float ux3 = 3 * thisux;
-            float uy3 = 3 * thisuy;
-            float ux2 = thisux * thisux;
-            float uy2 = thisuy * thisuy;
-            float uxuy2 = 2 * thisux * thisuy;
+            float this_rho = c->n0 + c->nN + c->nS + c->nE + c->nW + c->nNW + c->nNE + c->nSW + c->nSE;
+            c->rho = this_rho;
+            float this_ux = (c->nE + c->nNE + c->nSE - c->nW - c->nNW - c->nSW) / this_rho;
+            c->ux = this_ux;
+            float this_uy = (c->nN + c->nNE + c->nNW - c->nS - c->nSE - c->nSW) / this_rho;
+            c->uy = this_uy;
+            float one9th_rho = one9th * this_rho;		// pre-compute a bunch of stuff for optimization
+            float one36th_rho = one36th * this_rho;
+            float ux3 = 3 * this_ux;
+            float uy3 = 3 * this_uy;
+            float ux2 = this_ux * this_ux;
+            float uy2 = this_uy * this_uy;
+            float uxuy2 = 2 * this_ux * this_uy;
             float u2 = ux2 + uy2;
             float u215 = 1.5 * u2;
-            c->n0 += omega * (four9ths*thisrho * (1 - u215) - c->n0);
-            c->nE += omega * (one9thrho * (1 + ux3 + 4.5*ux2 - u215) - c->nE);
-            c->nW += omega * (one9thrho * (1 - ux3 + 4.5*ux2 - u215) - c->nW);
-            c->nN += omega * (one9thrho * (1 + uy3 + 4.5*uy2 - u215) - c->nN);
-            c->nS += omega * (one9thrho * (1 - uy3 + 4.5*uy2 - u215) - c->nS);
-            c->nNE += omega * (one36thrho * (1 + ux3 + uy3 + 4.5*(u2 + uxuy2) - u215) - c->nNE);
-            c->nSE += omega * (one36thrho * (1 + ux3 - uy3 + 4.5*(u2 - uxuy2) - u215) - c->nSE);
-            c->nNW += omega * (one36thrho * (1 - ux3 + uy3 + 4.5*(u2 - uxuy2) - u215) - c->nNW);
-            c->nSW += omega * (one36thrho * (1 - ux3 - uy3 + 4.5*(u2 + uxuy2) - u215) - c->nSW);
+            c->n0 += omega * (four9ths * this_rho * (1 - u215) - c->n0);
+            c->nE += omega * (one9th_rho * (1 + ux3 + 4.5*ux2 - u215) - c->nE);
+            c->nW += omega * (one9th_rho * (1 - ux3 + 4.5*ux2 - u215) - c->nW);
+            c->nN += omega * (one9th_rho * (1 + uy3 + 4.5*uy2 - u215) - c->nN);
+            c->nS += omega * (one9th_rho * (1 - uy3 + 4.5*uy2 - u215) - c->nS);
+            c->nNE += omega * (one36th_rho * (1 + ux3 + uy3 + 4.5*(u2 + uxuy2) - u215) - c->nNE);
+            c->nSE += omega * (one36th_rho * (1 + ux3 - uy3 + 4.5*(u2 - uxuy2) - u215) - c->nSE);
+            c->nNW += omega * (one36th_rho * (1 - ux3 + uy3 + 4.5*(u2 - uxuy2) - u215) - c->nNW);
+            c->nSW += omega * (one36th_rho * (1 - ux3 - uy3 + 4.5*(u2 + uxuy2) - u215) - c->nSW);
         }
     }
 
@@ -125,13 +124,13 @@ void stream() {
             cell(x, y)->nNW = cell(x + 1, y - 1)->nNW;		// and the northwest-moving particles
         }
     }
-    for (int y = Y_DIM - 2; y>0; y--) {			// now start in NE corner...
+    for (int y = Y_DIM - 2; y > 0; y--) {			// now start in NE corner...
         for (int x = X_DIM - 2; x > 0; x--) {
             cell(x, y)->nE = cell(x - 1, y)->nE;			// move the east-moving particles
             cell(x, y)->nNE = cell(x - 1 , y - 1)->nNE;		// and the northeast-moving particles
         }
     }
-    for (int y = 1; y<Y_DIM - 1; y++) {			// now start in SE corner...
+    for (int y = 1; y < Y_DIM - 1; y++) {			// now start in SE corner...
         for (int x = X_DIM - 2; x > 0; x--) {
             cell(x, y)->nS = cell(x, y + 1)->nS;			// move the south-moving particles
             cell(x, y)->nSE = cell(x - 1, y + 1)->nSE;		// and the southeast-moving particles
@@ -193,11 +192,6 @@ void initTracers() {
 //     }
 }
 
-// Color a grid square in the image data array, one pixel at a time (rgb each in range 0 to 255):
-void colorSquare(int x, int y, DfColour col) {
-    RectFill(g_window->bmp, x * pxPerSquare, y * pxPerSquare, pxPerSquare, pxPerSquare, col);
-}
-
 // Compute the curl (actually times 2) of the macroscopic velocity field, for plotting:
 void computeCurl() {
     for (int y = 1; y < Y_DIM - 1; y++) {			// interior sites only; leave edges set to zero
@@ -232,7 +226,7 @@ void initFluid() {
 
 void paintCanvas() {
     int cIndex = 0;
-    float contrast = 2.8;
+    float contrast = 1.0;
     int plotType = 4;
     if (plotType == 4) computeCurl();
     for (int y = 0; y < Y_DIM; y++) {
@@ -260,7 +254,8 @@ void paintCanvas() {
                 if (cIndex < 0) cIndex = 0;
                 if (cIndex > NUM_COLS) cIndex = NUM_COLS;
             }
-            colorSquare(x, y, hexColorList[cIndex]);
+            RectFill(g_window->bmp, x * pxPerSquare, y * pxPerSquare, 
+                pxPerSquare, pxPerSquare, colourList[cIndex]);
         }
     }
 
@@ -294,7 +289,7 @@ void simulate() {
 
 void LatticeBoltzmannMain()
 {
-    CreateWin(800, 320, WT_WINDOWED, "Lattice Boltzmann Example");
+    CreateWin(800, 320, WT_WINDOWED, "Lattice Boltzmann Method Fluid Simulation Example");
     g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
     // Initialize to no barriers.
@@ -330,9 +325,9 @@ void LatticeBoltzmannMain()
         else {
             r = 255 * (9 * NUM_COLS / 8.0 - c) / (NUM_COLS / 4.0); g = 0; b = 0;
         }
-        hexColorList[c] = Colour(r, g, b);
+        colourList[c] = Colour(r, g, b);
     }
-    hexColorList[NUM_COLS + 1] = Colour(0, 0, 0);
+    colourList[NUM_COLS + 1] = Colour(0, 0, 0);
 
     // Initialize tracers (but don't place them yet):
     enum { NUM_TRACERS = 144 };
@@ -346,13 +341,13 @@ void LatticeBoltzmannMain()
 
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
-        BitmapClear(g_window->bmp, g_colourBlack);
         InputPoll();
 
         simulate();
 
         // Draw frames per second counter
-        DrawTextRight(g_defaultFont, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
+        RectFill(g_window->bmp, g_window->bmp->width - 55, 0, 55, g_defaultFont->charHeight + 2, g_colourBlack);
+        DrawTextLeft(g_defaultFont, g_colourWhite, g_window->bmp, g_window->bmp->width - 50, 0, "FPS:%i", g_window->fps);
 
         UpdateWin();
 //        WaitVsync();
