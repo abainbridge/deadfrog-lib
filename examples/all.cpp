@@ -6,9 +6,8 @@ void FractalFernMain();
 void GasMain();
 void HarmonographMain();
 void HelloWorldMain();
+void LatticeBoltzmannMain(); 
 void MandelbrotMain();
-void PlanimeterMain();
-void SevenGuisMain();
 void Sierpinski3DMain();
 void TestMain();
 
@@ -28,9 +27,8 @@ int main()
 //     GasMain();
 //     HarmonographMain();
 //     HelloWorldMain();
+    LatticeBoltzmannMain();
 //     MandelbrotMain();
-//     PlanimeterMain();
-     SevenGuisMain();
 //    Sierpinski3DMain();
 //     TestMain();
 

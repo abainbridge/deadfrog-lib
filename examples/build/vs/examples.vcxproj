@@ -187,18 +187,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\7guis.cpp" />
     <ClCompile Include="..\..\aa_poly_test.cpp" />
     <ClCompile Include="..\..\all.cpp" />
     <ClCompile Include="..\..\benchmark.cpp" />
     <ClCompile Include="..\..\colour_whirl.cpp" />
-    <ClCompile Include="..\..\fluid.cpp" />
     <ClCompile Include="..\..\fractal_fern.cpp" />
     <ClCompile Include="..\..\gas.cpp" />
     <ClCompile Include="..\..\harmonograph.cpp" />
     <ClCompile Include="..\..\hello_world.cpp" />
+    <ClCompile Include="..\..\lattice_boltzmann.cpp" />
     <ClCompile Include="..\..\mandelbrot.cpp" />
-    <ClCompile Include="..\..\planimeter.cpp" />
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
     <ClCompile Include="..\..\test.cpp" />
   </ItemGroup>
