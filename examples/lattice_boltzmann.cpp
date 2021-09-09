@@ -1,10 +1,9 @@
-#include "df_bitmap.h"
 #include "df_font.h"
-#include "df_time.h"
 #include "df_window.h"
 #include "fonts/df_mono.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 
 // Based on https://physics.weber.edu/schroeder/fluids/
@@ -19,27 +18,30 @@ struct Cell {
 
 enum { X_DIM = 200 };
 enum { Y_DIM = 80 };
+enum { RENDER_SCALE = 4 }; // Width of cell in pixels.
+enum { NUM_TRACERS = 144 };
+enum { NUM_COLS = 400 }; // There are actually NUM_COLS+2 colors.
 
 // Index into this 2D array using x + y*X_DIM, traversing rows first and then columns.
-Cell g_cells[X_DIM * Y_DIM];
+static Cell g_cells[X_DIM * Y_DIM];
+static const float fluid_speed = 0.1f;
+static const float viscosity = 0.02f;
+static const float four9ths = 4.0 / 9.0;					// abbreviations
+static const float one9th = 1.0 / 9.0;
+static const float one36th = 1.0 / 36.0;
+bool tracers_enabled = true;
+DfColour colour_list[NUM_COLS + 2];
+float tracers_x[NUM_TRACERS];
+float tracers_y[NUM_TRACERS];
 
-Cell *cell(int x, int y) {
+
+static Cell *cell(int x, int y) {
     return &g_cells[x + y * X_DIM];
 }
 
-float fluid_speed = 0.1;
-float viscosity = 0.02;
-int pxPerSquare = 4; // width of cell in pixels
-float four9ths = 4.0 / 9.0;					// abbreviations
-float one9th = 1.0 / 9.0;
-float one36th = 1.0 / 36.0;
-bool tracers_enabled = false;
-enum { NUM_COLS = 400 };							// there are actually NUM_COLS+2 colors
-DfColour colourList[NUM_COLS + 2];
 
-
-// Set all densities in a cell to their equilibrium values for a given velocity and density:
-void setEquil(int x, int y, float new_ux, float new_uy, float new_rho) {
+// Set all densities in a cell to their equilibrium values for a given velocity and density.
+void SetEquilibrium(int x, int y, float new_ux, float new_uy, float new_rho) {
     float ux3 = 3 * new_ux;
     float uy3 = 3 * new_uy;
     float ux2 = new_ux * new_ux;
@@ -62,21 +64,23 @@ void setEquil(int x, int y, float new_ux, float new_uy, float new_rho) {
     c->uy = new_uy;
 }
 
-// Set the fluid variables at the boundaries, according to the current slider value:
-void setBoundaries() {
+
+// Set the fluid variables at the boundaries, according to the current slider value.
+void SetBoundaries() {
     float u0 = fluid_speed;
     for (int x = 0; x < X_DIM; x++) {
-        setEquil(x, 0, u0, 0, 1);
-        setEquil(x, Y_DIM - 1, u0, 0, 1);
+        SetEquilibrium(x, 0, u0, 0, 1);
+        SetEquilibrium(x, Y_DIM - 1, u0, 0, 1);
     }
     for (int y = 1; y < Y_DIM - 1; y++) {
-        setEquil(0, y, u0, 0, 1);
-        setEquil(X_DIM - 1, y, u0, 0, 1);
+        SetEquilibrium(0, y, u0, 0, 1);
+        SetEquilibrium(X_DIM - 1, y, u0, 0, 1);
     }
 }
 
-// Collide particles within each cell (here's the physics!):
-void collide() {
+
+// Collide particles within each cell (here's the physics!).
+void Collide() {
     float viscosity = 0.02;	// kinematic viscosity coefficient in natural units
     float omega = 1.0 / (3.0 * viscosity + 0.5);		// reciprocal of relaxation time
     for (int y = 1; y < Y_DIM - 1; y++) {
@@ -116,8 +120,8 @@ void collide() {
     }
 }
 
-// Move particles along their directions of motion:
-void stream() {
+// Move particles along their directions of motion.
+void Stream() {
     for (int y = Y_DIM - 2; y > 0; y--) {			// first start in NW corner...
         for (int x = 1; x < X_DIM - 1; x++) {
             cell(x, y)->nN = cell(x, y - 1)->nN;			// move the north-moving particles
@@ -158,42 +162,52 @@ void stream() {
     }
 }
 
-// Move the tracer particles:
-void moveTracers() {
-//     for (int t = 0; t < NUM_TRACERS; t++) {
-//         int roundedX = tracerX[t] + 0.5;
-//         int roundedY = tracerY[t] + 0.5;
-//         int index = roundedX + roundedY * X_DIM;
-//         tracerX[t] += g_cells[index].ux;
-//         tracerY[t] += g_cells[index].uy;
-//         if (tracerX[t] > X_DIM - 1) {
-//             tracerX[t] = 0.0;
-//             tracerY[t] = (float)rand() / (float)RAND_MAX * Y_DIM;
-//         }
-//     }
+void InitTracers() {
+    if (!tracers_enabled) return;
+
+    float nRows = ceilf(sqrtf(NUM_TRACERS));
+    float dx = X_DIM / nRows;
+    float dy = Y_DIM / nRows;
+    float nextX = dx / 2.0;
+    float nextY = dy / 2.0;
+    for (int i = 0; i < NUM_TRACERS; i++) {
+        tracers_x[i] = nextX;
+        tracers_y[i] = nextY;
+        nextX += dx;
+        if (nextX > X_DIM) {
+            nextX = dx / 2.0;
+            nextY += dy;
+        }
+    }
 }
 
-void initTracers() {
-//     if (tracers_enabled) {
-//         int nRows = ceilf(sqrtf(NUM_TRACERS));
-//         int dx = X_DIM / nRows;
-//         int dy = Y_DIM / nRows;
-//         int nextX = dx / 2;
-//         int nextY = dy / 2;
-//         for (int t = 0; t < NUM_TRACERS; t++) {
-//             tracerX[t] = nextX;
-//             tracerY[t] = nextY;
-//             nextX += dx;
-//             if (nextX > X_DIM) {
-//                 nextX = dx / 2;
-//                 nextY += dy;
-//             }
-//         }
-//     }
+void MoveTracers() {
+    if (!tracers_enabled) return;
+
+    for (int i = 0; i < NUM_TRACERS; i++) {
+        int roundedX = tracers_x[i];
+        int roundedY = tracers_y[i];
+        int index = roundedX + roundedY * X_DIM;
+        tracers_x[i] += g_cells[index].ux;
+        tracers_y[i] += g_cells[index].uy;
+        if (tracers_x[i] > X_DIM - 1) {
+            tracers_x[i] = 0.0;
+            tracers_y[i] = (float)rand() / (float)RAND_MAX * Y_DIM;
+        }
+    }
+}
+
+void DrawTracers() {
+    if (!tracers_enabled) return;
+
+    for (int i = 0; i < NUM_TRACERS; i++) {
+        RectFill(g_window->bmp, tracers_x[i] * RENDER_SCALE, tracers_y[i] * RENDER_SCALE, 
+            RENDER_SCALE, RENDER_SCALE, g_colourBlack);
+    }
 }
 
 // Compute the curl (actually times 2) of the macroscopic velocity field, for plotting:
-void computeCurl() {
+void ComputeCurl() {
     for (int y = 1; y < Y_DIM - 1; y++) {			// interior sites only; leave edges set to zero
         for (int x = 1; x < X_DIM - 1; x++) {
             cell(x, y)->curl = cell(x + 1, y)->uy -
@@ -204,77 +218,66 @@ void computeCurl() {
     }
 }
 
-// Draw the tracer particles:
-// void drawTracers() {
-//     for (int t = 0; t < NUM_TRACERS; t++) {
-//         int canvasX = (tracerX[t] + 0.5) * pxPerSquare;
-//         int canvasY = canvas.height - (tracerY[t] + 0.5) * pxPerSquare;
-//         context.fillRect(canvasX - 1, canvasY - 1, 2, 2);
-//     }
-// }
-
 // Initialize or re-initialize the fluid, based on speed slider setting:
-void initFluid() {
+void InitFluid() {
     float u0 = fluid_speed;
     for (int y = 0; y < Y_DIM; y++) {
         for (int x = 0; x < X_DIM; x++) {
-            setEquil(x, y, u0, 0, 1);
+            SetEquilibrium(x, y, u0, 0, 1);
             cell(x, y)->curl = 0.0;
         }
     }
 }
 
-void paintCanvas() {
-    int cIndex = 0;
+void PaintCanvas() {
+    int colour_index = 0;
     float contrast = 1.0;
-    int plotType = 4;
-    if (plotType == 4) computeCurl();
+    int plot_type = 4;
+    if (plot_type == 4) ComputeCurl();
     for (int y = 0; y < Y_DIM; y++) {
         for (int x = 0; x < X_DIM; x++) {
             if (cell(x, y)->barrier) {
-                cIndex = NUM_COLS + 1;	// kludge for barrier color which isn't really part of color map
+                colour_index = NUM_COLS + 1;	// kludge for barrier color which isn't really part of color map
             }
             else {
-                if (plotType == 0) {
-                    cIndex = NUM_COLS * ((cell(x, y)->rho - 1) * 6 * contrast + 0.5) + 0.5;
+                if (plot_type == 0) {
+                    colour_index = NUM_COLS * ((cell(x, y)->rho - 1) * 6 * contrast + 0.5) + 0.5;
                 }
-                else if (plotType == 1) {
-                    cIndex = (NUM_COLS * (cell(x, y)->ux * 2 * contrast + 0.5)) + 0.5;
+                else if (plot_type == 1) {
+                    colour_index = NUM_COLS * (cell(x, y)->ux * 2 * contrast + 0.5) + 0.5;
                 }
-                else if (plotType == 2) {
-                    cIndex = (NUM_COLS * (cell(x, y)->uy * 2 * contrast + 0.5)) + 0.5;
+                else if (plot_type == 2) {
+                    colour_index = NUM_COLS * (cell(x, y)->uy * 2 * contrast + 0.5) + 0.5;
                 }
-                else if (plotType == 3) {
+                else if (plot_type == 3) {
                     float speed = sqrtf(cell(x, y)->ux * cell(x, y)->ux + cell(x, y)->uy * cell(x, y)->uy);
-                    cIndex = (NUM_COLS * (speed * 4 * contrast)) + 0.5;
+                    colour_index = NUM_COLS * speed * 4 * contrast + 0.5;
                 }
                 else {
-                    cIndex = (NUM_COLS * (cell(x, y)->curl * 5 * contrast + 0.5)) + 0.5;
+                    colour_index = NUM_COLS * (cell(x, y)->curl * 5 * contrast + 0.5) + 0.5;
                 }
-                if (cIndex < 0) cIndex = 0;
-                if (cIndex > NUM_COLS) cIndex = NUM_COLS;
+                if (colour_index < 0) colour_index = 0;
+                if (colour_index > NUM_COLS) colour_index = NUM_COLS;
             }
-            RectFill(g_window->bmp, x * pxPerSquare, y * pxPerSquare, 
-                pxPerSquare, pxPerSquare, colourList[cIndex]);
+
+            RectFill(g_window->bmp, x * RENDER_SCALE, y * RENDER_SCALE,
+                RENDER_SCALE, RENDER_SCALE, colour_list[colour_index]);
         }
     }
 
-    // Draw tracers, force vector, and/or sensor if appropriate:
-    //    if (tracers_enabled) drawTracers();
+    DrawTracers();
 }
 
-// Simulate void executes a bunch of steps and then schedules another call to itself:
-void simulate() {
-    setBoundaries();
+void Simulate() {
+    SetBoundaries();
 
-    // Execute a bunch of time steps:
-    int stepsPerFrame = 20;			// number of simulation steps per animation frame
-    for (int step = 0; step < stepsPerFrame; step++) {
-        collide();
-        stream();
-        if (tracers_enabled) moveTracers();
+    // Execute a bunch of time steps.
+    int steps_per_frame = 10;
+    for (int step = 0; step < steps_per_frame; step++) {
+        Collide();
+        Stream();
+        MoveTracers();
     }
-    paintCanvas();
 
     //     int stable = true;
     //     for (int x = 0; x < X_DIM; x++) {
@@ -283,13 +286,13 @@ void simulate() {
     //     }
     //     if (!stable) {
     //         //window.alert("The simulation has become unstable due to excessive fluid speeds.");
-    //         initFluid();
     //     }
 }
 
 void LatticeBoltzmannMain()
 {
-    CreateWin(800, 320, WT_WINDOWED, "Lattice Boltzmann Method Fluid Simulation Example");
+    CreateWin(X_DIM * RENDER_SCALE, Y_DIM * RENDER_SCALE, WT_WINDOWED, 
+        "Lattice Boltzmann Method Fluid Simulation Example");
     g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
     // Initialize to no barriers.
@@ -299,14 +302,14 @@ void LatticeBoltzmannMain()
         }
     }
 
-    // Create a simple linear "wall" barrier (intentionally a little offset from center):
+    // Create a simple linear "wall" barrier (intentionally a little offset from center).
     int barrier_size = 8;
     for (int y = (Y_DIM / 2) - barrier_size; y <= (Y_DIM / 2) + barrier_size; y++) {
         int x = Y_DIM / 3.0 + 0.5;
         cell(x, y)->barrier = true;
     }
 
-    // Set up the array of colors for plotting (mimicks matplotlib's "jet" colormap):
+    // Set up the array of colors for plotting (mimics matplotlib's "jet" color map):
     // (Kludge: Index NUM_COLS+1 labels the color used for drawing barriers.)
     for (int c = 0; c <= NUM_COLS; c++) {
         int r, g, b;
@@ -325,31 +328,25 @@ void LatticeBoltzmannMain()
         else {
             r = 255 * (9 * NUM_COLS / 8.0 - c) / (NUM_COLS / 4.0); g = 0; b = 0;
         }
-        colourList[c] = Colour(r, g, b);
+        colour_list[c] = Colour(r, g, b);
     }
-    colourList[NUM_COLS + 1] = Colour(0, 0, 0);
+    colour_list[NUM_COLS + 1] = Colour(0, 0, 0);
 
-    // Initialize tracers (but don't place them yet):
-    enum { NUM_TRACERS = 144 };
-    int tracerX[NUM_TRACERS];
-    int tracerY[NUM_TRACERS];
-    for (int t = 0; t < NUM_TRACERS; t++) {
-        tracerX[t] = 0.0; tracerY[t] = 0.0;
-    }
-
-    initFluid();		// initialize to steady rightward flow
+    InitFluid();
+    InitTracers();
 
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
     {
         InputPoll();
 
-        simulate();
+        Simulate();
+        PaintCanvas();
 
         // Draw frames per second counter
         RectFill(g_window->bmp, g_window->bmp->width - 55, 0, 55, g_defaultFont->charHeight + 2, g_colourBlack);
         DrawTextLeft(g_defaultFont, g_colourWhite, g_window->bmp, g_window->bmp->width - 50, 0, "FPS:%i", g_window->fps);
 
         UpdateWin();
-//        WaitVsync();
+        WaitVsync();
     }
 }
