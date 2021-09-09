@@ -69,16 +69,6 @@ static inline int ClampInt(int val, int min, int max)
 }
 
 
-static inline double ClampDouble(double val, double min, double max)
-{
-    if (val < min)
-        return min;
-    if (val > max)
-        return max;
-    return val;
-}
-
-
 // Define an assert macro that stops in the debugger in Debug builds but does 
 // nothing in release builds
 #ifdef _DEBUG
