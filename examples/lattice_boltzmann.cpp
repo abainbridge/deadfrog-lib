@@ -12,7 +12,7 @@ struct Cell {
     float n0;
     float nN, nS, nE, nW;
     float nNE, nSE, nNW, nSW;
-    float rho, ux, uy, curl;
+    float rho, ux, uy;
     bool barrier;
 };
 
@@ -83,7 +83,6 @@ void InitFluid() {
     for (int y = 0; y < Y_DIM; y++) {
         for (int x = 0; x < X_DIM; x++) {
             SetEquilibrium(x, y, u0, 0, 1);
-            cell(x, y)->curl = 0.0;
         }
     }
 }
@@ -205,32 +204,24 @@ void DrawTracers() {
 }
 
 
-// Compute the curl (actually times 2) of the macroscopic velocity field, for plotting:
-void ComputeCurl() {
-    for (int y = 1; y < Y_DIM - 1; y++) {			// interior sites only; leave edges set to zero
-        for (int x = 1; x < X_DIM - 1; x++) {
-            cell(x, y)->curl = cell(x + 1, y)->uy -
-                cell(x - 1, y)->uy -
-                cell(x, y + 1)->ux +
-                cell(x, y - 1)->ux;
-        }
-    }
-}
-
-
 void PaintCanvas() {
+    BitmapClear(g_window->bmp, colour_list[NUM_COLS/2]);
+
     int colour_index = 0;
     float contrast = 1.0;
-    ComputeCurl();
-    for (int y = 0; y < Y_DIM; y++) {
-        for (int x = 0; x < X_DIM; x++) {
+    for (int y = 1; y < Y_DIM - 1; y++) {
+        for (int x = 1; x < X_DIM - 1; x++) {
             if (cell(x, y)->barrier) {
                 colour_index = NUM_COLS + 1;	// kludge for barrier color which isn't really part of color map
             }
             else {
-                colour_index = NUM_COLS * (cell(x, y)->curl * 5 * contrast + 0.5) + 0.5;
-                if (colour_index < 0) colour_index = 0;
-                if (colour_index > NUM_COLS) colour_index = NUM_COLS;
+                // Compute the curl (actually times 2) of the macroscopic velocity field.
+                float curl = cell(x + 1, y)->uy -
+                    cell(x - 1, y)->uy -
+                    cell(x, y + 1)->ux +
+                    cell(x, y - 1)->ux;
+                colour_index = NUM_COLS * (curl * 5 * contrast + 0.5) + 0.5;
+                colour_index = ClampInt(colour_index, 0, NUM_COLS);
             }
 
             RectFill(g_window->bmp, x * RENDER_SCALE, y * RENDER_SCALE,
