@@ -20,7 +20,6 @@ enum { X_DIM = 400 };
 enum { Y_DIM = 160 };
 enum { RENDER_SCALE = 3 }; // Width of cell in pixels.
 enum { NUM_TRACERS = 144 };
-enum { NUM_COLS = 400 }; // There are actually NUM_COLS+1 colors.
 
 // Index into this 2D array using x + y*X_DIM, traversing rows first and then columns.
 static Cell g_cells[X_DIM * Y_DIM];
@@ -29,7 +28,6 @@ static const float viscosity = 0.02f;
 static const float four9ths = 4.0 / 9.0;					// abbreviations
 static const float one9th = 1.0 / 9.0;
 static const float one36th = 1.0 / 36.0;
-DfColour colour_list[NUM_COLS + 1];
 float tracers_x[NUM_TRACERS];
 float tracers_y[NUM_TRACERS];
 
@@ -204,9 +202,8 @@ void DrawTracers() {
 
 
 void PaintCanvas() {
-    BitmapClear(g_window->bmp, colour_list[NUM_COLS/2]);
+    BitmapClear(g_window->bmp, g_colourWhite);
 
-    float contrast = 5.0;
     for (int y = 1; y < Y_DIM - 1; y++) {
         for (int x = 1; x < X_DIM - 1; x++) {
             DfColour col = g_colourBlack;
@@ -217,9 +214,18 @@ void PaintCanvas() {
                     cell(x - 1, y)->uy -
                     cell(x, y + 1)->ux +
                     cell(x, y - 1)->ux;
-                int index = NUM_COLS * (curl * contrast + 0.5);
-                index = ClampInt(index, 0, NUM_COLS);
-                col = colour_list[index];
+                
+                float contrast = 2000.0;
+                col = g_colourWhite;
+                int tmp = ClampInt(curl * contrast, -255, 255);
+                if (curl < 0.0) {
+                    col.g = 255 + tmp;
+                    col.r = col.g;
+                }
+                else {
+                    col.g = 255 - tmp;
+                    col.b = col.g;
+                }
             }
 
             RectFill(g_window->bmp, x * RENDER_SCALE, y * RENDER_SCALE,
@@ -254,27 +260,6 @@ void LatticeBoltzmannMain()
     for (int y = (Y_DIM / 2) - barrier_size; y <= (Y_DIM / 2) + barrier_size; y++) {
         int x = Y_DIM / 3.0;
         cell(x, y)->barrier = true;
-    }
-
-    // Set up the array of colors for plotting (mimics matplotlib's "jet" color map).
-    for (int c = 0; c <= NUM_COLS; c++) {
-        int r, g, b;
-        if (c < NUM_COLS / 8) {
-            r = 0; g = 0; b = 255.0 * (c + NUM_COLS / 8.0) / (NUM_COLS / 4.0);
-        }
-        else if (c < 3 * NUM_COLS / 8.0) {
-            r = 0; g = 255 * (c - NUM_COLS / 8.0) / (NUM_COLS / 4.0); b = 255;
-        }
-        else if (c < 5 * NUM_COLS / 8.0) {
-            r = 255 * (c - 3 * NUM_COLS / 8.0) / (NUM_COLS / 4.0); g = 255; b = 255 - r;
-        }
-        else if (c < 7 * NUM_COLS / 8.0) {
-            r = 255; g = 255 * (7 * NUM_COLS / 8.0 - c) / (NUM_COLS / 4.0); b = 0;
-        }
-        else {
-            r = 255 * (9 * NUM_COLS / 8.0 - c) / (NUM_COLS / 4.0); g = 0; b = 0;
-        }
-        colour_list[c] = Colour(r, g, b);
     }
 
     InitFluid();
