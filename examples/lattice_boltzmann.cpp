@@ -37,7 +37,7 @@ static Cell *cell(int x, int y) {
 }
 
 
-// Set all densities in a cell to their equilibrium values for a given velocity and density.
+// Set all densities in a cell to their equilibrium values.
 void SetEquilibrium(int x, int y) {
     float new_ux = fluid_speed;
     float new_rho = 1.0;
@@ -64,25 +64,19 @@ void SetEquilibrium(int x, int y) {
 }
 
 
-// Set the fluid variables at the boundaries.
-void SetBoundaries() {
-    for (int x = 0; x < X_DIM; x++) {
-        SetEquilibrium(x, 0);
-        SetEquilibrium(x, Y_DIM - 1);
-    }
-    for (int y = 1; y < Y_DIM - 1; y++) {
-        SetEquilibrium(0, y);
-        SetEquilibrium(X_DIM - 1, y);
-    }
-}
-
-
 // Initialize or re-initialize the fluid, based on speed slider setting:
-void InitFluid() {
+void InitCells() {
     for (int y = 0; y < Y_DIM; y++) {
         for (int x = 0; x < X_DIM; x++) {
             SetEquilibrium(x, y);
         }
+    }
+
+    // Create a simple linear "wall" barrier (intentionally a little offset from center).
+    int barrier_size = 8;
+    for (int y = (Y_DIM / 2) - barrier_size; y <= (Y_DIM / 2) + barrier_size; y++) {
+        int x = Y_DIM / 3.0;
+        cell(x, y)->barrier = true;
     }
 }
 
@@ -201,7 +195,7 @@ void DrawTracers() {
 }
 
 
-void PaintCanvas() {
+void Draw() {
     BitmapClear(g_window->bmp, g_colourWhite);
 
     for (int y = 1; y < Y_DIM - 1; y++) {
@@ -217,9 +211,9 @@ void PaintCanvas() {
                 
                 float contrast = 2000.0;
                 col = g_colourWhite;
-                int tmp = ClampInt(curl * contrast, -255, 255);
+                int tmp = ClampInt(abs(curl * contrast), 0, 255);
                 if (curl < 0.0) {
-                    col.g = 255 + tmp;
+                    col.g = 255 - tmp;
                     col.r = col.g;
                 }
                 else {
@@ -238,8 +232,6 @@ void PaintCanvas() {
 
 
 void Simulate() {
-    SetBoundaries();
-
     int steps_per_frame = 10;
     for (int step = 0; step < steps_per_frame; step++) {
         Collide();
@@ -255,21 +247,14 @@ void LatticeBoltzmannMain()
         "Lattice Boltzmann Method Fluid Simulation Example");
     g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
 
-    // Create a simple linear "wall" barrier (intentionally a little offset from center).
-    int barrier_size = 8;
-    for (int y = (Y_DIM / 2) - barrier_size; y <= (Y_DIM / 2) + barrier_size; y++) {
-        int x = Y_DIM / 3.0;
-        cell(x, y)->barrier = true;
-    }
-
-    InitFluid();
+    InitCells();
     InitTracers();
 
     while (!g_window->windowClosed && !g_input.keys[KEY_ESC]) {
         InputPoll();
 
         Simulate();
-        PaintCanvas();
+        Draw();
 
         // Draw frames per second counter
         RectFill(g_window->bmp, g_window->bmp->width - 55, 0, 55, g_defaultFont->charHeight + 2, g_colourBlack);
