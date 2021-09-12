@@ -20,8 +20,8 @@ enum { X_DIM = 400 };
 enum { Y_DIM = 160 };
 enum { RENDER_SCALE = 3 }; // Width of cell in pixels.
 enum { NUM_TRACERS = 144 };
-static const float fluid_speed = 0.1f;
-static const float viscosity = 0.02f;
+static const float fluid_speed = 0.1;
+static const float viscosity = 0.02;
 static const float four9ths = 4.0 / 9.0;					// abbreviations
 static const float one9th = 1.0 / 9.0;
 static const float one36th = 1.0 / 36.0;
@@ -81,7 +81,6 @@ void InitCells() {
 
 // Collide particles within each cell (here's the physics!).
 void Collide() {
-    float viscosity = 0.02;	// kinematic viscosity coefficient in natural units
     float omega = 1.0 / (3.0 * viscosity + 0.5);		// reciprocal of relaxation time
     for (int y = 1; y < Y_DIM - 1; y++) {
         for (int x = 1; x < X_DIM - 1; x++) {
