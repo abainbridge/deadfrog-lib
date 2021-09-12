@@ -29,7 +29,6 @@ static const float viscosity = 0.02f;
 static const float four9ths = 4.0 / 9.0;					// abbreviations
 static const float one9th = 1.0 / 9.0;
 static const float one36th = 1.0 / 36.0;
-bool tracers_enabled = true;
 DfColour colour_list[NUM_COLS + 2];
 float tracers_x[NUM_TRACERS];
 float tracers_y[NUM_TRACERS];
@@ -78,6 +77,18 @@ void SetBoundaries() {
 }
 
 
+// Initialize or re-initialize the fluid, based on speed slider setting:
+void InitFluid() {
+    float u0 = fluid_speed;
+    for (int y = 0; y < Y_DIM; y++) {
+        for (int x = 0; x < X_DIM; x++) {
+            SetEquilibrium(x, y, u0, 0, 1);
+            cell(x, y)->curl = 0.0;
+        }
+    }
+}
+
+
 // Collide particles within each cell (here's the physics!).
 void Collide() {
     float viscosity = 0.02;	// kinematic viscosity coefficient in natural units
@@ -118,6 +129,7 @@ void Collide() {
         cell(X_DIM - 1, y)->nSW = cell(X_DIM - 2, y)->nSW;
     }
 }
+
 
 // Move particles along their directions of motion.
 void Stream() {
@@ -161,18 +173,16 @@ void Stream() {
     }
 }
 
-void InitTracers() {
-    if (!tracers_enabled) return;
 
+void InitTracers() {
     for (int i = 0; i < NUM_TRACERS; i++) {
         tracers_x[i] = X_DIM / (float)NUM_TRACERS * i;
         tracers_y[i] = (float)rand() / (float)RAND_MAX * Y_DIM;
     }
 }
 
-void MoveTracers() {
-    if (!tracers_enabled) return;
 
+void MoveTracers() {
     for (int i = 0; i < NUM_TRACERS; i++) {
         int roundedX = tracers_x[i];
         int roundedY = tracers_y[i];
@@ -186,14 +196,14 @@ void MoveTracers() {
     }
 }
 
-void DrawTracers() {
-    if (!tracers_enabled) return;
 
+void DrawTracers() {
     for (int i = 0; i < NUM_TRACERS; i++) {
         RectFill(g_window->bmp, tracers_x[i] * RENDER_SCALE, tracers_y[i] * RENDER_SCALE, 
             RENDER_SCALE, RENDER_SCALE, g_colourBlack);
     }
 }
+
 
 // Compute the curl (actually times 2) of the macroscopic velocity field, for plotting:
 void ComputeCurl() {
@@ -207,44 +217,18 @@ void ComputeCurl() {
     }
 }
 
-// Initialize or re-initialize the fluid, based on speed slider setting:
-void InitFluid() {
-    float u0 = fluid_speed;
-    for (int y = 0; y < Y_DIM; y++) {
-        for (int x = 0; x < X_DIM; x++) {
-            SetEquilibrium(x, y, u0, 0, 1);
-            cell(x, y)->curl = 0.0;
-        }
-    }
-}
 
 void PaintCanvas() {
     int colour_index = 0;
     float contrast = 1.0;
-    int plot_type = 4;
-    if (plot_type == 4) ComputeCurl();
+    ComputeCurl();
     for (int y = 0; y < Y_DIM; y++) {
         for (int x = 0; x < X_DIM; x++) {
             if (cell(x, y)->barrier) {
                 colour_index = NUM_COLS + 1;	// kludge for barrier color which isn't really part of color map
             }
             else {
-                if (plot_type == 0) {
-                    colour_index = NUM_COLS * ((cell(x, y)->rho - 1) * 6 * contrast + 0.5) + 0.5;
-                }
-                else if (plot_type == 1) {
-                    colour_index = NUM_COLS * (cell(x, y)->ux * 2 * contrast + 0.5) + 0.5;
-                }
-                else if (plot_type == 2) {
-                    colour_index = NUM_COLS * (cell(x, y)->uy * 2 * contrast + 0.5) + 0.5;
-                }
-                else if (plot_type == 3) {
-                    float speed = sqrtf(cell(x, y)->ux * cell(x, y)->ux + cell(x, y)->uy * cell(x, y)->uy);
-                    colour_index = NUM_COLS * speed * 4 * contrast + 0.5;
-                }
-                else {
-                    colour_index = NUM_COLS * (cell(x, y)->curl * 5 * contrast + 0.5) + 0.5;
-                }
+                colour_index = NUM_COLS * (cell(x, y)->curl * 5 * contrast + 0.5) + 0.5;
                 if (colour_index < 0) colour_index = 0;
                 if (colour_index > NUM_COLS) colour_index = NUM_COLS;
             }
@@ -257,39 +241,24 @@ void PaintCanvas() {
     DrawTracers();
 }
 
+
 void Simulate() {
     SetBoundaries();
 
-    // Execute a bunch of time steps.
     int steps_per_frame = 10;
     for (int step = 0; step < steps_per_frame; step++) {
         Collide();
         Stream();
         MoveTracers();
     }
-
-    //     int stable = true;
-    //     for (int x = 0; x < X_DIM; x++) {
-    //         int index = x + (Y_DIM / 2) * X_DIM;	// look at middle row only
-    //         if (g_cells[index].rho <= 0) stable = false;
-    //     }
-    //     if (!stable) {
-    //         //window.alert("The simulation has become unstable due to excessive fluid speeds.");
-    //     }
 }
+
 
 void LatticeBoltzmannMain()
 {
     CreateWin(X_DIM * RENDER_SCALE, Y_DIM * RENDER_SCALE, WT_WINDOWED, 
         "Lattice Boltzmann Method Fluid Simulation Example");
     g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
-
-    // Initialize to no barriers.
-    for (int y = 0; y < Y_DIM; y++) {
-        for (int x = 0; x < X_DIM; x++) {
-            cell(x, y)->barrier = false;
-        }
-    }
 
     // Create a simple linear "wall" barrier (intentionally a little offset from center).
     int barrier_size = 8;
