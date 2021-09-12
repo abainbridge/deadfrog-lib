@@ -12,7 +12,7 @@ struct Cell {
     float n0;
     float nN, nS, nE, nW;
     float nNE, nSE, nNW, nSW;
-    float rho, ux, uy;
+    float ux, uy;
     bool barrier;
 };
 
@@ -20,16 +20,16 @@ enum { X_DIM = 400 };
 enum { Y_DIM = 160 };
 enum { RENDER_SCALE = 3 }; // Width of cell in pixels.
 enum { NUM_TRACERS = 144 };
-
-// Index into this 2D array using x + y*X_DIM, traversing rows first and then columns.
-static Cell g_cells[X_DIM * Y_DIM];
 static const float fluid_speed = 0.1f;
 static const float viscosity = 0.02f;
 static const float four9ths = 4.0 / 9.0;					// abbreviations
 static const float one9th = 1.0 / 9.0;
 static const float one36th = 1.0 / 36.0;
-float tracers_x[NUM_TRACERS];
-float tracers_y[NUM_TRACERS];
+
+// Index into this 2D array using x + y*X_DIM, traversing rows first and then columns.
+static Cell g_cells[X_DIM * Y_DIM];
+float g_tracers_x[NUM_TRACERS];
+float g_tracers_y[NUM_TRACERS];
 
 
 static Cell *cell(int x, int y) {
@@ -40,7 +40,6 @@ static Cell *cell(int x, int y) {
 // Set all densities in a cell to their equilibrium values.
 void SetEquilibrium(int x, int y) {
     float new_ux = fluid_speed;
-    float new_rho = 1.0;
     float ux3 = 3 * new_ux;
     float uy3 = 0.0;
     float ux2 = new_ux * new_ux;
@@ -49,16 +48,15 @@ void SetEquilibrium(int x, int y) {
     float u2 = ux2 + uy2;
     float u215 = 1.5 * u2;
     Cell *c = cell(x, y);
-    c->n0 = four9ths * new_rho * (1 - u215);
-    c->nE = one9th * new_rho * (1 + ux3 + 4.5 * ux2 - u215);
-    c->nW = one9th * new_rho * (1 - ux3 + 4.5 * ux2 - u215);
-    c->nN = one9th * new_rho * (1 + uy3 + 4.5 * uy2 - u215);
-    c->nS = one9th * new_rho * (1 - uy3 + 4.5 * uy2 - u215);
-    c->nNE = one36th * new_rho * (1 + ux3 + uy3 + 4.5 * (u2 + uxuy2) - u215);
-    c->nSE = one36th * new_rho * (1 + ux3 - uy3 + 4.5 * (u2 - uxuy2) - u215);
-    c->nNW = one36th * new_rho * (1 - ux3 + uy3 + 4.5 * (u2 - uxuy2) - u215);
-    c->nSW = one36th * new_rho * (1 - ux3 - uy3 + 4.5 * (u2 + uxuy2) - u215);
-    c->rho = new_rho;
+    c->n0 = four9ths * (1 - u215);
+    c->nE = one9th * (1 + ux3 + 4.5 * ux2 - u215);
+    c->nW = one9th * (1 - ux3 + 4.5 * ux2 - u215);
+    c->nN = one9th * (1 + uy3 + 4.5 * uy2 - u215);
+    c->nS = one9th * (1 - uy3 + 4.5 * uy2 - u215);
+    c->nNE = one36th * (1 + ux3 + uy3 + 4.5 * (u2 + uxuy2) - u215);
+    c->nSE = one36th * (1 + ux3 - uy3 + 4.5 * (u2 - uxuy2) - u215);
+    c->nNW = one36th * (1 - ux3 + uy3 + 4.5 * (u2 - uxuy2) - u215);
+    c->nSW = one36th * (1 - ux3 - uy3 + 4.5 * (u2 + uxuy2) - u215);
     c->ux = new_ux;
     c->uy = 0.0;
 }
@@ -89,7 +87,6 @@ void Collide() {
         for (int x = 1; x < X_DIM - 1; x++) {
             Cell *c = cell(x, y);
             float this_rho = c->n0 + c->nN + c->nS + c->nE + c->nW + c->nNW + c->nNE + c->nSW + c->nSE;
-            c->rho = this_rho;
             float this_ux = (c->nE + c->nNE + c->nSE - c->nW - c->nNW - c->nSW) / this_rho;
             c->ux = this_ux;
             float this_uy = (c->nN + c->nNE + c->nNW - c->nS - c->nSE - c->nSW) / this_rho;
@@ -168,20 +165,20 @@ void Stream() {
 
 void InitTracers() {
     for (int i = 0; i < NUM_TRACERS; i++) {
-        tracers_x[i] = X_DIM / (float)NUM_TRACERS * i;
-        tracers_y[i] = (float)rand() / (float)RAND_MAX * Y_DIM;
+        g_tracers_x[i] = X_DIM / (float)NUM_TRACERS * i;
+        g_tracers_y[i] = (float)rand() / (float)RAND_MAX * Y_DIM;
     }
 }
 
 
 void MoveTracers() {
     for (int i = 0; i < NUM_TRACERS; i++) {
-        Cell *c = cell(tracers_x[i], tracers_y[i]);
-        tracers_x[i] += c->ux;
-        tracers_y[i] += c->uy;
-        if (tracers_x[i] > X_DIM - 1) {
-            tracers_x[i] = 0.0;
-            tracers_y[i] = (float)rand() / (float)RAND_MAX * Y_DIM;
+        Cell *c = cell(g_tracers_x[i], g_tracers_y[i]);
+        g_tracers_x[i] += c->ux;
+        g_tracers_y[i] += c->uy;
+        if (g_tracers_x[i] > X_DIM - 1) {
+            g_tracers_x[i] = 0.0;
+            g_tracers_y[i] = (float)rand() / (float)RAND_MAX * Y_DIM;
         }
     }
 }
@@ -189,7 +186,7 @@ void MoveTracers() {
 
 void DrawTracers() {
     for (int i = 0; i < NUM_TRACERS; i++) {
-        RectFill(g_window->bmp, tracers_x[i] * RENDER_SCALE, tracers_y[i] * RENDER_SCALE, 
+        RectFill(g_window->bmp, g_tracers_x[i] * RENDER_SCALE, g_tracers_y[i] * RENDER_SCALE, 
             RENDER_SCALE, RENDER_SCALE, g_colourBlack);
     }
 }
@@ -232,8 +229,7 @@ void Draw() {
 
 
 void Simulate() {
-    int steps_per_frame = 10;
-    for (int step = 0; step < steps_per_frame; step++) {
+    for (int step = 0; step < 10; step++) {
         Collide();
         Stream();
         MoveTracers();
@@ -241,8 +237,7 @@ void Simulate() {
 }
 
 
-void LatticeBoltzmannMain()
-{
+void LatticeBoltzmannMain() {
     CreateWin(X_DIM * RENDER_SCALE, Y_DIM * RENDER_SCALE, WT_WINDOWED, 
         "Lattice Boltzmann Method Fluid Simulation Example");
     g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
