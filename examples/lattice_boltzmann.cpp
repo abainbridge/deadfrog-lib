@@ -20,7 +20,7 @@ enum { X_DIM = 400 };
 enum { Y_DIM = 160 };
 enum { RENDER_SCALE = 3 }; // Width of cell in pixels.
 enum { NUM_TRACERS = 144 };
-enum { NUM_COLS = 400 }; // There are actually NUM_COLS+2 colors.
+enum { NUM_COLS = 400 }; // There are actually NUM_COLS+1 colors.
 
 // Index into this 2D array using x + y*X_DIM, traversing rows first and then columns.
 static Cell g_cells[X_DIM * Y_DIM];
@@ -29,7 +29,7 @@ static const float viscosity = 0.02f;
 static const float four9ths = 4.0 / 9.0;					// abbreviations
 static const float one9th = 1.0 / 9.0;
 static const float one36th = 1.0 / 36.0;
-DfColour colour_list[NUM_COLS + 2];
+DfColour colour_list[NUM_COLS + 1];
 float tracers_x[NUM_TRACERS];
 float tracers_y[NUM_TRACERS];
 
@@ -184,11 +184,9 @@ void InitTracers() {
 
 void MoveTracers() {
     for (int i = 0; i < NUM_TRACERS; i++) {
-        int roundedX = tracers_x[i];
-        int roundedY = tracers_y[i];
-        int index = roundedX + roundedY * X_DIM;
-        tracers_x[i] += g_cells[index].ux;
-        tracers_y[i] += g_cells[index].uy;
+        Cell *c = cell(tracers_x[i], tracers_y[i]);
+        tracers_x[i] += c->ux;
+        tracers_y[i] += c->uy;
         if (tracers_x[i] > X_DIM - 1) {
             tracers_x[i] = 0.0;
             tracers_y[i] = (float)rand() / (float)RAND_MAX * Y_DIM;
@@ -208,25 +206,24 @@ void DrawTracers() {
 void PaintCanvas() {
     BitmapClear(g_window->bmp, colour_list[NUM_COLS/2]);
 
-    int colour_index = 0;
     float contrast = 5.0;
     for (int y = 1; y < Y_DIM - 1; y++) {
         for (int x = 1; x < X_DIM - 1; x++) {
-            if (cell(x, y)->barrier) {
-                colour_index = NUM_COLS + 1;	// kludge for barrier color which isn't really part of color map
-            }
-            else {
+            DfColour col = g_colourBlack;
+
+            if (!cell(x, y)->barrier) {
                 // Compute the curl (actually times 2) of the macroscopic velocity field.
                 float curl = cell(x + 1, y)->uy -
                     cell(x - 1, y)->uy -
                     cell(x, y + 1)->ux +
                     cell(x, y - 1)->ux;
-                colour_index = NUM_COLS * (curl * contrast + 0.5);
-                colour_index = ClampInt(colour_index, 0, NUM_COLS);
+                int index = NUM_COLS * (curl * contrast + 0.5);
+                index = ClampInt(index, 0, NUM_COLS);
+                col = colour_list[index];
             }
 
             RectFill(g_window->bmp, x * RENDER_SCALE, y * RENDER_SCALE,
-                RENDER_SCALE, RENDER_SCALE, colour_list[colour_index]);
+                RENDER_SCALE, RENDER_SCALE, col);
         }
     }
 
@@ -259,8 +256,7 @@ void LatticeBoltzmannMain()
         cell(x, y)->barrier = true;
     }
 
-    // Set up the array of colors for plotting (mimics matplotlib's "jet" color map):
-    // (Kludge: Index NUM_COLS+1 labels the color used for drawing barriers.)
+    // Set up the array of colors for plotting (mimics matplotlib's "jet" color map).
     for (int c = 0; c <= NUM_COLS; c++) {
         int r, g, b;
         if (c < NUM_COLS / 8) {
@@ -280,7 +276,6 @@ void LatticeBoltzmannMain()
         }
         colour_list[c] = Colour(r, g, b);
     }
-    colour_list[NUM_COLS + 1] = Colour(0, 0, 0);
 
     InitFluid();
     InitTracers();
