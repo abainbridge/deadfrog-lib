@@ -16,9 +16,9 @@ struct Cell {
     bool barrier;
 };
 
-enum { X_DIM = 200 };
-enum { Y_DIM = 80 };
-enum { RENDER_SCALE = 4 }; // Width of cell in pixels.
+enum { X_DIM = 400 };
+enum { Y_DIM = 160 };
+enum { RENDER_SCALE = 3 }; // Width of cell in pixels.
 enum { NUM_TRACERS = 144 };
 enum { NUM_COLS = 400 }; // There are actually NUM_COLS+2 colors.
 
@@ -65,16 +65,15 @@ void SetEquilibrium(int x, int y, float new_ux, float new_uy, float new_rho) {
 }
 
 
-// Set the fluid variables at the boundaries, according to the current slider value.
+// Set the fluid variables at the boundaries.
 void SetBoundaries() {
-    float u0 = fluid_speed;
     for (int x = 0; x < X_DIM; x++) {
-        SetEquilibrium(x, 0, u0, 0, 1);
-        SetEquilibrium(x, Y_DIM - 1, u0, 0, 1);
+        SetEquilibrium(x, 0, fluid_speed, 0, 1);
+        SetEquilibrium(x, Y_DIM - 1, fluid_speed, 0, 1);
     }
     for (int y = 1; y < Y_DIM - 1; y++) {
-        SetEquilibrium(0, y, u0, 0, 1);
-        SetEquilibrium(X_DIM - 1, y, u0, 0, 1);
+        SetEquilibrium(0, y, fluid_speed, 0, 1);
+        SetEquilibrium(X_DIM - 1, y, fluid_speed, 0, 1);
     }
 }
 
@@ -165,19 +164,9 @@ void Stream() {
 void InitTracers() {
     if (!tracers_enabled) return;
 
-    float nRows = ceilf(sqrtf(NUM_TRACERS));
-    float dx = X_DIM / nRows;
-    float dy = Y_DIM / nRows;
-    float nextX = dx / 2.0;
-    float nextY = dy / 2.0;
     for (int i = 0; i < NUM_TRACERS; i++) {
-        tracers_x[i] = nextX;
-        tracers_y[i] = nextY;
-        nextX += dx;
-        if (nextX > X_DIM) {
-            nextX = dx / 2.0;
-            nextY += dy;
-        }
+        tracers_x[i] = X_DIM / (float)NUM_TRACERS * i;
+        tracers_y[i] = (float)rand() / (float)RAND_MAX * Y_DIM;
     }
 }
 
