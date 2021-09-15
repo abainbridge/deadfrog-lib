@@ -1,3 +1,10 @@
+// Simulates a 2D viscous fluid using the Lattice Boltzmann Method. It models
+// a stream of fluid flowing past a barrier. The flow starts off laminar and
+// gradually becomes turbulent. The initial disturbances needed to allow the
+// turbulence to form come from the errors introduced by the floating point
+// arithmetic.
+//
+// Based on https://physics.weber.edu/schroeder/fluids/
 #include "df_font.h"
 #include "df_window.h"
 #include "fonts/df_mono.h"
@@ -5,8 +12,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-
-// Based on https://physics.weber.edu/schroeder/fluids/
 
 struct Cell {
     float n0;
