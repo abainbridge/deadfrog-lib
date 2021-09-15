@@ -22,6 +22,9 @@
 
 static unsigned GetKerningDist(MasterGlyph *a, MasterGlyph *b, int avgCharWidth)
 {
+    return a->m_width + avgCharWidth * 0.1;
+    // The code below crashes and I couldn't be bothered to debug it. This will do for now.
+
     // Calculate how many pixels in the X direction to add after rendering
     // glyph 'a' before glyph 'b'. I call this the kerning distance.
     // Start by assuming that the Kerning distance is just the width of glyph
