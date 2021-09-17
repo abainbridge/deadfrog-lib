@@ -56,9 +56,10 @@ DLL_API void        DrawLine        (DfBitmap *bmp, int x1, int y1, int x2, int 
 // Arguments a and d are the start and end points. b and c are the control points for a and d respectively.
 DLL_API void        DrawBezier      (DfBitmap *bmp, int const a[2], int const b[2], int const c[2], int const d[2], DfColour col);
 
-// Calculate the position on a Bezier curve. t is in range 0 to 63356.
-DLL_API void        GetBezierPos    (int const *a, int const *b, int const *c, int const *d, int t, int *result);
-DLL_API void        GetBezierDir    (int const *a, int const *b, int const *c, int const *d, int t, int *result);
+// Calculate the position on a Bezier curve. t is in range 0 to 63356. Parameters a, b, c & d
+// are the same as in DrawBezier().
+DLL_API void        GetBezierPos    (int const *a, int const *b, int const *c, int const *d, int t, int result[2]);
+DLL_API void        GetBezierDir    (int const *a, int const *b, int const *c, int const *d, int t, int result[2]);
 
 DLL_API void        RectFill        (DfBitmap *bmp, int x, int y, int w, int h, DfColour c);
 DLL_API void        RectOutline     (DfBitmap *bmp, int x, int y, int w, int h, DfColour c);
