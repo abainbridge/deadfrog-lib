@@ -59,32 +59,56 @@ static int ComputePixelCoverage(int x)
 
 static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 {
+    DfColour tmp = col;
     int x;
     for (x = leftMin / SUBXRES; x <= (rightMax / SUBXRES); x++) {
-        col.a = ComputePixelCoverage(x);
-        if (col.a == 255) {
+        int coverage = ComputePixelCoverage(x);
+        if (coverage == 255) {
             break;
         }
-        PutPix(bmp, x, y, col);
+        tmp.a = (col.a * coverage) >> 8;
+        PutPix(bmp, x, y, tmp);
     }
     int x2;
     for (x2 = (rightMax / SUBXRES); x2 > x; x2--) {
-        col.a = ComputePixelCoverage(x2);
-        if (col.a == 255) {
+        int coverage = ComputePixelCoverage(x2);
+        if (coverage == 255) {
             break;
         }
-        PutPix(bmp, x2, y, col);
+        tmp.a = (col.a * coverage) >> 8;
+        PutPix(bmp, x2, y, tmp);
     }
 
     if (x2 >= x) {
-        col.a = 255;
         HLine(bmp, x, y, x2 - x + 1, col);
     }
 }
 
 
+bool IsConvexAndAnticlockwise(DfVertex *verts, int numVerts) {
+    for (int a = 0; a < numVerts; a++) {
+        int b = (a + 1) % numVerts;
+        int c = (a + 2) % numVerts;
+
+        int abx = verts[b].x - verts[a].x;
+        int aby = verts[b].y - verts[a].y;
+        int bcx = verts[c].x - verts[b].x;
+        int bcy = verts[c].y - verts[b].y;
+
+        int crossProduct = abx * bcy - bcx * aby;
+        if (crossProduct > 0)
+            return false;
+    }
+
+    return true;
+}
+
+
 void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
 {
+    if (!IsConvexAndAnticlockwise(verts, numVerts))
+        return;
+
     // Convert the verts passed in into the format we use internally,
     // find the max vertex y value and the vertex with minimum y.
     DfVertex *vertLeft = verts;
