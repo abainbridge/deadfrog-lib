@@ -85,7 +85,7 @@ static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
 }
 
 
-bool IsConvexAndAnticlockwise(DfVertex *verts, int numVerts) {
+static bool IsConvexAndAnticlockwise(DfVertex *verts, int numVerts) {
     for (int a = 0; a < numVerts; a++) {
         int b = (a + 1) % numVerts;
         int c = (a + 2) % numVerts;
