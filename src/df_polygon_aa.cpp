@@ -142,9 +142,15 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
     // than those that would form the bottom of the poly. We'll never
     // encounter those either because the main loop will terminate just before
     // we get to those (because y will have become equal to maxY).
-    while (vertLeft->y == nextVertLeft->y) {
+    for (int i = 0; i < numVerts; i++) {
+        if (vertLeft->y != nextVertLeft->y)
+            break;
         NEXT_LEFT_EDGE();
     }
+
+    if (vertLeft->y == nextVertLeft->y)
+        return; // All verts have the same y value. This is fatal.
+
     while (vertRight->y == nextVertRight->y) {
         NEXT_RIGHT_EDGE();
     }
