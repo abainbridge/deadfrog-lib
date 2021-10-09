@@ -120,7 +120,6 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
         }
         maxY = IntMax(maxY, verts[i].y);
     }
-//    if (maxY < bmp->clipTop) return;
     DfVertex *endVert = &verts[numVerts - 1];
 
     // Initialize scanning edges.
