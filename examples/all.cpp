@@ -9,6 +9,7 @@ void HelloWorldMain();
 void LatticeBoltzmannMain(); 
 void MandelbrotMain();
 void Sierpinski3DMain();
+void StretchBlitMain();
 void TestMain();
 
 
@@ -27,9 +28,10 @@ int main()
 //     GasMain();
 //     HarmonographMain();
 //     HelloWorldMain();
-    LatticeBoltzmannMain();
+//     LatticeBoltzmannMain();
 //     MandelbrotMain();
-//    Sierpinski3DMain();
+//     Sierpinski3DMain();
+    StretchBlitMain();
 //     TestMain();
 
     return 0;

@@ -198,11 +198,8 @@
     <ClCompile Include="..\..\lattice_boltzmann.cpp" />
     <ClCompile Include="..\..\mandelbrot.cpp" />
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
+    <ClCompile Include="..\..\stretch_blit.cpp" />
     <ClCompile Include="..\..\test.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\polygon\clip_rectangle.h" />
-    <ClInclude Include="..\..\polygon\coverage_table.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
