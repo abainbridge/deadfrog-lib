@@ -82,7 +82,7 @@ DLL_API void        ScaleDownBlit   (DfBitmap *destBmp, int x, int y, int scale,
 DLL_API void        ScaleUpBlit     (DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp);
 
 // Blit with arbitrary resizing. dstWidth and dstHeight specify how large the output should be.
-DLL_API void 		StretchBlit     (DfBitmap *dst_bmp, int dstWidth, int dstHeight, DfBitmap *src_bmp);
+DLL_API void 		StretchBlit     (DfBitmap *dst_bmp, int dstX, int dstY, int dstWidth, int dstHeight, DfBitmap *src_bmp);
 
 
 inline void PutPixUnclipped(DfBitmap *bmp, int x, int y, DfColour c)

@@ -930,7 +930,7 @@ void ScaleUpBlit(DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp)
 }
 
 
-void StretchBlit(DfBitmap *dstBmp, int dstWidth, int dstHeight, DfBitmap *srcBmp)
+void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeight, DfBitmap *srcBmp)
 {
     // Based on Ryan Geiss's code from http://www.geisswerks.com/ryan/FAQS/resize.html
     
@@ -965,8 +965,8 @@ void StretchBlit(DfBitmap *dstBmp, int dstWidth, int dstHeight, DfBitmap *srcBmp
     // For every output pixel...
     for (int y2 = 0; y2 < h2; y2++)
     {   
-        DfColour *dstRow = dstBmp->pixels + y2 * dstBmp->width;
-        unsigned *ddest = &dstRow->c;
+        DfColour *dstRow = dstBmp->pixels + (dstY + y2) * dstBmp->width;
+        unsigned *ddest = &dstRow->c + dstX;
 
         // Find the y-range of input pixels that will contribute.
         int y1a = (int)((y2  ) * fh); 
