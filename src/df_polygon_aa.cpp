@@ -112,7 +112,7 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
     // Convert the verts passed in into the format we use internally,
     // find the max vertex y value and the vertex with minimum y.
     DfVertex *vertLeft = verts;
-    int maxY = -1;
+    int maxY = INT_MIN;
     for (int i = 0; i < numVerts; i++) {
         verts[i].y /= SUBXRES / SUBYRES;
         if (verts[i].y < vertLeft->y) {
@@ -120,6 +120,7 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
         }
         maxY = IntMax(maxY, verts[i].y);
     }
+//    if (maxY < bmp->clipTop) return;
     DfVertex *endVert = &verts[numVerts - 1];
 
     // Initialize scanning edges.
