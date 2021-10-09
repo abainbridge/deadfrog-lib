@@ -930,22 +930,19 @@ void ScaleUpBlit(DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp)
 }
 
 
-void BitmapDownsample(DfBitmap *src_bmp, DfBitmap *dst_bmp)
+void StretchBlit(DfBitmap *dstBmp, int dstWidth, int dstHeight, DfBitmap *srcBmp)
 {
-    int w1 = src_bmp->width;
-    int h1 = src_bmp->height;
-
-    int w2 = dst_bmp->width;
-    int h2 = dst_bmp->height;
-
-    // Both buffers must be in ARGB format, and a scanline should be w*4 bytes.
+    // Based on Ryan Geiss's code from http://www.geisswerks.com/ryan/FAQS/resize.html
+    
+    int w1 = srcBmp->width;
+    int h1 = srcBmp->height;
+    int w2 = dstWidth;
+    int h2 = dstHeight;
 
     // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
     // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
 
-    // arbitrary resize.
-    unsigned int *dsrc  = &src_bmp->pixels->c;
-    unsigned int *ddest = &dst_bmp->pixels->c;
+    unsigned *dsrc = &srcBmp->pixels->c;
 
     // If too many input pixels map to one output pixel, our 32-bit accumulation values
     // could overflow - so, if we have huge mappings like that, cut down the weights:
@@ -953,68 +950,70 @@ void BitmapDownsample(DfBitmap *src_bmp, DfBitmap *dst_bmp)
     //   *256 weight_x
     //   *256 weight_y
     //   *256 (16*16) maximum # of input pixels (x,y) - unless we cut the weights down...
-    int weight_shift = 0;
-    float source_texels_per_out_pixel = ( (w1/(float)w2 + 1) * (h1/(float)h2 + 1) );
-    float weight_per_pixel = source_texels_per_out_pixel * 256 * 256;  //weight_x * weight_y
-    float accum_per_pixel = weight_per_pixel*256; //color value is 0-255
-    float weight_div = accum_per_pixel / 4294967000.0f;
-    if (weight_div > 1)
-        weight_shift = (int)ceilf( logf((float)weight_div)/logf(2.0f) );
-    weight_shift = std::min(15, weight_shift);  // this could go to 15 and still be ok.
+    int weightShift = 0;
+    float sourceTexelsPerOutPixel = (w1 / (float)w2 + 1) * (h1 / (float)h2 + 1);
+    float weightPerPixel = sourceTexelsPerOutPixel * 256 * 256;  //weight_x * weight_y
+    float accumPerPixel = weightPerPixel * 256; //color value is 0-255
+    float weightDiv = accumPerPixel / 4294967000.0f;
+    if (weightDiv > 1)
+        weightShift = (int)ceilf( logf((float)weightDiv) / logf(2.0f) );
+    weightShift = IntMin(15, weightShift);  // this could go to 15 and still be ok.
 
-    float fh = 256*h1/(float)h2;
-    float fw = 256*w1/(float)w2;
+    float fh = 256 * h1 / (float)h2;
+    float fw = 256 * w1 / (float)w2;
 
-    // FOR EVERY OUTPUT PIXEL
-    for (int y2=0; y2<h2; y2++)
+    // For every output pixel...
+    for (int y2 = 0; y2 < h2; y2++)
     {   
-        // find the y-range of input pixels that will contribute:
-        int y1a = (int)((y2  )*fh); 
-        int y1b = (int)((y2+1)*fh); 
-        y1b = std::min(y1b, 256*h1 - 1);
+        DfColour *dstRow = dstBmp->pixels + y2 * dstBmp->width;
+        unsigned *ddest = &dstRow->c;
+
+        // Find the y-range of input pixels that will contribute.
+        int y1a = (int)((y2  ) * fh); 
+        int y1b = (int)((y2+1) * fh); 
+        y1b = IntMin(y1b, 256 * h1 - 1);
         int y1c = y1a >> 8;
         int y1d = y1b >> 8;
 
-        for (int x2=0; x2<w2; x2++)
+        for (int x2 = 0; x2 < w2; x2++)
         {
-            // find the x-range of input pixels that will contribute:
-            // find the x-range of input pixels that will contribute:
+            // Find the x-range of input pixels that will contribute.
             int x1a = (int)((x2)*fw);
             int x1b = (int)((x2 + 1)*fw);
-            x1b = std::min(x1b, 256 * w1 - 1);
+            x1b = IntMin(x1b, 256 * w1 - 1);
             int x1c = x1a >> 8;
             int x1d = x1b >> 8;
 
-            // ADD UP ALL INPUT PIXELS CONTRIBUTING TO THIS OUTPUT PIXEL:
-            unsigned int r=0, g=0, b=0, a=0;
-            for (int y=y1c; y<=y1d; y++)
+            // Add up all input pixels contributing to this output pixel.
+            unsigned r = 0, g = 0, b = 0, a = 0;
+            for (int y = y1c; y <= y1d; y++)
             {
-                unsigned int weight_y = 256;
+                unsigned weightY = 256;
                 if (y1c != y1d) 
                 {
-                    if (y==y1c)
-                        weight_y = 256 - (y1a & 0xFF);
-                    else if (y==y1d)
-                        weight_y = (y1b & 0xFF);
+                    if (y == y1c)
+                        weightY = 256 - (y1a & 0xFF);
+                    else if (y == y1d)
+                        weightY = (y1b & 0xFF);
                 }
 
-                unsigned int *dsrc2 = &dsrc[y*w1 + x1c];
-                for (int x=x1c; x<=x1d; x++)
+                unsigned *dsrc2 = &dsrc[y * w1 + x1c];
+                for (int x = x1c; x <= x1d; x++)
                 {
-                    unsigned int weight_x = 256;
+                    unsigned weightX = 256;
                     if (x1c != x1d) 
                     {
-                        if (x==x1c)
-                            weight_x = 256 - (x1a & 0xFF);
-                        else if (x==x1d)
-                            weight_x = (x1b & 0xFF);
+                        if (x == x1c)
+                            weightX = 256 - (x1a & 0xFF);
+                        else if (x == x1d)
+                            weightX = (x1b & 0xFF);
                     }
 
-                    unsigned int c = *dsrc2++;//dsrc[y*w1 + x];
-                    unsigned int r_src = (c    ) & 0xFF;
-                    unsigned int g_src = (c>> 8) & 0xFF;
-                    unsigned int b_src = (c>>16) & 0xFF;
-                    unsigned int w = (weight_x * weight_y) >> weight_shift;
+                    unsigned c = *dsrc2++;//dsrc[y*w1 + x];
+                    unsigned r_src = (c    ) & 0xFF;
+                    unsigned g_src = (c>> 8) & 0xFF;
+                    unsigned b_src = (c>>16) & 0xFF;
+                    unsigned w = (weightX * weightY) >> weightShift;
                     r += r_src * w;
                     g += g_src * w;
                     b += b_src * w;
@@ -1022,8 +1021,8 @@ void BitmapDownsample(DfBitmap *src_bmp, DfBitmap *dst_bmp)
                 }
             }
 
-            // write results
-            unsigned int c = ((r/a)) | ((g/a)<<8) | ((b/a)<<16);
+            // Write results.
+            unsigned c = ((r/a)) | ((g/a)<<8) | ((b/a)<<16);
             *ddest++ = c;//ddest[y2*w2 + x2] = c;
         }
     }
