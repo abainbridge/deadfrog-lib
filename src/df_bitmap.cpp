@@ -930,19 +930,16 @@ void ScaleUpBlit(DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp)
 }
 
 
-void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeight, DfBitmap *srcBmp)
+void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBitmap *srcBmp)
 {
     // Based on Ryan Geiss's code from http://www.geisswerks.com/ryan/FAQS/resize.html
     
-    int w1 = srcBmp->width;
-    int h1 = srcBmp->height;
-    int w2 = dstWidth;
-    int h2 = dstHeight;
-
     // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
     // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
 
     DfColour *src = srcBmp->pixels;
+    int srcW = srcBmp->width;
+    int srcH = srcBmp->height;
 
     // If too many input pixels map to one output pixel, our 32-bit accumulation values
     // could overflow - so, if we have huge mappings like that, cut down the weights:
@@ -951,7 +948,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeig
     //   *256 weight_y
     //   *256 (16*16) maximum # of input pixels (x,y) - unless we cut the weights down...
     int weightShift = 0;
-    float sourceTexelsPerOutPixel = (w1 / (float)w2 + 1) * (h1 / (float)h2 + 1);
+    float sourceTexelsPerOutPixel = (srcW / (float)dstW + 1) * (srcH / (float)dstH + 1);
     float weightPerPixel = sourceTexelsPerOutPixel * 256 * 256;  //weight_x * weight_y
     float accumPerPixel = weightPerPixel * 256; //color value is 0-255
     float weightDiv = accumPerPixel / 4294967000.0f;
@@ -959,11 +956,11 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeig
         weightShift = (int)ceilf( logf((float)weightDiv) / logf(2.0f) );
     weightShift = IntMin(15, weightShift);  // this could go to 15 and still be ok.
 
-    float fh = 256 * h1 / (float)h2;
-    float fw = 256 * w1 / (float)w2;
+    float fh = 256 * srcH / (float)dstH;
+    float fw = 256 * srcW / (float)dstW;
 
     // For every output pixel...
-    for (int y2 = 0; y2 < h2; y2++)
+    for (int y2 = 0; y2 < dstH; y2++)
     {   
         DfColour *dstRow = dstBmp->pixels + (dstY + y2) * dstBmp->width;
         DfColour *dest = dstRow + dstX;
@@ -971,16 +968,16 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeig
         // Find the y-range of input pixels that will contribute.
         int y1a = (int)((y2  ) * fh); 
         int y1b = (int)((y2+1) * fh); 
-        y1b = IntMin(y1b, 256 * h1 - 1);
+        y1b = IntMin(y1b, 256 * srcH - 1);
         int y1c = y1a >> 8;
         int y1d = y1b >> 8;
 
-        for (int x2 = 0; x2 < w2; x2++)
+        for (int x2 = 0; x2 < dstW; x2++)
         {
             // Find the x-range of input pixels that will contribute.
             int x1a = (int)((x2)*fw);
             int x1b = (int)((x2 + 1)*fw);
-            x1b = IntMin(x1b, 256 * w1 - 1);
+            x1b = IntMin(x1b, 256 * srcW - 1);
             int x1c = x1a >> 8;
             int x1d = x1b >> 8;
 
@@ -997,7 +994,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeig
                         weightY = (y1b & 0xFF);
                 }
 
-                DfColour *src2 = &src[y * w1 + x1c];
+                DfColour *src2 = &src[y * srcW + x1c];
                 for (int x = x1c; x <= x1d; x++)
                 {
                     unsigned weightX = 256;
