@@ -942,7 +942,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeig
     // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
     // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
 
-    unsigned *dsrc = &srcBmp->pixels->c;
+    DfColour *src = srcBmp->pixels;
 
     // If too many input pixels map to one output pixel, our 32-bit accumulation values
     // could overflow - so, if we have huge mappings like that, cut down the weights:
@@ -966,7 +966,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeig
     for (int y2 = 0; y2 < h2; y2++)
     {   
         DfColour *dstRow = dstBmp->pixels + (dstY + y2) * dstBmp->width;
-        unsigned *ddest = &dstRow->c + dstX;
+        DfColour *dest = dstRow + dstX;
 
         // Find the y-range of input pixels that will contribute.
         int y1a = (int)((y2  ) * fh); 
@@ -997,7 +997,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeig
                         weightY = (y1b & 0xFF);
                 }
 
-                unsigned *dsrc2 = &dsrc[y * w1 + x1c];
+                DfColour *src2 = &src[y * w1 + x1c];
                 for (int x = x1c; x <= x1d; x++)
                 {
                     unsigned weightX = 256;
@@ -1009,21 +1009,20 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstWidth, int dstHeig
                             weightX = (x1b & 0xFF);
                     }
 
-                    unsigned c = *dsrc2++;//dsrc[y*w1 + x];
-                    unsigned r_src = (c    ) & 0xFF;
-                    unsigned g_src = (c>> 8) & 0xFF;
-                    unsigned b_src = (c>>16) & 0xFF;
+                    DfColour c = *src2++;
                     unsigned w = (weightX * weightY) >> weightShift;
-                    r += r_src * w;
-                    g += g_src * w;
-                    b += b_src * w;
+                    r += c.r * w;
+                    g += c.g * w;
+                    b += c.b * w;
                     a += w;
                 }
             }
 
             // Write results.
-            unsigned c = ((r/a)) | ((g/a)<<8) | ((b/a)<<16);
-            *ddest++ = c;//ddest[y2*w2 + x2] = c;
+            dest->r = r / a;
+            dest->g = g / a;
+            dest->b = b / a;
+            dest++;
         }
     }
 }
