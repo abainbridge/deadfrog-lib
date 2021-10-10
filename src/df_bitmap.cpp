@@ -940,6 +940,11 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
     // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
     // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
 
+    static int* g_px1a = NULL;
+    static int  g_px1a_w = 0;
+    static int* g_px1ab = NULL;
+    static int  g_px1ab_w = 0;
+
     DfColour *src = srcBmp->pixels;
     int srcW = srcBmp->width;
     int srcH = srcBmp->height;
@@ -962,72 +967,144 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
     float fh = 256 * srcH / (float)dstH;
     float fw = 256 * srcW / (float)dstW;
 
-    // For every output pixel...
-    for (int y2 = 0; y2 < dstH; y2++)
-    {   
-        if (dstY + y2 < dstBmp->clipTop) continue;
-        if (dstY + y2 >= dstBmp->clipBottom) break;
+    if (srcW < dstW && srcH < dstH) 
+    {
+        // Do 2x2 bilinear interp.
 
-        DfColour *dstRow = dstBmp->pixels + (dstY + y2) * dstBmp->width;
-        DfColour *dest = dstRow + dstX;
-
-        // Find the y-range of input pixels that will contribute.
-        int y1a = (int)((y2  ) * fh); 
-        int y1b = (int)((y2+1) * fh); 
-        y1b = IntMin(y1b, 256 * srcH - 1);
-        int y1c = y1a >> 8;
-        int y1d = y1b >> 8;
-
-        for (int x2 = 0; x2 < dstW; x2++, dest++)
+        // Cache x1a, x1b for all the columns:
+        // ...and your OS better have garbage collection on process exit :)
+        if (g_px1a_w < dstW) 
         {
-            if (dstX + x2 < dstBmp->clipLeft) continue;
-            if (dstX + x2 >= dstBmp->clipRight) break;
+            if (g_px1a) delete[] g_px1a;
+            g_px1a = new int[dstW * 2];
+            g_px1a_w = dstW * 2;
+        }
 
+        for (int x2 = 0; x2 < dstW; x2++) 
+        {
             // Find the x-range of input pixels that will contribute.
-            int x1a = (int)((x2)*fw);
-            int x1b = (int)((x2 + 1)*fw);
-            x1b = IntMin(x1b, 256 * srcW - 1);
-            int x1c = x1a >> 8;
-            int x1d = x1b >> 8;
+            int x1a = x2 * fw;
+            x1a = IntMin(x1a, 256 * (srcW - 1) - 1);
+            g_px1a[x2] = x1a;
+        }
 
-            // Add up all input pixels contributing to this output pixel.
-            unsigned r = 0, g = 0, b = 0, a = 0;
-            for (int y = y1c; y <= y1d; y++)
+        // For every output pixel...
+        for (int y2 = 0; y2 < dstH; y2++) 
+        {
+            if (dstY + y2 < dstBmp->clipTop) continue;
+            if (dstY + y2 >= dstBmp->clipBottom) break;
+
+            // Find the y-range of input pixels that will contribute.
+            int y1a = y2 * fh;
+            y1a = IntMin(y1a, 256 * (srcH - 1) - 1);
+            int y1c = y1a >> 8;
+
+            DfColour *dest = &dstBmp->pixels[(dstY + y2) * dstBmp->width + dstX];
+
+            for (int x2 = 0; x2 < dstW; x2++, dest++)
             {
-                unsigned weightY = 256;
-                if (y1c != y1d) 
+                if (dstX + x2 < dstBmp->clipLeft) continue;
+                if (dstX + x2 >= dstBmp->clipRight) break;
+
+                // Find the x-range of input pixels that will contribute.
+                int x1a = g_px1a[x2];//(int)(x2*fw); 
+                int x1c = x1a >> 8;
+
+                DfColour *src2 = &srcBmp->pixels[y1c * srcW + x1c];
+
+                // Perform bilinear interpolation on 2x2 pixels.
+                unsigned r = 0, g = 0, b = 0;
+                unsigned weightX = 256 - (x1a & 0xFF);
+                unsigned weightY = 256 - (y1a & 0xFF);
+                for (int y = 0; y < 2; y++) 
                 {
-                    if (y == y1c)
-                        weightY = 256 - (y1a & 0xFF);
-                    else if (y == y1d)
-                        weightY = (y1b & 0xFF);
+                    for (int x = 0; x < 2; x++) 
+                    {
+                        DfColour *c = &src2[x + y*srcW];
+                        unsigned w = (weightX * weightY) >> weightShift;
+                        r += c->r * w;
+                        g += c->g * w;
+                        b += c->b * w;
+                        weightX = 256 - weightX;
+                    }
+                    weightY = 256 - weightY;
                 }
 
-                DfColour *src2 = &src[y * srcW + x1c];
-                for (int x = x1c; x <= x1d; x++)
+                dest->r = r >> 16;
+                dest->g = g >> 16;
+                dest->b = b >> 16;
+            }
+        }
+    }
+    else
+    {
+        // For every output pixel...
+        for (int y2 = 0; y2 < dstH; y2++)
+        {
+            if (dstY + y2 < dstBmp->clipTop) continue;
+            if (dstY + y2 >= dstBmp->clipBottom) break;
+
+            DfColour *dstRow = dstBmp->pixels + (dstY + y2) * dstBmp->width;
+            DfColour *dest = dstRow + dstX;
+
+            // Find the y-range of input pixels that will contribute.
+            int y1a = (int)((y2)* fh);
+            int y1b = (int)((y2 + 1) * fh);
+            y1b = IntMin(y1b, 256 * srcH - 1);
+            int y1c = y1a >> 8;
+            int y1d = y1b >> 8;
+
+            for (int x2 = 0; x2 < dstW; x2++, dest++)
+            {
+                if (dstX + x2 < dstBmp->clipLeft) continue;
+                if (dstX + x2 >= dstBmp->clipRight) break;
+
+                // Find the x-range of input pixels that will contribute.
+                int x1a = (int)((x2)*fw);
+                int x1b = (int)((x2 + 1)*fw);
+                x1b = IntMin(x1b, 256 * srcW - 1);
+                int x1c = x1a >> 8;
+                int x1d = x1b >> 8;
+
+                // Add up all input pixels contributing to this output pixel.
+                unsigned r = 0, g = 0, b = 0, a = 0;
+                for (int y = y1c; y <= y1d; y++)
                 {
-                    unsigned weightX = 256;
-                    if (x1c != x1d) 
+                    unsigned weightY = 256;
+                    if (y1c != y1d)
                     {
-                        if (x == x1c)
-                            weightX = 256 - (x1a & 0xFF);
-                        else if (x == x1d)
-                            weightX = (x1b & 0xFF);
+                        if (y == y1c)
+                            weightY = 256 - (y1a & 0xFF);
+                        else if (y == y1d)
+                            weightY = (y1b & 0xFF);
                     }
 
-                    DfColour c = *src2++;
-                    unsigned w = (weightX * weightY) >> weightShift;
-                    r += c.r * w;
-                    g += c.g * w;
-                    b += c.b * w;
-                    a += w;
-                }
-            }
+                    DfColour *src2 = &src[y * srcW + x1c];
+                    for (int x = x1c; x <= x1d; x++)
+                    {
+                        unsigned weightX = 256;
+                        if (x1c != x1d)
+                        {
+                            if (x == x1c)
+                                weightX = 256 - (x1a & 0xFF);
+                            else if (x == x1d)
+                                weightX = (x1b & 0xFF);
+                        }
 
-            // Write results.
-            dest->r = r / a;
-            dest->g = g / a;
-            dest->b = b / a;
+                        DfColour c = *src2++;
+                        unsigned w = (weightX * weightY) >> weightShift;
+                        r += c.r * w;
+                        g += c.g * w;
+                        b += c.b * w;
+                        a += w;
+                    }
+                }
+
+                // Write results.
+                dest->r = r / a;
+                dest->g = g / a;
+                dest->b = b / a;
+            }
         }
     }
 }
