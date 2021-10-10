@@ -908,14 +908,17 @@ void ScaleDownBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src)
 
 void ScaleUpBlit(DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp)
 {
-    for (int sy = 0; sy < srcBmp->height; sy++)
+    int maxSx = IntMin(srcBmp->width, destBmp->width / scale);
+    int maxSy = IntMin(srcBmp->height, destBmp->height / scale);
+
+    for (int sy = 0; sy < maxSy; sy++)
     {
         for (int j = 0; j < scale; j++)
         {
             DfColour *srcPixel = srcBmp->lines[sy];
-            DfColour *destPixel = destBmp->lines[y + sy * scale + j] + x * scale;
+            DfColour *destPixel = destBmp->lines[y + sy * scale + j] + x;
 
-            for (int sx = 0; sx < srcBmp->width; sx++)
+            for (int sx = 0; sx < maxSx; sx++)
             {
                 for (int i = 0; i < scale; i++)
                 {
