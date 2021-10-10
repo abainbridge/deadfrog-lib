@@ -965,6 +965,9 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
     // For every output pixel...
     for (int y2 = 0; y2 < dstH; y2++)
     {   
+        if (dstY + y2 < dstBmp->clipTop) continue;
+        if (dstY + y2 >= dstBmp->clipBottom) break;
+
         DfColour *dstRow = dstBmp->pixels + (dstY + y2) * dstBmp->width;
         DfColour *dest = dstRow + dstX;
 
@@ -975,8 +978,11 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
         int y1c = y1a >> 8;
         int y1d = y1b >> 8;
 
-        for (int x2 = 0; x2 < dstW; x2++)
+        for (int x2 = 0; x2 < dstW; x2++, dest++)
         {
+            if (dstX + x2 < dstBmp->clipLeft) continue;
+            if (dstX + x2 >= dstBmp->clipRight) break;
+
             // Find the x-range of input pixels that will contribute.
             int x1a = (int)((x2)*fw);
             int x1b = (int)((x2 + 1)*fw);
@@ -1022,7 +1028,6 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
             dest->r = r / a;
             dest->g = g / a;
             dest->b = b / a;
-            dest++;
         }
     }
 }
