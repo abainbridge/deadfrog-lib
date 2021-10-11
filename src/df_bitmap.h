@@ -77,7 +77,8 @@ DLL_API void        MaskedBlit      (DfBitmap *destBmp, int x, int y, DfBitmap *
 // TODO rename this to just Blit().
 DLL_API void        QuickBlit       (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
 
-// Copies the source bitmap to the destination bitmap, scaling the result down by the specified scale factor
+// Copies the source bitmap to the destination bitmap, scaling the result down by the specified 
+// integer scale factor. These are much faster than StretchBlit() which supports arbitrary scaling.
 DLL_API void        ScaleDownBlit   (DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp);
 DLL_API void        ScaleUpBlit     (DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp);
 
