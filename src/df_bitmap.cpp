@@ -946,6 +946,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
     static int  g_px1ab_w = 0;
 
     DfColour *src = srcBmp->pixels;
+    int srcX0 = 0;
     int srcW = srcBmp->width;
     int srcH = srcBmp->height;
 
@@ -971,6 +972,17 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
     {
         // Do 2x2 bilinear interp.
 
+        if (dstX < dstBmp->clipLeft) {
+            int amtToClip = dstBmp->clipLeft - dstX;
+            dstW -= amtToClip;
+            dstX += amtToClip;
+            srcX0 = amtToClip;
+        }
+
+        if (dstX + dstW > dstBmp->clipRight) {
+            dstW = dstBmp->clipRight - dstX;
+        }
+
         // Cache x1a, x1b for all the columns:
         // ...and your OS better have garbage collection on process exit :)
         if (g_px1a_w < dstW) 
@@ -983,7 +995,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
         for (int x2 = 0; x2 < dstW; x2++) 
         {
             // Find the x-range of input pixels that will contribute.
-            int x1a = x2 * fw;
+            int x1a = (x2 + srcX0) * fw;
             x1a = IntMin(x1a, 256 * (srcW - 1) - 1);
             g_px1a[x2] = x1a;
         }
@@ -1003,9 +1015,6 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
 
             for (int x2 = 0; x2 < dstW; x2++, dest++)
             {
-                if (dstX + x2 < dstBmp->clipLeft) continue;
-                if (dstX + x2 >= dstBmp->clipRight) break;
-
                 // Find the x-range of input pixels that will contribute.
                 int x1a = g_px1a[x2];//(int)(x2*fw); 
                 int x1c = x1a >> 8;
