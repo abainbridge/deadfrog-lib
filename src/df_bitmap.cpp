@@ -961,7 +961,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
 
     float fh = 256 * srcH / (float)dstH;
     float fw = 256 * srcW / (float)dstW;
-    int fwFixed = 65536 * srcW / (float)dstW;
+    unsigned fwFixed = (double)srcW * (double)(1 << 22) / (double)dstW;
 
     if (srcW < dstW && srcH < dstH) 
     {
@@ -1002,7 +1002,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                 // Perform bilinear interpolation on 2x2 pixels.
 
                 // Find the x-range of input pixels that will contribute.
-                int x1a = ((x2 + srcX0) * fwFixed) >> 8;
+                int x1a = ((x2 + srcX0) * fwFixed) >> 14;
                 int x1c = x1a >> 8;
 
                 DfColour *src2 = &src[x1c];
