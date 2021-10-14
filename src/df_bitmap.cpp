@@ -1020,24 +1020,41 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                 int x1c = x1a >> 8;
 
                 DfColour *src2 = &src[x1c];
-                
+
                 // Perform bilinear interpolation on 2x2 pixels.
                 unsigned r = 0, g = 0, b = 0;
                 unsigned weightX = 256 - (x1a & 0xFF);
                 unsigned weightY = 256 - (y1a & 0xFF);
-                for (int y = 0; y < 2; y++) 
-                {
-                    for (int x = 0; x < 2; x++) 
-                    {
-                        DfColour *c = &src2[x + y*srcW];
-                        unsigned w = weightX * weightY;
-                        r += c->r * w;
-                        g += c->g * w;
-                        b += c->b * w;
-                        weightX = 256 - weightX;
-                    }
-                    weightY = 256 - weightY;
-                }
+
+                DfColour *c = &src2[0];
+                unsigned w = (weightX * weightY);
+                r += c->r * w;
+                g += c->g * w;
+                b += c->b * w;
+                weightX = 256 - weightX;
+
+                c++;
+                w = (weightX * weightY);
+                r += c->r * w;
+                g += c->g * w;
+                b += c->b * w;
+                weightX = 256 - weightX;
+
+                weightY = 256 - weightY;
+
+
+                c = &src2[srcW];
+                w = (weightX * weightY);
+                r += c->r * w;
+                g += c->g * w;
+                b += c->b * w;
+                weightX = 256 - weightX;
+
+                c++;
+                w = (weightX * weightY);
+                r += c->r * w;
+                g += c->g * w;
+                b += c->b * w;
 
                 dest->r = r >> 16;
                 dest->g = g >> 16;
