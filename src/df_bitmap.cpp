@@ -1089,7 +1089,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                             weightY = (y1b & 0xFF);
                     }
 
-                    DfColour *src2 = &src[y * srcW + x1c];
+                    DfColour *src2 = &srcBmp->pixels[y * srcW + x1c];
                     for (int x = x1c; x <= x1d; x++)
                     {
                         unsigned weightX = 256;
