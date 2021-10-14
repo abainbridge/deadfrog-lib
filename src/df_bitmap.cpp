@@ -1026,32 +1026,34 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                 unsigned weightX = 256 - (x1a & 0xFF);
                 unsigned weightY = 256 - (y1a & 0xFF);
 
+                // Pixel 0,0
                 DfColour *c = &src2[0];
-                unsigned w = (weightX * weightY);
+                unsigned w = weightX * weightY;
                 r += c->r * w;
                 g += c->g * w;
                 b += c->b * w;
-                weightX = 256 - weightX;
 
+                // Pixel 1,0
+                weightX = 256 - weightX;
                 c++;
-                w = (weightX * weightY);
+                w = weightX * weightY;
                 r += c->r * w;
                 g += c->g * w;
                 b += c->b * w;
-                weightX = 256 - weightX;
 
+                // Pixel 0,1
+                weightX = 256 - weightX;
                 weightY = 256 - weightY;
-
-
                 c = &src2[srcW];
-                w = (weightX * weightY);
+                w = weightX * weightY;
                 r += c->r * w;
                 g += c->g * w;
                 b += c->b * w;
-                weightX = 256 - weightX;
 
+                // Pixel 1,1
+                weightX = 256 - weightX;
                 c++;
-                w = (weightX * weightY);
+                w = weightX * weightY;
                 r += c->r * w;
                 g += c->g * w;
                 b += c->b * w;
