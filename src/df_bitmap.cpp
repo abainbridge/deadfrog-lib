@@ -1015,16 +1015,18 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
 
             for (int x2 = 0; x2 < dstW; x2++, dest++)
             {
+                // Perform bilinear interpolation on 2x2 pixels.
+
                 // Find the x-range of input pixels that will contribute.
                 int x1a = g_px1a[x2];//(int)(x2*fw); 
                 int x1c = x1a >> 8;
 
                 DfColour *src2 = &src[x1c];
-
-                // Perform bilinear interpolation on 2x2 pixels.
                 unsigned r = 0, g = 0, b = 0;
-                unsigned weightX = 256 - (x1a & 0xFF);
-                unsigned weightY = 256 - (y1a & 0xFF);
+                unsigned weightX2 = x1a & 0xFF;
+                unsigned weightX = 256 - weightX2;
+                unsigned weightY2 = y1a & 0xFF;
+                unsigned weightY = 256 - weightY2;
 
                 // Pixel 0,0
                 DfColour *c = &src2[0];
@@ -1034,26 +1036,22 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                 b += c->b * w;
 
                 // Pixel 1,0
-                weightX = 256 - weightX;
                 c++;
-                w = weightX * weightY;
+                w = weightX2 * weightY;
                 r += c->r * w;
                 g += c->g * w;
                 b += c->b * w;
 
                 // Pixel 0,1
-                weightX = 256 - weightX;
-                weightY = 256 - weightY;
                 c = &src2[srcW];
-                w = weightX * weightY;
+                w = weightX * weightY2;
                 r += c->r * w;
                 g += c->g * w;
                 b += c->b * w;
 
                 // Pixel 1,1
-                weightX = 256 - weightX;
                 c++;
-                w = weightX * weightY;
+                w = weightX2 * weightY2;
                 r += c->r * w;
                 g += c->g * w;
                 b += c->b * w;
