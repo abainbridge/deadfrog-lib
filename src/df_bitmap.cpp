@@ -1006,41 +1006,36 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                 int x1c = x1a >> 8;
 
                 DfColour *src2 = &src[x1c];
-                unsigned r = 0, g = 0, b = 0;
+                unsigned rb = 0, g = 0;
                 unsigned weightX2 = x1a & 0xFF;
                 unsigned weightX = 256 - weightX2;
 
                 // Pixel 0,0
                 DfColour *c = &src2[0];
-                unsigned w = weightX * weightY;
-                r += c->r * w;
+                unsigned w = (weightX * weightY) >> 8;
+                rb += (c->c & 0xff00ff) * w;
                 g += c->g * w;
-                b += c->b * w;
 
                 // Pixel 1,0
                 c++;
-                w = weightX2 * weightY;
-                r += c->r * w;
+                w = (weightX2 * weightY) >> 8;
+                rb += (c->c & 0xff00ff) * w;
                 g += c->g * w;
-                b += c->b * w;
 
                 // Pixel 0,1
                 c = &src2[srcW];
-                w = weightX * weightY2;
-                r += c->r * w;
+                w = (weightX * weightY2) >> 8;
+                rb += (c->c & 0xff00ff) * w;
                 g += c->g * w;
-                b += c->b * w;
 
                 // Pixel 1,1
                 c++;
-                w = weightX2 * weightY2;
-                r += c->r * w;
+                w = (weightX2 * weightY2) >> 8;
+                rb += (c->c & 0xff00ff) * w;
                 g += c->g * w;
-                b += c->b * w;
 
-                dest->r = r >> 16;
-                dest->g = g >> 16;
-                dest->b = b >> 16;
+                dest->c = rb >> 8;
+                dest->g = g >> 8;
             }
         }
     }
