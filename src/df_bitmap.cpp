@@ -940,24 +940,8 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
     // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
     // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
 
-    int srcX0 = 0;
     int srcW = srcBmp->width;
     int srcH = srcBmp->height;
-
-    // If too many input pixels map to one output pixel, our 32-bit accumulation values
-    // could overflow - so, if we have huge mappings like that, cut down the weights:
-    //    256 max color value
-    //   *256 weight_x
-    //   *256 weight_y
-    //   *256 (16*16) maximum # of input pixels (x,y) - unless we cut the weights down...
-    int weightShift = 0;
-    float sourceTexelsPerOutPixel = (srcW / (float)dstW + 1) * (srcH / (float)dstH + 1);
-    float weightPerPixel = sourceTexelsPerOutPixel * 256 * 256;  //weight_x * weight_y
-    float accumPerPixel = weightPerPixel * 256; //color value is 0-255
-    float weightDiv = accumPerPixel / 4294967000.0f;
-    if (weightDiv > 1)
-        weightShift = (int)ceilf( logf((float)weightDiv) / logf(2.0f) );
-    weightShift = IntMin(15, weightShift);  // this could go to 15 and still be ok.
 
     float fh = 256 * srcH / (float)dstH;
     float fw = 256 * srcW / (float)dstW;
@@ -965,9 +949,9 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
 
     if (srcW < dstW && srcH < dstH) 
     {
-        DebugAssert(weightShift == 0); 
-
         // Do 2x2 bilinear interp.
+
+        int srcX0 = 0;
 
         if (dstX < dstBmp->clipLeft) {
             int amtToClip = dstBmp->clipLeft - dstX;
@@ -1041,6 +1025,21 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
     }
     else
     {
+        // If too many input pixels map to one output pixel, our 32-bit accumulation values
+        // could overflow - so, if we have huge mappings like that, cut down the weights:
+        //    256 max color value
+        //   *256 weight_x
+        //   *256 weight_y
+        //   *256 (16*16) maximum # of input pixels (x,y) - unless we cut the weights down...
+        int weightShift = 0;
+        float sourceTexelsPerOutPixel = (srcW / (float)dstW + 1) * (srcH / (float)dstH + 1);
+        float weightPerPixel = sourceTexelsPerOutPixel * 256 * 256;  //weight_x * weight_y
+        float accumPerPixel = weightPerPixel * 256; //color value is 0-255
+        float weightDiv = accumPerPixel / 4294967000.0f;
+        if (weightDiv > 1)
+            weightShift = (int)ceilf(logf((float)weightDiv) / logf(2.0f));
+        weightShift = IntMin(15, weightShift);  // this could go to 15 and still be ok.
+
         // For every output pixel...
         for (int y2 = 0; y2 < dstH; y2++)
         {
