@@ -943,8 +943,8 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
     int srcW = srcBmp->width;
     int srcH = srcBmp->height;
 
-    float fh = 256 * srcH / (float)dstH;
-    float fw = 256 * srcW / (float)dstW;
+    float heightRatio = 256 * srcH / (float)dstH;
+    float widthRatio = 256 * srcW / (float)dstW;
     unsigned fwFixed = (double)srcW * (double)(1 << 22) / (double)dstW;
 
     if (srcW < dstW && srcH < dstH) 
@@ -965,33 +965,33 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
         }
 
         // For every output pixel...
-        for (int y2 = 0; y2 < dstH; y2++) 
+        for (int y = 0; y < dstH; y++) 
         {
-            if (dstY + y2 < dstBmp->clipTop) continue;
-            if (dstY + y2 >= dstBmp->clipBottom) break;
+            if (dstY + y < dstBmp->clipTop) continue;
+            if (dstY + y >= dstBmp->clipBottom) break;
 
             // Find the y-range of input pixels that will contribute.
-            int y1a = y2 * fh;
-            y1a = IntMin(y1a, 256 * (srcH - 1) - 1);
-            int y1c = y1a >> 8;
+            int srcYAndWeight = y * heightRatio;
+            srcYAndWeight = IntMin(srcYAndWeight, 256 * (srcH - 1) - 1);
+            int srcY = srcYAndWeight >> 8;
 
-            DfColour *dest = &dstBmp->pixels[(dstY + y2) * dstBmp->width + dstX];
-            DfColour *src = &srcBmp->pixels[y1c * srcW];
+            DfColour *dest = &dstBmp->pixels[(dstY + y) * dstBmp->width + dstX];
+            DfColour *src = &srcBmp->pixels[srcY * srcW];
 
-            unsigned weightY2 = y1a & 0xFF;
+            unsigned weightY2 = srcYAndWeight & 0xFF;
             unsigned weightY = 256 - weightY2;
 
-            for (int x2 = 0; x2 < dstW; x2++, dest++)
+            for (int x = 0; x < dstW; x++, dest++)
             {
                 // Perform bilinear interpolation on 2x2 pixels.
 
                 // Find the x-range of input pixels that will contribute.
-                int x1a = ((x2 + srcX0) * fwFixed) >> 14;
-                int x1c = x1a >> 8;
+                int srcXAndWeight = ((x + srcX0) * fwFixed) >> 14;
+                int srcX = srcXAndWeight >> 8;
 
-                DfColour *src2 = &src[x1c];
+                DfColour *src2 = &src[srcX];
                 unsigned rb = 0, g = 0;
-                unsigned weightX2 = x1a & 0xFF;
+                unsigned weightX2 = srcXAndWeight & 0xFF;
                 unsigned weightX = 256 - weightX2;
 
                 // Pixel 0,0
@@ -1050,8 +1050,8 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
             DfColour *dest = dstRow + dstX;
 
             // Find the y-range of input pixels that will contribute.
-            int y1a = (int)((y2)* fh);
-            int y1b = (int)((y2 + 1) * fh);
+            int y1a = (int)((y2)* heightRatio);
+            int y1b = (int)((y2 + 1) * heightRatio);
             y1b = IntMin(y1b, 256 * srcH - 1);
             int y1c = y1a >> 8;
             int y1d = y1b >> 8;
@@ -1062,8 +1062,8 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                 if (dstX + x2 >= dstBmp->clipRight) break;
 
                 // Find the x-range of input pixels that will contribute.
-                int x1a = (int)((x2)*fw);
-                int x1b = (int)((x2 + 1)*fw);
+                int x1a = (int)((x2)*widthRatio);
+                int x1b = (int)((x2 + 1)*widthRatio);
                 x1b = IntMin(x1b, 256 * srcW - 1);
                 int x1c = x1a >> 8;
                 int x1d = x1b >> 8;
