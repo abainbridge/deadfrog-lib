@@ -935,96 +935,109 @@ void ScaleUpBlit(DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp)
 
 void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBitmap *srcBmp)
 {
-    // Based on Ryan Geiss's code from http://www.geisswerks.com/ryan/FAQS/resize.html
-    
-    // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
-    // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
-
-    int srcW = srcBmp->width;
-    int srcH = srcBmp->height;
-
-    float heightRatio = 256 * srcH / (float)dstH;
-    float widthRatio = 256 * srcW / (float)dstW;
-    unsigned fwFixed = (double)srcW * (double)(1 << 22) / (double)dstW;
-
-    if (srcW < dstW && srcH < dstH) 
+    if (srcBmp->width < dstW && srcBmp->height < dstH) 
     {
-        // Do 2x2 bilinear interp.
+        // *** Bilinear upscale ***
 
-        int srcX0 = 0;
+        unsigned heightRatio = (double)(1 << 8) * 255.5 * srcBmp->height / dstH;
+        unsigned widthRatio = (double)(1 << 8) * 255.5 * srcBmp->width / dstW;
 
+        // Start of clipping.
+        if (dstX + dstW <= dstBmp->clipLeft || dstX >= dstBmp->clipRight) return;
+
+        double widthRatioFloat = (double)srcBmp->width / dstW;
+        int srcXMin = 0;
+        int srcXMax = srcBmp->width;
+        int srcXErr = 0;
         if (dstX < dstBmp->clipLeft) {
             int amtToClip = dstBmp->clipLeft - dstX;
             dstW -= amtToClip;
             dstX += amtToClip;
-            srcX0 = amtToClip;
+            double tmp = amtToClip * widthRatioFloat;
+            srcXMin = tmp;
+            srcXErr = (tmp - srcXMin) * 256.0;
         }
 
-        if (dstX + dstW > dstBmp->clipRight) {
-            dstW = dstBmp->clipRight - dstX;
+        if (dstX + dstW >= dstBmp->clipRight) {
+            int amtToClip = dstX + dstW - dstBmp->clipRight;
+            dstW -= amtToClip;
+            srcXMax -= amtToClip * widthRatioFloat - 1.5;
+            if (srcXMax > srcBmp->width) srcXMax = srcBmp->width;
         }
 
-        // For every output pixel...
-        for (int y = 0; y < dstH; y++) 
-        {
-            if (dstY + y < dstBmp->clipTop) continue;
-            if (dstY + y >= dstBmp->clipBottom) break;
+        if (dstY + dstH >= dstBmp->clipBottom) {
+            int amtToClip = dstY + dstH - dstBmp->clipBottom;
+            dstH -= amtToClip;
+        }
+        // End of clipping.
 
-            // Find the y-range of input pixels that will contribute.
-            int srcYAndWeight = y * heightRatio;
-            srcYAndWeight = IntMin(srcYAndWeight, 256 * (srcH - 1) - 1);
-            int srcY = srcYAndWeight >> 8;
+        for (int y = 0; y < dstH; y++) {
+            if (dstY + y < 0) continue;
 
-            DfColour *dest = &dstBmp->pixels[(dstY + y) * dstBmp->width + dstX];
-            DfColour *src = &srcBmp->pixels[srcY * srcW];
+            int srcYAndWeight = (y * heightRatio) >> 8;
+            int srcY = (srcYAndWeight) >> 8;
+
+            DfColour *dstRow = &dstBmp->pixels[(y + dstY) * dstBmp->width + dstX];
+            DfColour *srcRow = &srcBmp->pixels[srcY * srcBmp->width];
 
             unsigned weightY2 = srcYAndWeight & 0xFF;
             unsigned weightY = 256 - weightY2;
 
-            for (int x = 0; x < dstW; x++, dest++)
-            {
-                // Perform bilinear interpolation on 2x2 pixels.
+            for (int x = 0; x < srcXMax; x++) {
+                if (x < srcXMin) continue;
 
-                // Find the x-range of input pixels that will contribute.
-                int srcXAndWeight = ((x + srcX0) * fwFixed) >> 14;
-                int srcX = srcXAndWeight >> 8;
-
-                DfColour *src2 = &src[srcX];
                 unsigned rb = 0, g = 0;
+
+                // Pixel 0,0
+                DfColour *srcPixel = &srcRow[x];
+                rb += (srcPixel->c & 0xff00ff) * weightY;
+                g += srcPixel->g * weightY;
+
+                // Pixel 1,0
+                srcPixel += srcBmp->width;
+                rb += (srcPixel->c & 0xff00ff) * weightY2;
+                g += srcPixel->g * weightY2;
+
+                dstRow[x - srcXMin].c = rb >> 8;
+                dstRow[x - srcXMin].g = g >> 8;
+            }
+
+            for (int x = dstW - 1; x; x--) {
+                unsigned rb = 0, g = 0;
+
+                int srcXAndWeight = ((x * widthRatio) >> 8) + srcXErr;
+                int srcX = srcXAndWeight >> 8;
                 unsigned weightX2 = srcXAndWeight & 0xFF;
                 unsigned weightX = 256 - weightX2;
 
                 // Pixel 0,0
-                DfColour *c = &src2[0];
-                unsigned w = (weightX * weightY) >> 8;
-                rb += (c->c & 0xff00ff) * w;
-                g += c->g * w;
-
-                // Pixel 1,0
-                c++;
-                w = (weightX2 * weightY) >> 8;
-                rb += (c->c & 0xff00ff) * w;
-                g += c->g * w;
+                DfColour *srcPixel = &dstRow[srcX];
+                rb += (srcPixel->c & 0xff00ff) * weightX;
+                g += srcPixel->g * weightX;
 
                 // Pixel 0,1
-                c = &src2[srcW];
-                w = (weightX * weightY2) >> 8;
-                rb += (c->c & 0xff00ff) * w;
-                g += c->g * w;
+                srcPixel++;
+                rb += (srcPixel->c & 0xff00ff) * weightX2;
+                g += srcPixel->g * weightX2;
 
-                // Pixel 1,1
-                c++;
-                w = (weightX2 * weightY2) >> 8;
-                rb += (c->c & 0xff00ff) * w;
-                g += c->g * w;
-
-                dest->c = rb >> 8;
-                dest->g = g >> 8;
+                dstRow[x].c = rb >> 8;
+                dstRow[x].g = g >> 8;
             }
         }
     }
     else
     {
+        // Based on Ryan Geiss's code from http://www.geisswerks.com/ryan/FAQS/resize.html
+
+        // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
+        // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
+
+        int srcW = srcBmp->width;
+        int srcH = srcBmp->height;
+
+        float heightRatio = 256 * srcH / (float)dstH;
+        float widthRatio = 256 * srcBmp->width / (float)dstW;
+
         // If too many input pixels map to one output pixel, our 32-bit accumulation values
         // could overflow - so, if we have huge mappings like that, cut down the weights:
         //    256 max color value
