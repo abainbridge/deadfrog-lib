@@ -2,10 +2,10 @@ src_dir=../../src
 obj_dir=obj
 inc_dirs=
 
-cxxflags=-MMD -O2 -march=native -Wno-unused-result -fno-strict-aliasing
+cxxflags=-MMD -DWIN32 -O2 -march=native -Wno-unused-result -fno-strict-aliasing -Wall
 
 c_files_raw=df_bitmap.cpp df_bmp.cpp df_colour.cpp df_common.cpp \
-	df_font.cpp df_message_dialog_linux.cpp df_polygon_aa.cpp df_time.cpp \
+	df_font.cpp df_message_dialog.cpp df_polygon_aa.cpp df_time.cpp \
 	df_window.cpp
 c_files=$(addprefix $(src_dir)/,$(c_files_raw))
 o_files=$(patsubst $(src_dir)/%.cpp,$(obj_dir)/%.o,$(c_files))
