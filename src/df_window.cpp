@@ -47,7 +47,7 @@ static void InitInput();
 static void InputPollInternal();
 
 
-#ifdef WIN32
+#ifdef _WIN32
 # include "df_window_windows.cpp"
 #else
 # include "df_window_x11.cpp"

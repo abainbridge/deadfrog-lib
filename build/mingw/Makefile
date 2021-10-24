@@ -2,7 +2,7 @@ src_dir=../../src
 obj_dir=obj
 inc_dirs=
 
-cxxflags=-MMD -DWIN32 -O2 -march=native -Wno-unused-result -fno-strict-aliasing -Wall
+cxxflags=-MMD -D_WIN32 -O2 -march=native -Wno-unused-result -fno-strict-aliasing -Wall
 
 c_files_raw=df_bitmap.cpp df_bmp.cpp df_colour.cpp df_common.cpp \
 	df_font.cpp df_message_dialog.cpp df_polygon_aa.cpp df_time.cpp \
