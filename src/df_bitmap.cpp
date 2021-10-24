@@ -118,7 +118,7 @@ void HLineUnclipped(DfBitmap *bmp, int x, int y, int len, DfColour c)
 #ifdef _MSC_VER
         __stosd((unsigned long*)row, c.c, len);
 #else
-        for (unsigned i = 0; i < len; i++)
+        for (int i = 0; i < len; i++)
             row[i] = c;
 #endif
     }
