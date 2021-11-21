@@ -170,7 +170,7 @@ void ColourWhirlMain()
             // Abort drawing the set if the user presses escape or clicks the close icon
             InputPoll();
             if (g_window->windowClosed || g_input.keyDowns[KEY_ESC])
-                return;
+                exit(0);
             UpdateWin();
         }
     }

@@ -151,7 +151,7 @@ double CalcMillionLinePixelsPerSec(DfBitmap *bmp)
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
     g_testFmtString = "Million line pixels per sec";
-    double numPixels = (320 + 16 + 151) * 2 * g_iterations;
+    double numPixels = (double)(320 + 16 + 151) * 2 * g_iterations;
     return (numPixels / g_duration) / 1e6;
 }
 
@@ -183,7 +183,7 @@ double CalcBillionBlitPixelsPerSec(DfBitmap *bmp)
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
     g_testFmtString = "Billion blit pixels per sec";
-    double numPixels = dog->width * dog->height * (double)g_iterations;
+    double numPixels = (double)dog->width * dog->height * (double)g_iterations;
     BitmapDelete(dog);
     return (numPixels / g_duration) / 1e9;
 }
@@ -296,7 +296,7 @@ double CalcWindowUpdatesPerSecond()
     QuickBlit(g_window->bmp, 600, textY, backBmp); \
     UpdateWin(); \
     InputPoll(); \
-    if (g_window->windowClosed || g_input.keyDowns[KEY_ESC]) return; \
+    if (g_window->windowClosed || g_input.keyDowns[KEY_ESC]) exit(0); \
     BitmapClear(backBmp, g_colourBlack); \
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, "%-42s %7.2f %5.2f %9u", g_testFmtString, score, g_duration, g_iterations); \
     fprintf(file, "%-42s %7.2f %6.2f %9u\n", g_testFmtString, score, g_duration, g_iterations); \
@@ -306,6 +306,7 @@ double CalcWindowUpdatesPerSecond()
 void BenchmarkMain()
 {
     FILE *file = fopen("report.txt", "w");
+    ReleaseAssert(file, "Couldn't open report.txt");
 
 	CreateWin(1024, 768, WT_WINDOWED, "Benchmark");
     BitmapClear(g_window->bmp, g_colourBlack);
@@ -365,6 +366,8 @@ void BenchmarkMain()
     // Window updates
     score = CalcWindowUpdatesPerSecond();
     END_TEST;
+
+    fclose(file);
 
     textY += yInc;
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
