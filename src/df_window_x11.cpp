@@ -574,12 +574,16 @@ static void handle_event() {
 }
 
 
-static void HandleEvents() {
+static bool HandleEvents() {
     ReadFromXServer();
-    
+
+    bool rv = false;
     while (IsEventPending()) {
         handle_event();
+        rv = true;
     }
+
+    return rv;
 }
 
 
@@ -921,9 +925,9 @@ bool WaitVsync() {
 
 
 bool InputPoll() {
-    HandleEvents();
+    bool rv = HandleEvents();
     InputPollInternal();
-    return true;
+    return rv;
 }
 
 
