@@ -7,6 +7,7 @@
 
 // Standard includes
 #include <ctype.h>
+#include <memory.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -45,6 +46,21 @@ DfWindow *g_window = NULL;
 
 static void InitInput();
 static void InputPollInternal();
+
+
+static void HandleFocusInEvent()
+{
+    g_input.windowHasFocus = true;
+    memset(g_priv.m_newKeyDowns, 0, KEY_MAX);
+    memset(g_priv.m_newKeyUps, 0, KEY_MAX);
+    memset(g_input.keys, 0, KEY_MAX);
+}
+
+
+static void HandleFocusOutEvent()
+{
+    g_input.windowHasFocus = false;
+}
 
 
 #ifdef _WIN32

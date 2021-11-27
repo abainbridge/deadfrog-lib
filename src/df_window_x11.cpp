@@ -49,16 +49,17 @@ enum {
 };
 
 enum {
-     X11_EVENT_KEYPRESS = 1,
-     X11_EVENT_KEYRELEASE = 2,
-     X11_EVENT_BUTTONPRESS = 4,
-     X11_EVENT_BUTTONRELEASE = 8,
-     X11_EVENT_ENTERWINDOW = 0x10,
-     X11_EVENT_LEAVEWINDOW = 0x20,
-     X11_EVENT_POINTERMOTION = 0x40,
-     X11_EVENT_POINTERMOTIONHINT = 0x80,
-     X11_EVENT_STRUCTURE_NOTIFY = 0x20000
-//     X11_EVENT_RESIZEREDIRECT = 0x40000
+    X11_EVENT_KEYPRESS = 1,
+    X11_EVENT_KEYRELEASE = 2,
+    X11_EVENT_BUTTONPRESS = 4,
+    X11_EVENT_BUTTONRELEASE = 8,
+    X11_EVENT_ENTERWINDOW = 0x10,
+    X11_EVENT_LEAVEWINDOW = 0x20,
+    X11_EVENT_POINTERMOTION = 0x40,
+    X11_EVENT_POINTERMOTIONHINT = 0x80,
+    X11_EVENT_STRUCTURE_NOTIFY = 0x20000,
+//     X11_EVENT_RESIZEREDIRECT = 0x40000,
+    X11_EVENT_FOCUSCHANGE = 0x200000,
 //      #x00000100     Button1Motion
 //      #x00000200     Button2Motion
 //      #x00000400     Button3Motion
@@ -492,7 +493,7 @@ static void handle_event() {
     if (g_state.recvBuf[0] == 1) {
         FATAL_ERROR("Got unexpected reply.");
     }
-            
+
     switch (g_state.recvBuf[0]) {
     case 2: // KeyPress event.
         {
@@ -556,6 +557,14 @@ static void handle_event() {
             g_input.mouseY = y;
             break;
         }
+
+    case 9: // Focus in event.
+        HandleFocusInEvent();
+        break;
+        
+    case 10: // Focus out event.
+        HandleFocusOutEvent();
+        break;
 
     case 22: // Configure notify event.
         {
@@ -787,7 +796,8 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
     packet[6] = 0; // Visual: Copy from parent.
     packet[7] = 0x800; // value_mask = event-mask
     packet[8] = X11_EVENT_KEYPRESS | X11_EVENT_KEYRELEASE | X11_EVENT_POINTERMOTION |
-                X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE | X11_EVENT_STRUCTURE_NOTIFY;
+                X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE | X11_EVENT_STRUCTURE_NOTIFY |
+                X11_EVENT_FOCUSCHANGE;
 
     SendBuf(packet, sizeof(packet));
 

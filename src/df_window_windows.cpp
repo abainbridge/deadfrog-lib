@@ -34,14 +34,10 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
             break;
 
         case WM_SETFOCUS:
-			g_input.windowHasFocus = true;
-			// Clear keyboard state when we regain focus
-            memset(g_priv.m_newKeyDowns, 0, KEY_MAX);
-            memset(g_priv.m_newKeyUps, 0, KEY_MAX);
-            memset(g_input.keys, 0, KEY_MAX);
+            HandleFocusInEvent();
             return -1;
 		case WM_KILLFOCUS:
-			g_input.windowHasFocus = false;
+            HandleFocusOutEvent();
 			break;
 
 		case WM_CHAR:
