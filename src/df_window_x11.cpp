@@ -306,7 +306,18 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
 
     if (keycode >= KEY_0 && keycode <= KEY_9) {
         if (shift) {
-            return keycode - 16;   // TODO Fix £.
+            switch (keycode) {
+               case KEY_0: return ')';
+               case KEY_1: return '!';
+               case KEY_2: return '"';
+               case KEY_3: return '£';
+               case KEY_4: return '$';
+               case KEY_5: return '%';
+               case KEY_6: return '^';
+               case KEY_7: return '&';
+               case KEY_8: return '*';
+               case KEY_9: return '(';
+            }
         }
         return keycode;
     }
