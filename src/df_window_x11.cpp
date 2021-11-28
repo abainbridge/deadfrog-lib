@@ -500,6 +500,8 @@ static void handle_event() {
         FATAL_ERROR("Got unexpected reply.");
     }
 
+    g_state.recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
+    
     switch (g_state.recvBuf[0]) {
     case 2: // KeyPress event.
         {
