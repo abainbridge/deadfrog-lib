@@ -304,3 +304,8 @@ void RegisterRedrawCallback(RedrawCallback *proc)
 {
     g_window->redrawCallback = proc;
 }
+
+
+void ClipboardRegisterDataCallback(ClipboardDataCallback *proc) {
+    g_window->clipboardDataCallback = proc;
+}

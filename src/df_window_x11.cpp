@@ -15,8 +15,10 @@
 
 #define FATAL_ERROR(msg, ...) { fprintf(stderr, msg "\n", ##__VA_ARGS__); __asm__("int3"); exit(-1); }
 
-// X11 protocol specs:
+// All the X11 protocol specs:
 //    https://www.x.org/releases/X11R7.7/doc/index.html
+// The most important one being:
+//    https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html
 
 // To debug what we send to the xserver:
 //    In one terminal, run:
@@ -166,6 +168,10 @@ typedef struct {
     uint32_t nextResourceId;
     uint32_t graphicsContextId;
     uint32_t windowId;
+
+    int clipboardId;
+    int stringId;
+    int xselDataId;
 } X11State;
 
 
@@ -578,11 +584,17 @@ static void handle_event() {
             break;
         }
 
-    case 150:
-        break;
+    case 31: // Selection Notify
+        // This event is only (I hope) received in response to a ConvertSelection
+        // request we sent to the server as the start of the just-gimme-the-damn-clipboard-data
+        // dance.
+        printf("Got selection notify\n");
+        ConsumeMessage(32);
+        ReceiveClipboardData();
+        return;
 
-    case 161:
-        // Window Manager wants us to close.
+    case 33: // Client message.
+        // We only ever get this when the Window Manager wants us to close.
         g_window->windowClosed = true;
         break;
         
@@ -632,6 +644,32 @@ static void MapWindow() {
     packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
     packet[1] = g_state.windowId;
     SendBuf(packet, 8);
+}
+
+
+static int GetAtomId(char const *atomName) {
+    int atomNameLen = strlen(atomName);
+    if (atomNameLen > 19) return 0;
+
+    int requestLenWords = (11 + atomNameLen) / 4;
+    int requestLenBytes = requestLenWords * 4;
+    uint8_t packet[30] = { 0 };
+    packet[0] = 16; // opcode = InternAtom.
+    packet[1] = 0; // only_if_exists = 0.
+    packet[2] = requestLenWords;
+    packet[4] = atomNameLen; // Atom name len in bytes.
+    memcpy(packet + 8, atomName, atomNameLen);
+
+    SendBuf(packet, requestLenBytes);
+
+    while (!GetReply(32))
+        ;
+        
+    uint16_t *id = (uint16_t *)(g_state.recvBuf + 8);
+
+    ConsumeMessage(32);
+    
+    return *id;
 }
 
 
@@ -707,6 +745,12 @@ static void EnsureState() {
                                   g_state.connectionReplySuccessBody->num_pixmapFormats);
 
     g_state.nextResourceId = g_state.connectionReplySuccessBody->id_base;
+
+    // Get some Atom ids that we will use later.
+    g_state.clipboardId = GetAtomId("CLIPBOARD");
+    g_state.stringId = GetAtomId("STRING");
+    g_state.xselDataId = GetAtomId("XSEL_DATA");
+    printf("Atoms: %d %d %d\n", g_state.clipboardId, g_state.stringId, g_state.xselDataId);
 }
 
 
@@ -730,32 +774,6 @@ static void CreateGc() {
 
 bool CreateWin(int width, int height, WindowType winType, char const *winName) {
     return CreateWinPos(0, 0, width, height, winType, winName);
-}
-
-
-static int GetAtomId(char const *atomName) {
-    int atomNameLen = strlen(atomName);
-    if (atomNameLen > 19) return 0;
-
-    int requestLenWords = (11 + atomNameLen) / 4;
-    int requestLenBytes = requestLenWords * 4;
-    uint8_t packet[30] = { 0 };
-    packet[0] = 16; // opcode = InternAtom.
-    packet[1] = 0; // only_if_exists = 0.
-    packet[2] = requestLenWords;
-    packet[4] = atomNameLen; // Atom name len in bytes.
-    memcpy(packet + 8, atomName, atomNameLen);
-
-    SendBuf(packet, requestLenBytes);
-
-    while (!GetReply(32))
-        ;
-        
-    uint16_t *id = (uint16_t *)(g_state.recvBuf + 8);
-
-    ConsumeMessage(32);
-    
-    return *id;
 }
 
 
@@ -865,7 +883,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 // 
 //         uint8_t *buf = g_state.recvBuf;
 //         uint32_t type = *((uint32_t *)(buf + 8));
-//         if (type == stringId) {
+//         if (type == g_state.stringId) {
 //             uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
 //         
 //             uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
@@ -993,3 +1011,6 @@ void SetWindowTitle(char const *title) {
 
 void SetWindowIcon() {}
 
+
+void ClipboardRequestData() {
+}

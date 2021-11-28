@@ -27,6 +27,7 @@ extern "C"
 
 typedef void (RedrawCallback)(void);
 typedef void (FileDropCallback)(char const *path);
+typedef void (ClipboardDataCallback)(char const *data, int len);
 
 
 typedef struct
@@ -86,6 +87,9 @@ typedef struct _DfWindow
 
     // A callback that will be called when files are drag-and-dropped onto the window.
     FileDropCallback    *fileDropCallback;
+
+    ClipboardDataCallback *clipboardDataCallback;
+    
     // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
 } DfWindow;
 
@@ -154,6 +158,14 @@ DLL_API void RegisterRedrawCallback(RedrawCallback *proc);
 DLL_API char const *GetKeyName(int i);
 DLL_API int	        GetKeyId(char const *name);
 DLL_API bool	    InputPoll();  // Returns true if any events occurred since last call
+
+
+// Request data from the system clipboard.
+DLL_API void ClipboardRequestData();
+
+// This callback is called in when the system gives back clipboard data in response
+// to a call of ClipboardRequestData().
+DLL_API void ClipboardRegisterDataCallback(ClipboardDataCallback *proc);
 
 
 // Defines for indexes into g_input.keys[], keyDowns[] and keyUps[].
