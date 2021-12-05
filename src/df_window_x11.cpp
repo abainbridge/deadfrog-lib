@@ -172,6 +172,8 @@ typedef struct {
     int clipboardId;
     int stringId;
     int xselDataId;
+
+    char *clipboardData;
 } X11State;
 
 
@@ -804,57 +806,6 @@ static void EnableDeleteWindowEvent() {
 }
 
 
-static void SendGetPropertyRequest() {
-    puts("sending GetProperty request");
-    uint32_t packet[6];
-    packet[0] = 20 | 6 << 16;
-    packet[1] = g_state.windowId; // window
-    packet[2] = g_state.xselDataId;   // property
-    packet[3] = 0; // Type = any
-    packet[4] = 0; // offset = 0
-    packet[5] = 0xfffffffful; // length
-    SendBuf(packet, sizeof(packet));
-}
-
-
-static void ReceiveClipboardData() {
-    if (!g_window->clipboardDataCallback) return;
-    
-    SendGetPropertyRequest();
-    printf("Getting GetProperty response\n");
-
-    while (!GetReply(32))
-        ;
-
-    uint8_t *buf = g_state.recvBuf;
-    uint32_t type = *((uint32_t *)(buf + 8));
-    if (type == g_state.stringId) {
-        uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
-    
-        uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
-        printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
-
-        ConsumeMessage(32);
-
-        uint32_t numBytesLeft = lenOfValueInFmtUnits;
-        while (numBytesLeft > 0) {
-            ReadFromXServer();
-
-            ssize_t stringLen = IntMin(g_state.recvBufNumBytesAvailable, numBytesLeft);
-puts("Calling callback");
-            g_window->clipboardDataCallback((char const *)buf, stringLen);
-puts("Callback done");
-
-            ConsumeMessage(stringLen);
-            numBytesLeft -= stringLen;
-        }
-
-        uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
-        ConsumeMessage(amtPadding);
-    }
-}
-
-
 bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
@@ -897,86 +848,6 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 
     InitInput();
 
-//     int clipboardId = GetAtomId("CLIPBOARD");
-//     int stringId = GetAtomId("STRING");
-//     int xselDataId = GetAtomId("XSEL_DATA");
-//     printf("%d %d %d\n", clipboardId, stringId, xselDataId);
-// 
-//     usleep(100000);
-//     puts("Sending ConvertSelection request");
-// 
-//     // Send ConvertSelection request.
-//     {
-//         uint32_t packet[6];
-//         packet[0] = 24 | 6 << 16;
-//         packet[1] = g_state.windowId; // requestor
-//         packet[2] = g_state.clipboardId; // selection
-//         packet[3] = g_state.stringId; // target
-//         packet[4] = g_state.xselDataId; // property
-//         packet[5] = 0; // time
-//         SendBuf(packet, sizeof(packet));
-//     }
-// 
-//     // Wait for long enough that the SelectionNotify response will have arrived.
-//     usleep(100000);
-// 
-//     // Consume it, and assume it tells us that there is a selection.
-//     HandleEvents();
-// 
-//     // Send GetProperty request.
-//     {
-//         puts("sending GetProperty request");
-//         uint32_t packet[6];
-//         packet[0] = 20 | 6 << 16;
-//         packet[1] = g_state.windowId; // window
-//         packet[2] = g_state.xselDataId;   // property
-//         packet[3] = 0; // Type = any
-//         packet[4] = 0; // offset = 0
-//         packet[5] = 0xfffffffful; // length
-//         SendBuf(packet, sizeof(packet));
-//     }
-// 
-//     // Get response to GetProperty request.
-//     printf("Getting GetProperty response\n");
-//     {
-//         while (!GetReply(32))
-//             ;
-// 
-//         uint8_t *buf = g_state.recvBuf;
-//         uint32_t type = *((uint32_t *)(buf + 8));
-//         if (type == g_state.stringId) {
-//             uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
-//         
-//             uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
-//             printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
-// 
-//             ConsumeMessage(32);
-// 
-//             uint32_t numBytesLeft = lenOfValueInFmtUnits;
-//             while (numBytesLeft > 0) {
-//                 ReadFromXServer();
-// 
-//                 ssize_t stringLen = IntMin(g_state.recvBufNumBytesAvailable, numBytesLeft);
-//                 for (int i = 0; i < stringLen; i++) {
-//                     if (buf[i] >= 32 && buf[i] < 128) {
-//                         putchar(buf[i]);
-//                     }
-//                     else {
-//                         putchar('?');
-//                     }
-//                 }
-// 
-//                 ConsumeMessage(stringLen);
-//                 numBytesLeft -= stringLen;
-//             }
-// 
-//             uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
-//             ConsumeMessage(amtPadding);
-//         }
-//     }
-// 
-//    exit(1);
-    
     return true;
 }
 
@@ -1073,7 +944,60 @@ void SetWindowTitle(char const *title) {
 void SetWindowIcon() {}
 
 
-void ClipboardRequestData() {
+static void SendGetPropertyRequest() {
+    puts("sending GetProperty request");
+    uint32_t packet[6];
+    packet[0] = 20 | 6 << 16;
+    packet[1] = g_state.windowId; // window
+    packet[2] = g_state.xselDataId;   // property
+    packet[3] = 0; // Type = any
+    packet[4] = 0; // offset = 0
+    packet[5] = 0xfffffffful; // length
+    SendBuf(packet, sizeof(packet));
+}
+
+
+static void ReceiveClipboardData() {    
+    SendGetPropertyRequest();
+    printf("Getting GetProperty response\n");
+
+    while (!GetReply(32))
+        ;
+
+    uint8_t *buf = g_state.recvBuf;
+    uint32_t type = *((uint32_t *)(buf + 8));
+    if (type == g_state.stringId) {
+        uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
+    
+        uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
+        printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
+
+        ConsumeMessage(32);
+
+        g_state.clipboardData = new char[lenOfValueInFmtUnits];
+        char *nextWritePoint = g_state.clipboardData;
+
+        uint32_t numBytesLeft = lenOfValueInFmtUnits;
+        while (numBytesLeft > 0) {
+            ReadFromXServer();
+
+            ssize_t stringLen = IntMin(g_state.recvBufNumBytesAvailable, numBytesLeft);
+            memcpy(nextWritePoint, (char const *)buf, stringLen);
+            nextWritePoint += stringLen;
+            
+            ConsumeMessage(stringLen);
+            numBytesLeft -= stringLen;
+        }
+
+        uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
+        ConsumeMessage(amtPadding);
+    }
+}
+
+
+char *X11InternalClipboardRequestData() {
+    if (g_state.clipboardData) return NULL;
+
     puts("Sending ConvertSelection request");
     uint32_t packet[6];
     packet[0] = 24 | 6 << 16;
@@ -1083,4 +1007,21 @@ void ClipboardRequestData() {
     packet[4] = g_state.xselDataId; // property
     packet[5] = 0; // time
     SendBuf(packet, sizeof(packet));
+
+    double endTime = GetRealTime() + 0.1;
+    do {
+        InputPoll();
+
+        if (g_state.clipboardData) {
+            break;
+        }
+    } while (GetRealTime() < endTime);
+
+    return g_state.clipboardData;
+}
+
+
+void X11InternalClipboardReleaseReceivedData() {
+    delete [] g_state.clipboardData;
+    g_state.clipboardData = NULL;
 }

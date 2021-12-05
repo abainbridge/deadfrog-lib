@@ -91,12 +91,16 @@ int ClipboardSetData(char const *data, int sizeData) {
 #include <stdlib.h>
 
 
+char *X11InternalClipboardRequestData();
+void X11InternalClipboardReleaseReceivedData();
+
 char *ClipboardReceiveData(int *numChars) {
-    return NULL;
+    return X11InternalClipboardRequestData();
 }
 
 
 void ClipboardReleaseReceivedData(char const *data) {
+    X11InternalClipboardReleaseReceivedData();
 }
 
 
