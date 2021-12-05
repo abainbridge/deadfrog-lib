@@ -85,16 +85,24 @@ int ClipboardSetData(char const *data, int sizeData) {
     return 1;
 }
 
+
 #else
 
-char const *Clipboard::GetData()
-{
-    return m_data;
+#include <stdlib.h>
+
+
+char *ClipboardReceiveData(int *numChars) {
+    return NULL;
 }
 
 
-void Clipboard::SetData(char const *data, int sizeData)
-{
+void ClipboardReleaseReceivedData(char const *data) {
 }
+
+
+int ClipboardSetData(char const *data, int sizeData) {
+    return 0;
+}
+
 
 #endif
