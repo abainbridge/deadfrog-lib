@@ -14,6 +14,7 @@
     <ClCompile Include="..\..\src\df_sized_glyph.cpp" />
     <ClCompile Include="..\..\src\df_time.cpp" />
     <ClCompile Include="..\..\src\df_window.cpp" />
+    <ClCompile Include="..\..\src\df_clipboard.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\df_bitmap.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="..\..\src\fonts\df_prop.h">
       <Filter>fonts</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\df_clipboard.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="fonts">
