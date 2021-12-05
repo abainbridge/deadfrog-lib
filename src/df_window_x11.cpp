@@ -500,7 +500,7 @@ static bool IsEventPending() {
 }
 
 
-static void handle_event() {
+static void HandleEvent() {
     if (g_state.recvBuf[0] == 1) {
         FATAL_ERROR("Got unexpected reply.");
     }
@@ -623,7 +623,7 @@ static bool HandleEvents() {
 
     bool rv = false;
     while (IsEventPending()) {
-        handle_event();
+        HandleEvent();
         rv = true;
     }
 
@@ -974,7 +974,7 @@ static void ReceiveClipboardData() {
 
         ConsumeMessage(32);
 
-        g_state.clipboardData = new char[lenOfValueInFmtUnits];
+        g_state.clipboardData = new char[lenOfValueInFmtUnits + 1];
         char *nextWritePoint = g_state.clipboardData;
 
         uint32_t numBytesLeft = lenOfValueInFmtUnits;
@@ -988,6 +988,7 @@ static void ReceiveClipboardData() {
             ConsumeMessage(stringLen);
             numBytesLeft -= stringLen;
         }
+        g_state.clipboardData[lenOfValueInFmtUnits] = '\0';
 
         uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
         ConsumeMessage(amtPadding);
