@@ -178,6 +178,9 @@ typedef struct {
 static X11State g_state = { .socketFd = -1 };
 
 
+static void ReceiveClipboardData();
+
+
 static int x11KeycodeToDfKeycode(int i) {
     switch (i) {
         case 9: return KEY_ESC;
@@ -500,6 +503,8 @@ static void handle_event() {
         FATAL_ERROR("Got unexpected reply.");
     }
 
+    bool selectionNotifyReceived = false;
+
     g_state.recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
     
     switch (g_state.recvBuf[0]) {
@@ -591,9 +596,8 @@ static void handle_event() {
         // request we sent to the server as the start of the just-gimme-the-damn-clipboard-data
         // dance.
         printf("Got selection notify\n");
-        ConsumeMessage(32);
-        ReceiveClipboardData();
-        return;
+        selectionNotifyReceived = true;
+        break;
 
     case 33: // Client message.
         // We only ever get this when the Window Manager wants us to close.
@@ -605,6 +609,10 @@ static void handle_event() {
     }
 
     ConsumeMessage(32);
+
+    if (selectionNotifyReceived) {
+        ReceiveClipboardData();
+    }
 }
 
 
@@ -796,6 +804,57 @@ static void EnableDeleteWindowEvent() {
 }
 
 
+static void SendGetPropertyRequest() {
+    puts("sending GetProperty request");
+    uint32_t packet[6];
+    packet[0] = 20 | 6 << 16;
+    packet[1] = g_state.windowId; // window
+    packet[2] = g_state.xselDataId;   // property
+    packet[3] = 0; // Type = any
+    packet[4] = 0; // offset = 0
+    packet[5] = 0xfffffffful; // length
+    SendBuf(packet, sizeof(packet));
+}
+
+
+static void ReceiveClipboardData() {
+    if (!g_window->clipboardDataCallback) return;
+    
+    SendGetPropertyRequest();
+    printf("Getting GetProperty response\n");
+
+    while (!GetReply(32))
+        ;
+
+    uint8_t *buf = g_state.recvBuf;
+    uint32_t type = *((uint32_t *)(buf + 8));
+    if (type == g_state.stringId) {
+        uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
+    
+        uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
+        printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
+
+        ConsumeMessage(32);
+
+        uint32_t numBytesLeft = lenOfValueInFmtUnits;
+        while (numBytesLeft > 0) {
+            ReadFromXServer();
+
+            ssize_t stringLen = IntMin(g_state.recvBufNumBytesAvailable, numBytesLeft);
+puts("Calling callback");
+            g_window->clipboardDataCallback((char const *)buf, stringLen);
+puts("Callback done");
+
+            ConsumeMessage(stringLen);
+            numBytesLeft -= stringLen;
+        }
+
+        uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
+        ConsumeMessage(amtPadding);
+    }
+}
+
+
 bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
@@ -851,9 +910,9 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //         uint32_t packet[6];
 //         packet[0] = 24 | 6 << 16;
 //         packet[1] = g_state.windowId; // requestor
-//         packet[2] = clipboardId; // selection
-//         packet[3] = stringId; // target
-//         packet[4] = xselDataId; // property
+//         packet[2] = g_state.clipboardId; // selection
+//         packet[3] = g_state.stringId; // target
+//         packet[4] = g_state.xselDataId; // property
 //         packet[5] = 0; // time
 //         SendBuf(packet, sizeof(packet));
 //     }
@@ -870,7 +929,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 //         uint32_t packet[6];
 //         packet[0] = 20 | 6 << 16;
 //         packet[1] = g_state.windowId; // window
-//         packet[2] = xselDataId;   // property
+//         packet[2] = g_state.xselDataId;   // property
 //         packet[3] = 0; // Type = any
 //         packet[4] = 0; // offset = 0
 //         packet[5] = 0xfffffffful; // length
@@ -1015,4 +1074,13 @@ void SetWindowIcon() {}
 
 
 void ClipboardRequestData() {
+    puts("Sending ConvertSelection request");
+    uint32_t packet[6];
+    packet[0] = 24 | 6 << 16;
+    packet[1] = g_state.windowId; // requestor
+    packet[2] = g_state.clipboardId; // selection
+    packet[3] = g_state.stringId; // target
+    packet[4] = g_state.xselDataId; // property
+    packet[5] = 0; // time
+    SendBuf(packet, sizeof(packet));
 }
