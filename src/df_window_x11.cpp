@@ -585,11 +585,11 @@ static void HandleEvent() {
 
     case 6: // Pointer motion event.
         {
-            int x = g_state.recvBuf[24] + (g_state.recvBuf[25] << 8);
-            int y = g_state.recvBuf[26] + (g_state.recvBuf[27] << 8);
-            //printf("detail:%i rx=%i ry=%i\n", g_state.recvBuf[1], x, y);
-            g_input.mouseX = x;
-            g_input.mouseY = y;
+            int16_t *x = (int16_t*)&g_state.recvBuf[24];
+            int16_t *y = (int16_t*)&g_state.recvBuf[26];
+            //printf("detail:%i rx=%i ry=%i\n", g_state.recvBuf[1], *x, *y);
+            g_input.mouseX = *x;
+            g_input.mouseY = *y;
             break;
         }
 
