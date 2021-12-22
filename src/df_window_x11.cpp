@@ -374,6 +374,7 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
     }
     else {
         switch (keycode) {
+            case KEY_DEL: return 127;
             case KEY_COLON: return ';';
             case KEY_EQUALS: return '=';
             case KEY_COMMA: return ',';
