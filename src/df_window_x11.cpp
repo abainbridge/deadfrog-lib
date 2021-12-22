@@ -322,7 +322,7 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
 
     if (keycode == KEY_BACK_TICK) {
         if (shift) {
-            return 'Â¬';
+            return '¬';
         }
         return '`';
     }
@@ -333,7 +333,7 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
                case KEY_0: return ')';
                case KEY_1: return '!';
                case KEY_2: return '"';
-               case KEY_3: return 'Â£';
+               case KEY_3: return '£';
                case KEY_4: return '$';
                case KEY_5: return '%';
                case KEY_6: return '^';
