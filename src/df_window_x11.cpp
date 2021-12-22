@@ -169,9 +169,12 @@ typedef struct {
     uint32_t graphicsContextId;
     uint32_t windowId;
 
+    // Atom values.
     int clipboardId;
     int stringId;
     int xselDataId;
+    int wmDeleteWindowId;
+    int wmProtocolsId;
 
     char *clipboardData;
 } X11State;
@@ -311,7 +314,7 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
 
     if (keycode == KEY_BACK_TICK) {
         if (shift) {
-            return '¬';
+            return 'Â¬';
         }
         return '`';
     }
@@ -322,7 +325,7 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
                case KEY_0: return ')';
                case KEY_1: return '!';
                case KEY_2: return '"';
-               case KEY_3: return '£';
+               case KEY_3: return 'Â£';
                case KEY_4: return '$';
                case KEY_5: return '%';
                case KEY_6: return '^';
@@ -763,6 +766,8 @@ static void EnsureState() {
     g_state.clipboardId = GetAtomId("CLIPBOARD");
     g_state.stringId = GetAtomId("STRING");
     g_state.xselDataId = GetAtomId("XSEL_DATA");
+    g_state.wmDeleteWindowId = GetAtomId("WM_DELETE_WINDOW");
+    g_state.wmProtocolsId = GetAtomId("WM_PROTOCOLS");
     printf("Atoms: %d %d %d\n", g_state.clipboardId, g_state.stringId, g_state.xselDataId);
 }
 
@@ -797,11 +802,11 @@ static void EnableDeleteWindowEvent() {
     uint32_t packet[requestLen];
     packet[0] = X11_OPCODE_CHANGE_PROPERTY | (requestLen << 16);
     packet[1] = g_state.windowId;
-    packet[2] = 0x144; // Property = WM_PROTOCOLS.
+    packet[2] = g_state.wmProtocolsId; // Property.
     packet[3] = 4; // Type = ATOM.
     packet[4] = 32; // Format = 32 bits per item.
     packet[5] = 1; // Length = 1 item.
-    packet[6] = 0x143; // Item data = WM_DELETE_WINDOW.
+    packet[6] = g_state.wmDeleteWindowId; // Item data.
 
     SendBuf(packet, sizeof(packet));
 }
