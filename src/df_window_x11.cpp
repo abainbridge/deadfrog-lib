@@ -39,9 +39,12 @@ enum {
     X11_OPCODE_CREATE_WINDOW = 1,
     X11_OPCODE_MAP_WINDOW = 8,
     X11_OPCODE_CHANGE_PROPERTY = 18,
+    X11_OPCODE_SET_SELECTION_OWNER = 22,
     X11_OPCODE_QUERY_KEYMAP = 44,
     X11_OPCODE_CREATE_GC = 55,
     X11_OPCODE_PUT_IMAGE = 72,
+
+    X11_EVENT_CODE_SELECTION_NOTIFY = 31,
 
     X11_CW_EVENT_MASK = 1<<11,
     X11_EVENT_MASK_KEY_PRESS = 1,
@@ -173,10 +176,13 @@ typedef struct {
     int clipboardId;
     int stringId;
     int xselDataId;
+    int targetsId;
     int wmDeleteWindowId;
     int wmProtocolsId;
 
-    char *clipboardData;
+    char *clipboardRxData;  // NULL except between calls of X11InternalClipboardRequestData() and ClipboardReleaseReceivedData()
+    char *clipboardTxData;
+    unsigned clipboardTxDataNumChars;
 } X11State;
 
 
@@ -184,6 +190,8 @@ static X11State g_state = { .socketFd = -1 };
 
 
 static void ReceiveClipboardData();
+static void SendChangePropertyRequest(uint32_t destWindow, uint32_t target, uint32_t property);
+static void SendSendEventSelectionNotify(uint32_t destWindow, uint32_t target, uint32_t property, uint32_t time);
 
 
 static int x11KeycodeToDfKeycode(int i) {
@@ -504,6 +512,14 @@ static bool IsEventPending() {
 }
 
 
+static uint32_t GetU32FromRecvBuf(int offset) {
+    return g_state.recvBuf[offset] +
+        (g_state.recvBuf[offset + 1] << 8) +
+        (g_state.recvBuf[offset + 2] << 16) +
+        (g_state.recvBuf[offset + 3] << 24);
+}
+
+
 static void HandleEvent() {
     if (g_state.recvBuf[0] == 1) {
         FATAL_ERROR("Got unexpected reply.");
@@ -597,7 +613,23 @@ static void HandleEvent() {
             break;
         }
 
-    case 31: // Selection Notify
+    case 30: // Selection Request
+        {
+            uint32_t time = GetU32FromRecvBuf(4);
+            uint32_t requestor = GetU32FromRecvBuf(12);
+            uint32_t selection = GetU32FromRecvBuf(16);
+            ReleaseAssert(selection == g_state.clipboardId, "selection was %x", selection);
+            uint32_t target = GetU32FromRecvBuf(20);
+            uint32_t property = GetU32FromRecvBuf(24);
+            printf("Recv'd Selection request. Time=%x Requestor=%x target=%x property=%x\n",
+                time, requestor, target, property);
+
+            SendChangePropertyRequest(requestor, target, property);
+            SendSendEventSelectionNotify(requestor, target, property, time);
+        }
+        break;
+
+    case X11_EVENT_CODE_SELECTION_NOTIFY: // Selection Notify
         // This event is only (I hope) received in response to a ConvertSelection
         // request we sent to the server as the start of the just-gimme-the-damn-clipboard-data
         // dance.
@@ -766,9 +798,13 @@ static void EnsureState() {
     g_state.clipboardId = GetAtomId("CLIPBOARD");
     g_state.stringId = GetAtomId("STRING");
     g_state.xselDataId = GetAtomId("XSEL_DATA");
+    g_state.targetsId = GetAtomId("TARGETS");
     g_state.wmDeleteWindowId = GetAtomId("WM_DELETE_WINDOW");
     g_state.wmProtocolsId = GetAtomId("WM_PROTOCOLS");
-    printf("Atoms: %d %d %d\n", g_state.clipboardId, g_state.stringId, g_state.xselDataId);
+    printf("Atoms: clipboard=0x%x string=0x%x xsel=0x%x targets=0x%x wmDeleteWindow=0x%x "
+        "wmProtocols=0x%x\n", 
+        g_state.clipboardId, g_state.stringId, g_state.xselDataId, g_state.targetsId,
+        g_state.wmDeleteWindowId, g_state.wmProtocolsId);
 }
 
 
@@ -980,8 +1016,8 @@ static void ReceiveClipboardData() {
 
         ConsumeMessage(32);
 
-        g_state.clipboardData = new char[lenOfValueInFmtUnits + 1];
-        char *nextWritePoint = g_state.clipboardData;
+        g_state.clipboardRxData = new char[lenOfValueInFmtUnits + 1];
+        char *nextWritePoint = g_state.clipboardRxData;
 
         uint32_t numBytesLeft = lenOfValueInFmtUnits;
         while (numBytesLeft > 0) {
@@ -994,7 +1030,7 @@ static void ReceiveClipboardData() {
             ConsumeMessage(stringLen);
             numBytesLeft -= stringLen;
         }
-        g_state.clipboardData[lenOfValueInFmtUnits] = '\0';
+        g_state.clipboardRxData[lenOfValueInFmtUnits] = '\0';
 
         uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
         ConsumeMessage(amtPadding);
@@ -1003,7 +1039,7 @@ static void ReceiveClipboardData() {
 
 
 char *X11InternalClipboardRequestData() {
-    if (g_state.clipboardData) return NULL;
+    if (g_state.clipboardRxData) return NULL;
 
     puts("Sending ConvertSelection request");
     uint32_t packet[6];
@@ -1019,16 +1055,90 @@ char *X11InternalClipboardRequestData() {
     do {
         InputPoll();
 
-        if (g_state.clipboardData) {
+        if (g_state.clipboardRxData) {
             break;
         }
     } while (GetRealTime() < endTime);
 
-    return g_state.clipboardData;
+    return g_state.clipboardRxData;
 }
 
 
 void X11InternalClipboardReleaseReceivedData() {
-    delete [] g_state.clipboardData;
-    g_state.clipboardData = NULL;
+    delete [] g_state.clipboardRxData;
+    g_state.clipboardRxData = NULL;
+}
+
+
+static void SendChangePropertyRequest(uint32_t destWindow, uint32_t target, uint32_t property) {
+    if (target == g_state.targetsId) {
+        // This branch sends a change property request that is used as the
+        // response to a SelectionRequest. It tells the recipient what format the
+        // clipboard data that we are about to send will be in.
+//        puts("Sending ChangeProperty with clipboard data format");
+        const int numWords = 8;
+        uint32_t packet[numWords];
+        packet[0] = X11_OPCODE_CHANGE_PROPERTY | numWords << 16;
+        packet[1] = destWindow;
+        packet[2] = property;
+        packet[3] = 4; // type is ATOM.
+        packet[4] = 32; // Format unit is 32 bits.
+        packet[5] = 2; // Length is 2 format units;
+        packet[6] = g_state.targetsId;
+        packet[7] = g_state.stringId;
+        SendBuf(packet, sizeof(packet));
+    }
+    else {
+        // This branch send a change property request that includes the actual
+        // clipboard data.
+//        puts("Sending ChangeProperty with clipboard contents");
+
+        const int amtPadding = 4 - g_state.clipboardTxDataNumChars & 3;
+        const int numWords = 6 + (g_state.clipboardTxDataNumChars + amtPadding) / 4;
+//        printf("amtPadding:%d numWords:%d numChars:%d\n", amtPadding, numWords, g_state.clipboardTxDataNumChars);
+        uint32_t packet[6];
+        packet[0] = X11_OPCODE_CHANGE_PROPERTY | numWords << 16;
+        packet[1] = destWindow;
+        packet[2] = property;
+        packet[3] = g_state.stringId; // type is STRING.
+        packet[4] = 8; // Format unit is this many bits.
+        packet[5] = g_state.clipboardTxDataNumChars; // Length in format units;
+        SendBuf(packet, sizeof(packet));
+        SendBuf(g_state.clipboardTxData, g_state.clipboardTxDataNumChars + amtPadding);
+    }
+}
+
+
+static void SendSendEventSelectionNotify(uint32_t destWindow, uint32_t target, uint32_t property, uint32_t time) {
+//    puts("Sending SendEvent");
+    uint32_t packet[11];
+    packet[0] = 25 | 11 << 16;
+    packet[1] = destWindow;
+    packet[2] = 0; // event mask
+    packet[3] = 31; // SelectionNotify
+    packet[4] = time;
+    packet[5] = destWindow; // requestor
+    packet[6] = g_state.clipboardId;
+    packet[7] = target;
+    packet[8] = property;
+    packet[9] = 0;
+    packet[10] = 0;
+    
+    SendBuf(packet, sizeof(packet));
+}
+
+
+void X11InternalClipboardSetData(char const *data, int numChars) {
+    delete [] g_state.clipboardTxData;
+    g_state.clipboardTxData = new char[numChars];
+    g_state.clipboardTxDataNumChars = numChars;
+    memcpy(g_state.clipboardTxData, data, numChars);
+
+//    puts("Sending SetSelectionOwner request");
+    uint32_t packet[4];
+    packet[0] = X11_OPCODE_SET_SELECTION_OWNER | 4 << 16;
+    packet[1] = g_state.windowId;
+    packet[2] = g_state.clipboardId;
+    packet[3] = 0;
+    SendBuf(packet, sizeof(packet));
 }
