@@ -282,6 +282,7 @@ static int x11KeycodeToDfKeycode(int i) {
         case 95: return KEY_F11;
         case 96: return KEY_F12;
         case 104: return KEY_ENTER;
+        case 105: return KEY_CONTROL;
         case 106: return KEY_SLASH_PAD;
         case 110: return KEY_HOME;
         case 111: return KEY_UP;
