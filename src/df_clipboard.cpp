@@ -39,6 +39,7 @@ void ClipboardReleaseReceivedData(char const *data) {
     // Unlock the global memory.
     if (g_clipboardData)
         GlobalUnlock(g_clipboardData);
+    g_clipboardData = NULL;
 
     // Close the Clipboard, which unlocks it so that other applications can 
     // examine or modify its contents.
@@ -48,7 +49,7 @@ void ClipboardReleaseReceivedData(char const *data) {
 
 int ClipboardSetData(char const *data, int sizeData) {
     if (g_clipboardData) {
-        DebugAssert("Clipboard already open");
+        DebugAssert(0); // Clipboard already open
         return 0;
     }
 
