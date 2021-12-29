@@ -26,12 +26,19 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
     switch (message)
 	{
         case WM_SYSCHAR:
-            // We get one of these if the user presses alt+c. I don't understand exactly
+            // We get one of these if the user presses alt+<regular key>. I don't understand exactly
             // what is going on here. If we don't handle it, we will then get a WM_SYSCOMMAND
-            // message and if we don't handle that, the system's default handler will play the
-            // "Asterisk" sound which we don't want. If we do handle it and return 0,
-            // everything is fine. Weird.
-            break;
+            // message later and if we don't handle that, the system's default handler will
+            // play the "Asterisk" sound which we don't want. If we do handle it and return 0,
+            // everything is fine. BUT we shouldn't handle alt+space (ie when wParam == 32) because
+            // that prevents the standard restore-move-size window menu from appearing (that
+            // behaviour is part of the standard Windows window manager).
+            if (wParam != 32) {
+                break;
+            }
+            else {
+                return -1;
+            }
 
         case WM_SETFOCUS:
             HandleFocusInEvent();
