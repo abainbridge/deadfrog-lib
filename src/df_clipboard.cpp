@@ -94,6 +94,8 @@ int ClipboardSetData(char const *data, int sizeData) {
 
 char *X11InternalClipboardRequestData();
 void X11InternalClipboardReleaseReceivedData();
+void X11InternalClipboardSetData(char const *data, int numChars);
+
 
 char *ClipboardReceiveData(int *numChars) {
     return X11InternalClipboardRequestData();
@@ -105,7 +107,8 @@ void ClipboardReleaseReceivedData(char const *data) {
 }
 
 
-int ClipboardSetData(char const *data, int sizeData) {
+int ClipboardSetData(char const *data, int numChars) {
+    X11InternalClipboardSetData(data, numChars);
     return 0;
 }
 
