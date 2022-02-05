@@ -769,7 +769,7 @@ static void EnsureState() {
     connection_request_t request = { 0 };
     request.order = 'l';  // Little endian.
     request.major_version = 11;
-    request.minor_version =  0;
+    request.minor_version = 0;
     request.auth_proto_name_len = 18;
     request.auth_proto_data_len = 16;
     SendBuf(&request, sizeof(connection_request_t));
@@ -788,8 +788,9 @@ static void EnsureState() {
                g_state.connectionReplyHeader.len * 4);
 
     // Set some pointers into the connection reply because they'll be convenient later.
+    int vendorLenPlusPadding = (g_state.connectionReplySuccessBody->vendor_len + 3) & ~3;
     g_state.pixmapFormats = (pixmap_format_t *)(g_state.connectionReplySuccessBody->vendor_string +
-                             g_state.connectionReplySuccessBody->vendor_len);
+                             vendorLenPlusPadding);
     g_state.screens = (screen_t *)(g_state.pixmapFormats +
                                   g_state.connectionReplySuccessBody->num_pixmapFormats);
 
