@@ -347,6 +347,7 @@ static int DrawTextSimpleClipped(DfFont *fnt, DfColour col, DfBitmap *bmp, int _
     return x - _x;
 }
 
+
 int DrawTextSimpleLen(DfFont *fnt, DfColour col, DfBitmap *bmp, int _x, int y, char const *text, int maxChars)
 {
     int x = _x;
