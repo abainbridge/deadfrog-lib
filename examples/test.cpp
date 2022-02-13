@@ -205,7 +205,7 @@ void TestMain()
     CreateWin(1024, 768, WT_WINDOWED, "Test");
     BitmapClear(g_window->bmp, g_colourBlack);
 
-    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
     DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
 
     DfBitmap *backBmp = BitmapCreate(1920, 1200);

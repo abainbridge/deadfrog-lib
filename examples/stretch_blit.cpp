@@ -12,7 +12,7 @@
 void StretchBlitMain() {
     CreateWin(1024, 768, WT_WINDOWED, "Stretch Blit Example");
 
-    g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     DfBitmap *dogBmp = LoadBmp("marlieses_dog.bmp");
     if (!dogBmp) {

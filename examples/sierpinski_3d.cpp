@@ -88,7 +88,7 @@ void Sierpinski3DMain()
 {
     CreateWin(800, 600, WT_WINDOWED, "Sierpinski Gasket Example");
     BitmapClear(g_window->bmp, g_colourBlack);
-    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     CreateSierpinski3D();
 

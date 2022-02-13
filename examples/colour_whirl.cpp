@@ -176,7 +176,7 @@ void ColourWhirlMain()
     }
 
     double endTime = GetRealTime();
-    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
     // Continue to display the window until the user presses escape or clicks the close icon

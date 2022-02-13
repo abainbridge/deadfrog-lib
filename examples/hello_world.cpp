@@ -8,7 +8,7 @@
 void HelloWorldMain()
 {
 	CreateWin(800, 600, WT_WINDOWED, "Hello World Example");
-    g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     unsigned x = 100;
     unsigned y = 100;

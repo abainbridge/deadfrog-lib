@@ -83,7 +83,7 @@ void AaPolyTestMain()
     GetDesktopRes(&width, &height);
     CreateWin(1280, 1024, WT_WINDOWED, "AA Poly Test");
 
-    g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     DfBitmap *bmp = BitmapCreate(100, 100);
 

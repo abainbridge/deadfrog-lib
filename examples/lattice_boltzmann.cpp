@@ -244,7 +244,7 @@ void Simulate() {
 void LatticeBoltzmannMain() {
     CreateWin(X_DIM * RENDER_SCALE, Y_DIM * RENDER_SCALE, WT_WINDOWED, 
         "Lattice Boltzmann Method Fluid Simulation Example");
-    g_defaultFont = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     InitCells();
     InitTracers();

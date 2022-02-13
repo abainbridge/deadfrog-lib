@@ -212,7 +212,7 @@ void HarmonographMain()
     CreateWin(width, height, WT_WINDOWED, "Harmonograph");
 
     g_bigBmp = BitmapCreate(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
-    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     BitmapClear(g_window->bmp, g_colourBlack);
     BitmapClear(g_bigBmp, g_colourBlack);

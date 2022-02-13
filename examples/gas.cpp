@@ -194,7 +194,7 @@ static void Render()
 void GasMain()
 {
     CreateWin(800, 600, WT_WINDOWED, "Ideal Gas Simulation Example");
-    DfFont *font = LoadFontFromMemory(deadfrog_mono_7x13, sizeof(deadfrog_mono_7x13));
+    DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     InitParticles();
 
