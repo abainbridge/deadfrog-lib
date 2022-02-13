@@ -25,11 +25,11 @@ enum { X_DIM = 400 };
 enum { Y_DIM = 160 };
 enum { RENDER_SCALE = 3 }; // Width of cell in pixels.
 enum { NUM_TRACERS = 144 };
-static const float fluid_speed = 0.1;
-static const float viscosity = 0.02;
-static const float four9ths = 4.0 / 9.0;					// abbreviations
-static const float one9th = 1.0 / 9.0;
-static const float one36th = 1.0 / 36.0;
+static const float fluid_speed = 0.1f;
+static const float viscosity = 0.02f;
+static const float four9ths = 4.0f / 9.0f;					// abbreviations
+static const float one9th = 1.0f / 9.0f;
+static const float one36th = 1.0f / 36.0f;
 
 // Index into this 2D array using x + y*X_DIM, traversing rows first and then columns.
 static Cell g_cells[X_DIM * Y_DIM];
