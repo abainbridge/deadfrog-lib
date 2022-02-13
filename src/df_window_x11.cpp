@@ -1091,7 +1091,7 @@ static void SendChangePropertyRequest(uint32_t destWindow, uint32_t target, uint
         SendBuf(packet, sizeof(packet));
     }
     else {
-        // This branch send a change property request that includes the actual
+        // This branch sends a change property request that includes the actual
         // clipboard data.
 //        puts("Sending ChangeProperty with clipboard contents");
 
@@ -1132,7 +1132,7 @@ static void SendSendEventSelectionNotify(uint32_t destWindow, uint32_t target, u
 
 void X11InternalClipboardSetData(char const *data, int numChars) {
     delete [] g_state.clipboardTxData;
-    g_state.clipboardTxData = new char[numChars];
+    g_state.clipboardTxData = new char[numChars + 3]; // +3 to allow for maximum amount of padding needed when buffer is sent to xServer.
     g_state.clipboardTxDataNumChars = numChars;
     memcpy(g_state.clipboardTxData, data, numChars);
 
