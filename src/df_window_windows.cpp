@@ -11,10 +11,14 @@
 // Prototype of DwmFlush function from Win API.
 typedef void (WINAPI DwmFlushFunc)();
 
+struct WindowPlatformSpecific
+{
+    HWND hWnd;
+    MouseCursorType currentMouseCursorType;
+};
 
-static HWND g_hWnd = 0;
+
 static DwmFlushFunc *g_dwmFlush = NULL;
-static MouseCursorType g_currentMouseCursorType = MCT_ARROW;
 
 
 
@@ -188,7 +192,7 @@ bool InputPoll()
     POINT point;
     if (GetCursorPos(&point) != 0)
     {
-        if (ScreenToClient(g_hWnd, &point))
+        if (ScreenToClient(g_window->_private->platSpec->hWnd, &point))
         {
             g_input.mouseX = point.x;
             g_input.mouseY = point.y;
@@ -238,7 +242,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 //         case WM_SYSCOMMAND:
 //             if ((wParam & 0xfff0) == SC_SIZE)
 //             {
-//                 GetWindowRect(g_hWnd, &g_rect);
+//                 GetWindowRect(g_window->_private->platSpec->hWnd, &g_rect);
 //                 xx = g_input.mouseX;
 //                 yy = g_input.mouseY;
 //                 moving = 1;
@@ -257,7 +261,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 // dragging the frame. We know the cursor is in our client area,
                 // rather than someone else's, because this event is only sent if
                 // the cursor is over our window.
-                SetMouseCursor(g_currentMouseCursorType);
+                SetMouseCursor(g_window->_private->platSpec->currentMouseCursorType);
                 break;
             }
             goto _default; // Pretend we didn't handle this message.
@@ -346,6 +350,8 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 	memset(wd, 0, sizeof(DfWindow));
     wd->_private = new DfWindowPrivate;
     memset(wd->_private, 0, sizeof(DfWindowPrivate));
+    wd->_private->platSpec = new WindowPlatformSpecific;
+    wd->_private->platSpec->currentMouseCursorType = MCT_ARROW;
 
 	width = ClampInt(width, 100, 4000);
 	height = ClampInt(height, 100, 4000);
@@ -387,7 +393,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 	}
 
 	// Create main window
-	g_hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName,
+	wd->_private->platSpec->hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName,
 		windowStyle, x, y, width, height,
 		NULL, NULL, 0, NULL);
 
@@ -399,7 +405,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
     g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
 
     // Register as a drag-and-drop target.
-    DragAcceptFiles(g_hWnd, true);
+    DragAcceptFiles(wd->_private->platSpec->hWnd, true);
 
     InitInput();
 	return true;
@@ -424,7 +430,7 @@ static void BlitBitmapToWindow(DfWindow *wd)
     binfo.bmiHeader.biClrUsed = 0;
     binfo.bmiHeader.biClrImportant = 0;
 
-    HDC dc = GetDC(g_hWnd);
+    HDC dc = GetDC(g_window->_private->platSpec->hWnd);
 
     SetDIBitsToDevice(dc,
         0, 0, bmp->width, bmp->height,
@@ -432,13 +438,13 @@ static void BlitBitmapToWindow(DfWindow *wd)
         bmp->pixels, &binfo, DIB_RGB_COLORS
     );
 
-    ReleaseDC(g_hWnd, dc);
+    ReleaseDC(g_window->_private->platSpec->hWnd, dc);
 }
 
 
 void *GetWindowHandle()
 {
-    return g_hWnd;
+    return g_window->_private->platSpec->hWnd;
 }
 
 
@@ -484,7 +490,7 @@ void SetMouseCursor(MouseCursorType t)
         break;
     }
 
-    g_currentMouseCursorType = t;
+    g_window->_private->platSpec->currentMouseCursorType = t;
 }
 
 
@@ -494,13 +500,13 @@ void SetWindowIcon()
 	HANDLE hIcon = LoadImageA(hInstance, "#101", IMAGE_ICON, 16, 16, 0);
     if (hIcon)
     {
-        SendMessage(g_hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-        SendMessage(g_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(g_window->_private->platSpec->hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage(g_window->_private->platSpec->hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
     }
 	hIcon = LoadImageA(hInstance, "#101", IMAGE_ICON, 32, 32, 0);
     if (hIcon)
     {
-        SendMessage(g_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(g_window->_private->platSpec->hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 	}
 }
 
@@ -510,7 +516,7 @@ bool IsWindowMaximized()
 {
     WINDOWPLACEMENT winPlacement;
     winPlacement.length = sizeof(WINDOWPLACEMENT);
-    GetWindowPlacement(g_hWnd, &winPlacement);
+    GetWindowPlacement(g_window->_private->platSpec->hWnd, &winPlacement);
     return winPlacement.showCmd == SW_SHOWMAXIMIZED;
 }
 
@@ -519,25 +525,25 @@ void SetMaximizedState(bool maximize)
 {
     if (maximize)
     {
-        ShowWindow(g_hWnd, SW_MAXIMIZE);
+        ShowWindow(g_window->_private->platSpec->hWnd, SW_MAXIMIZE);
     }
     else
     {
-        ShowWindow(g_hWnd, SW_RESTORE);
+        ShowWindow(g_window->_private->platSpec->hWnd, SW_RESTORE);
     }
 }
 
 
 void BringWindowToFront()
 {
-    BringWindowToTop(g_hWnd);
-    SetForegroundWindow(g_hWnd);
+    BringWindowToTop(g_window->_private->platSpec->hWnd);
+    SetForegroundWindow(g_window->_private->platSpec->hWnd);
 }
 
 
 void SetWindowTitle(char const *title)
 {
-    SetWindowText(g_hWnd, title);
+    SetWindowText(g_window->_private->platSpec->hWnd, title);
 }
 
 

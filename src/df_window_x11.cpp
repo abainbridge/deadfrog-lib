@@ -157,7 +157,7 @@ typedef struct __attribute__((packed)) {
 //
 
 
-typedef struct {
+struct WindowPlatformSpecific {
     int socketFd;
     unsigned char recvBuf[10000];
     int recvBufNumBytesAvailable;
@@ -183,10 +183,7 @@ typedef struct {
     char *clipboardRxData;  // NULL except between calls of X11InternalClipboardRequestData() and ClipboardReleaseReceivedData()
     char *clipboardTxData;
     unsigned clipboardTxDataNumChars;
-} X11State;
-
-
-static X11State g_state = { .socketFd = -1 };
+};
 
 
 static void ReceiveClipboardData();
@@ -420,9 +417,10 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
 //
 // Returns the number of bytes received.
 static int ReadFromXServer() {
-    unsigned char *buf = g_state.recvBuf + g_state.recvBufNumBytesAvailable;
-    ssize_t bufLen = sizeof(g_state.recvBuf) - g_state.recvBufNumBytesAvailable;
-    ssize_t numBytesRecvd = recv(g_state.socketFd, buf, bufLen, 0);
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    unsigned char *buf = platSpec->recvBuf + platSpec->recvBufNumBytesAvailable;
+    ssize_t bufLen = sizeof(platSpec->recvBuf) - platSpec->recvBufNumBytesAvailable;
+    ssize_t numBytesRecvd = recv(platSpec->socketFd, buf, bufLen, 0);
     if (numBytesRecvd == 0) {
         // Treat this as a FATAL_ERROR because if it happened when we were
         // doing a write to the socket, we'd get a SIGPIPE fatal exception. In
@@ -441,30 +439,32 @@ static int ReadFromXServer() {
         return 0;
     }
 
-    g_state.recvBufNumBytesAvailable += numBytesRecvd;
+    platSpec->recvBufNumBytesAvailable += numBytesRecvd;
 
     return numBytesRecvd;
 }
 
 
 static void ConsumeMessage(int len) {
-    memmove(g_state.recvBuf, g_state.recvBuf + len, g_state.recvBufNumBytesAvailable - len);
-    g_state.recvBufNumBytesAvailable -= len;
-    if (g_state.recvBufNumBytesAvailable > sizeof(g_state.recvBuf)) {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    memmove(platSpec->recvBuf, platSpec->recvBuf + len, platSpec->recvBufNumBytesAvailable - len);
+    platSpec->recvBufNumBytesAvailable -= len;
+    if (platSpec->recvBufNumBytesAvailable > sizeof(platSpec->recvBuf)) {
         FATAL_ERROR("bad num bytes");
     }
 }
 
 
 static void SendBuf(const void *_buf, int len) {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
     const char *buf = (const char *)_buf;
     while (1) {
-        struct pollfd pollFd = { g_state.socketFd, POLLOUT };
+        struct pollfd pollFd = { platSpec->socketFd, POLLOUT };
         int pollResult = poll(&pollFd, 1, -1);
         if (pollResult == -1)
             FATAL_ERROR("Poll gave an error %i", pollResult);
 
-        int sizeSent = write(g_state.socketFd, buf, len);
+        int sizeSent = write(platSpec->socketFd, buf, len);
         if (sizeSent < 0) {
             FATAL_ERROR("Couldn't send buf");
         }
@@ -480,33 +480,36 @@ static void SendBuf(const void *_buf, int len) {
 
 
 static void FatalRead(void *buf, size_t count) {
-    if (recvfrom(g_state.socketFd, buf, count, 0, NULL, NULL) != count) {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    if (recvfrom(platSpec->socketFd, buf, count, 0, NULL, NULL) != count) {
         FATAL_ERROR("Failed to read.");
     }
 }
 
 
 static void HandleErrorMessage() {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
     // See https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#Encoding::Errors
     printf("Error message from X11 server - ");
-    switch (g_state.recvBuf[1]) {
-        case 2: printf("Bad value. %x %x", g_state.recvBuf[2], g_state.recvBuf[3]); break;
+    switch (platSpec->recvBuf[1]) {
+        case 2: printf("Bad value. %x %x", platSpec->recvBuf[2], platSpec->recvBuf[3]); break;
         case 9: printf("Bad drawable\n"); break;
         case 16: printf("Bad length\n"); break;
-        default: printf("Unknown error code %i\n", g_state.recvBuf[1]);
+        default: printf("Unknown error code %i\n", platSpec->recvBuf[1]);
     }
     exit(-1);
 }
 
 
 static bool IsEventPending() {
-    if (g_state.recvBufNumBytesAvailable >= 2 && g_state.recvBuf[0] == 0)
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    if (platSpec->recvBufNumBytesAvailable >= 2 && platSpec->recvBuf[0] == 0)
         return true; // Error message event is pending.
 
-    if (g_state.recvBuf[0] == 1)
+    if (platSpec->recvBuf[0] == 1)
         return false;   // Reply is pending.
 
-    if (g_state.recvBufNumBytesAvailable >= 32)
+    if (platSpec->recvBufNumBytesAvailable >= 32)
         return true;
 
     return false;
@@ -514,30 +517,32 @@ static bool IsEventPending() {
 
 
 static uint32_t GetU32FromRecvBuf(int offset) {
-    return g_state.recvBuf[offset] +
-        (g_state.recvBuf[offset + 1] << 8) +
-        (g_state.recvBuf[offset + 2] << 16) +
-        (g_state.recvBuf[offset + 3] << 24);
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    return platSpec->recvBuf[offset] +
+        (platSpec->recvBuf[offset + 1] << 8) +
+        (platSpec->recvBuf[offset + 2] << 16) +
+        (platSpec->recvBuf[offset + 3] << 24);
 }
 
 
 static void HandleEvent() {
-    if (g_state.recvBuf[0] == 1) {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    if (platSpec->recvBuf[0] == 1) {
         FATAL_ERROR("Got unexpected reply.");
     }
 
     bool selectionNotifyReceived = false;
 
-    g_state.recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
+    platSpec->recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
     
-    switch (g_state.recvBuf[0]) {
+    switch (platSpec->recvBuf[0]) {
     case 2: // KeyPress event.
         {
-            unsigned char x11_keycode = g_state.recvBuf[1];
+            unsigned char x11_keycode = platSpec->recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
             g_window->_private->m_newKeyDowns[df_keycode] = 1;
             g_input.keys[df_keycode] = 1;
-            int modifiers = g_state.recvBuf[28];
+            int modifiers = platSpec->recvBuf[28];
             char ascii = dfKeycodeToAscii(df_keycode, modifiers);
     //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
 
@@ -550,7 +555,7 @@ static void HandleEvent() {
 
     case 3: // KeyRelease event.
         {
-            unsigned char x11_keycode = g_state.recvBuf[1];
+            unsigned char x11_keycode = platSpec->recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
             g_window->_private->m_newKeyUps[df_keycode] = 1;
             g_input.keys[df_keycode] = 0;
@@ -559,7 +564,7 @@ static void HandleEvent() {
         }
 
     case 4: // Mouse down button event (includes scroll motion).
-        switch (g_state.recvBuf[1]) {
+        switch (platSpec->recvBuf[1]) {
             case 1:
                 g_input.lmb = 1;
     			g_window->_private->m_lmbPrivate = true;
@@ -569,11 +574,11 @@ static void HandleEvent() {
             case 4: g_input.mouseZ++; break;
             case 5: g_input.mouseZ--; break;
         }
-        //printf("down:%i\n", g_state.recvBuf[1]);
+        //printf("down:%i\n", platSpec->recvBuf[1]);
         break;
 
     case 5: // Mouse button up event.
-        switch (g_state.recvBuf[1]) {
+        switch (platSpec->recvBuf[1]) {
             case 1:
                 g_input.lmb = 0;
     			g_window->_private->m_lmbPrivate = false;
@@ -581,14 +586,14 @@ static void HandleEvent() {
             case 2: g_input.mmb = 0; break;
             case 3: g_input.rmb = 0; break;
         }
-        //printf("up:%i\n", g_state.recvBuf[1]);
+        //printf("up:%i\n", platSpec->recvBuf[1]);
         break;
 
     case 6: // Pointer motion event.
         {
-            int16_t *x = (int16_t*)&g_state.recvBuf[24];
-            int16_t *y = (int16_t*)&g_state.recvBuf[26];
-            //printf("detail:%i rx=%i ry=%i\n", g_state.recvBuf[1], *x, *y);
+            int16_t *x = (int16_t*)&platSpec->recvBuf[24];
+            int16_t *y = (int16_t*)&platSpec->recvBuf[26];
+            //printf("detail:%i rx=%i ry=%i\n", platSpec->recvBuf[1], *x, *y);
             g_input.mouseX = *x;
             g_input.mouseY = *y;
             break;
@@ -604,8 +609,8 @@ static void HandleEvent() {
 
     case 22: // Configure notify event.
         {
-            int w = g_state.recvBuf[20] + (g_state.recvBuf[21] << 8);
-            int h = g_state.recvBuf[22] + (g_state.recvBuf[23] << 8);
+            int w = platSpec->recvBuf[20] + (platSpec->recvBuf[21] << 8);
+            int h = platSpec->recvBuf[22] + (platSpec->recvBuf[23] << 8);
             BitmapDelete(g_window->bmp);
             g_window->bmp = BitmapCreate(w, h);
 //             if (g_window->redrawCallback) {
@@ -619,7 +624,7 @@ static void HandleEvent() {
             uint32_t time = GetU32FromRecvBuf(4);
             uint32_t requestor = GetU32FromRecvBuf(12);
             uint32_t selection = GetU32FromRecvBuf(16);
-            ReleaseAssert(selection == g_state.clipboardId, "selection was %x", selection);
+            ReleaseAssert(selection == platSpec->clipboardId, "selection was %x", selection);
             uint32_t target = GetU32FromRecvBuf(20);
             uint32_t property = GetU32FromRecvBuf(24);
             printf("Recv'd Selection request. Time=%x Requestor=%x target=%x property=%x\n",
@@ -644,7 +649,7 @@ static void HandleEvent() {
         break;
         
     default:
-        printf("Got an unknown message type (%i).\n", g_state.recvBuf[0]);
+        printf("Got an unknown message type (%i).\n", platSpec->recvBuf[0]);
     }
 
     ConsumeMessage(32);
@@ -675,7 +680,8 @@ static bool HandleEvents() {
 static bool GetReply(int expectedLen) {
     HandleEvents();
 
-    if (g_state.recvBuf[0] == 1 && g_state.recvBufNumBytesAvailable >= expectedLen)
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    if (platSpec->recvBuf[0] == 1 && platSpec->recvBufNumBytesAvailable >= expectedLen)
         return true;
 
     return false;
@@ -688,10 +694,11 @@ static bool GetReply(int expectedLen) {
 
 
 static void MapWindow() {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
     int const len = 2;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
-    packet[1] = g_state.windowId;
+    packet[1] = platSpec->windowId;
     SendBuf(packet, 8);
 }
 
@@ -714,7 +721,8 @@ static int GetAtomId(char const *atomName) {
     while (!GetReply(32))
         ;
         
-    uint16_t *id = (uint16_t *)(g_state.recvBuf + 8);
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    uint16_t *id = (uint16_t *)(platSpec->recvBuf + 8);
 
     ConsumeMessage(32);
     
@@ -724,7 +732,8 @@ static int GetAtomId(char const *atomName) {
 
 // Initialize the connection to the Xserver if we haven't already.
 static void EnsureState() {
-    if (g_state.socketFd >= 0) return;
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    if (platSpec->socketFd >= 0) return;
 
     char *displayString = getenv("DISPLAY");
     char socketName[] = "/tmp/.X11-unix/X0";
@@ -732,14 +741,14 @@ static void EnsureState() {
         socketName[16] = displayString[1];
 
     // Open socket and connect.
-    g_state.socketFd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (g_state.socketFd < 0) {
+    platSpec->socketFd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (platSpec->socketFd < 0) {
         FATAL_ERROR("Create socket failed");
     }
     struct sockaddr_un servAddr = { 0 };
     servAddr.sun_family = AF_UNIX;
     strcpy(servAddr.sun_path, socketName);
-    if (connect(g_state.socketFd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
+    if (connect(platSpec->socketFd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
         FATAL_ERROR("Couldn't connect");
     }
 
@@ -777,51 +786,53 @@ static void EnsureState() {
     SendBuf(xauthCookie + xauthLen - 16, 16);
 
     // Read connection reply header.
-    FatalRead(&g_state.connectionReplyHeader, sizeof(connectionReplyHeader_t));
-    if (g_state.connectionReplyHeader.success == 0) {
+    FatalRead(&platSpec->connectionReplyHeader, sizeof(connectionReplyHeader_t));
+    if (platSpec->connectionReplyHeader.success == 0) {
         FATAL_ERROR("Connection reply indicated failure.");
     }
 
     // Read rest of connection reply.
-    g_state.connectionReplySuccessBody = (connectionReplySuccessBody_t*)new char[g_state.connectionReplyHeader.len * 4];
-    FatalRead(g_state.connectionReplySuccessBody,
-               g_state.connectionReplyHeader.len * 4);
+    platSpec->connectionReplySuccessBody = (connectionReplySuccessBody_t*)new char[platSpec->connectionReplyHeader.len * 4];
+    FatalRead(platSpec->connectionReplySuccessBody,
+               platSpec->connectionReplyHeader.len * 4);
 
     // Set some pointers into the connection reply because they'll be convenient later.
-    int vendorLenPlusPadding = (g_state.connectionReplySuccessBody->vendor_len + 3) & ~3;
-    g_state.pixmapFormats = (pixmap_format_t *)(g_state.connectionReplySuccessBody->vendor_string +
+    int vendorLenPlusPadding = (platSpec->connectionReplySuccessBody->vendor_len + 3) & ~3;
+    platSpec->pixmapFormats = (pixmap_format_t *)(platSpec->connectionReplySuccessBody->vendor_string +
                              vendorLenPlusPadding);
-    g_state.screens = (screen_t *)(g_state.pixmapFormats +
-                                  g_state.connectionReplySuccessBody->num_pixmapFormats);
+    platSpec->screens = (screen_t *)(platSpec->pixmapFormats +
+                                  platSpec->connectionReplySuccessBody->num_pixmapFormats);
 
-    g_state.nextResourceId = g_state.connectionReplySuccessBody->id_base;
+    platSpec->nextResourceId = platSpec->connectionReplySuccessBody->id_base;
 
     // Get some Atom ids that we will use later.
-    g_state.clipboardId = GetAtomId("CLIPBOARD");
-    g_state.stringId = GetAtomId("STRING");
-    g_state.xselDataId = GetAtomId("XSEL_DATA");
-    g_state.targetsId = GetAtomId("TARGETS");
-    g_state.wmDeleteWindowId = GetAtomId("WM_DELETE_WINDOW");
-    g_state.wmProtocolsId = GetAtomId("WM_PROTOCOLS");
+    platSpec->clipboardId = GetAtomId("CLIPBOARD");
+    platSpec->stringId = GetAtomId("STRING");
+    platSpec->xselDataId = GetAtomId("XSEL_DATA");
+    platSpec->targetsId = GetAtomId("TARGETS");
+    platSpec->wmDeleteWindowId = GetAtomId("WM_DELETE_WINDOW");
+    platSpec->wmProtocolsId = GetAtomId("WM_PROTOCOLS");
     printf("Atoms: clipboard=0x%x string=0x%x xsel=0x%x targets=0x%x wmDeleteWindow=0x%x "
         "wmProtocols=0x%x\n", 
-        g_state.clipboardId, g_state.stringId, g_state.xselDataId, g_state.targetsId,
-        g_state.wmDeleteWindowId, g_state.wmProtocolsId);
+        platSpec->clipboardId, platSpec->stringId, platSpec->xselDataId, platSpec->targetsId,
+        platSpec->wmDeleteWindowId, platSpec->wmProtocolsId);
 }
 
 
 static uint32_t generateId() {
-    return g_state.nextResourceId++;
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    return platSpec->nextResourceId++;
 }
 
 
 static void CreateGc() {
-    g_state.graphicsContextId = generateId();
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    platSpec->graphicsContextId = generateId();
     int const len = 4;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_CREATE_GC | (len<<16);
-    packet[1] = g_state.graphicsContextId;
-    packet[2] = g_state.windowId;
+    packet[1] = platSpec->graphicsContextId;
+    packet[2] = platSpec->windowId;
     packet[3] = 0; // Value mask.
 
     SendBuf(packet, sizeof(packet));
@@ -834,17 +845,19 @@ bool CreateWin(int width, int height, WindowType winType, char const *winName) {
 
 
 static void EnableDeleteWindowEvent() {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+
     // See InterClient Communication Conventions Manual v2.0. The section
     // heading is "Window Deletion".
     int requestLen = 7;
     uint32_t packet[requestLen];
     packet[0] = X11_OPCODE_CHANGE_PROPERTY | (requestLen << 16);
-    packet[1] = g_state.windowId;
-    packet[2] = g_state.wmProtocolsId; // Property.
+    packet[1] = platSpec->windowId;
+    packet[2] = platSpec->wmProtocolsId; // Property.
     packet[3] = 4; // Type = ATOM.
     packet[4] = 32; // Format = 32 bits per item.
     packet[5] = 1; // Length = 1 item.
-    packet[6] = g_state.wmDeleteWindowId; // Item data.
+    packet[6] = platSpec->wmDeleteWindowId; // Item data.
 
     SendBuf(packet, sizeof(packet));
 }
@@ -855,18 +868,21 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 	memset(wd, 0, sizeof(DfWindow));
     wd->_private = new DfWindowPrivate;
     memset(wd->_private, 0, sizeof(DfWindowPrivate));
+    wd->_private->platSpec = new WindowPlatformSpecific;
+    wd->_private->platSpec->socketFd = -1;
 
     wd->bmp = BitmapCreate(width, height);
 
     EnsureState();
 
-    g_state.windowId = generateId();
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    platSpec->windowId = generateId();
 
     int const len = 9;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_CREATE_WINDOW | (len<<16);
-    packet[1] = g_state.windowId;
-    packet[2] = g_state.screens[0].root_id;
+    packet[1] = platSpec->windowId;
+    packet[2] = platSpec->screens[0].root_id;
     packet[3] = 0; // x,y pos. System will position window. TODO - use x and y
     packet[4] = width | (height<<16);
     packet[5] = 0; // DEFAULT_BORDER and DEFAULT_GROUP.
@@ -884,12 +900,12 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
     EnableDeleteWindowEvent();
 
     // Make socket non-blocking.
-    int flags = fcntl(g_state.socketFd, F_GETFL, 0);
+    int flags = fcntl(platSpec->socketFd, F_GETFL, 0);
     if (flags == -1) {
         FATAL_ERROR("Couldn't get flags of socket");
     }
     flags |= O_NONBLOCK;
-    if (fcntl(g_state.socketFd, F_SETFL, flags) != 0) {
+    if (fcntl(platSpec->socketFd, F_SETFL, flags) != 0) {
         FATAL_ERROR("Couldn't set socket as non-blocking");
     }
 
@@ -900,6 +916,8 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char
 
 
 static void BlitBitmapToWindow(DfWindow *wd) {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+
     // *** Send back-buffer to Xserver.
     int W = wd->bmp->width;
     int H = wd->bmp->height;
@@ -915,8 +933,8 @@ static void BlitBitmapToWindow(DfWindow *wd) {
         uint32_t bmp_format = 2 << 8;
         uint32_t request_len = (uint32_t)(W * num_rows_in_chunk + 6) << 16;
         packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
-        packet[1] = g_state.windowId;
-        packet[2] = g_state.graphicsContextId;
+        packet[1] = platSpec->windowId;
+        packet[2] = platSpec->graphicsContextId;
         packet[3] = W | (num_rows_in_chunk << 16); // Width and height.
         packet[4] = 0 | (y << 16); // Dst X and Y.
         packet[5] = 24 << 8; // Bit depth.
@@ -929,9 +947,11 @@ static void BlitBitmapToWindow(DfWindow *wd) {
 
 
 bool GetDesktopRes(int *width, int *height) {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+
     EnsureState();
-    *width = g_state.screens[0].width;
-    *height = g_state.screens[0].height;
+    *width = platSpec->screens[0].width;
+    *height = platSpec->screens[0].height;
     return true;
 }
 
@@ -975,9 +995,10 @@ void SetWindowTitle(char const *title) {
     if (titleLen > maxTitleLen)
         titleLen = maxTitleLen;
 
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
     int len = (headerNumBytes + titleLen + 3) / 4;
     packet[0] = X11_OPCODE_CHANGE_PROPERTY | (len << 16);
-    packet[1] = g_state.windowId;
+    packet[1] = platSpec->windowId;
     packet[2] = X11_ATOM_WM_NAME; // Property
     packet[3] = 0x1f; // Type
     packet[4] = 8; // Format
@@ -992,11 +1013,12 @@ void SetWindowIcon() {}
 
 
 static void SendGetPropertyRequest() {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
     puts("sending GetProperty request");
     uint32_t packet[6];
     packet[0] = 20 | 6 << 16;
-    packet[1] = g_state.windowId; // window
-    packet[2] = g_state.xselDataId;   // property
+    packet[1] = platSpec->windowId; // window
+    packet[2] = platSpec->xselDataId;   // property
     packet[3] = 0; // Type = any
     packet[4] = 0; // offset = 0
     packet[5] = 0xfffffffful; // length
@@ -1011,9 +1033,10 @@ static void ReceiveClipboardData() {
     while (!GetReply(32))
         ;
 
-    uint8_t *buf = g_state.recvBuf;
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    uint8_t *buf = platSpec->recvBuf;
     uint32_t type = *((uint32_t *)(buf + 8));
-    if (type == g_state.stringId) {
+    if (type == platSpec->stringId) {
         uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
     
         uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
@@ -1021,21 +1044,21 @@ static void ReceiveClipboardData() {
 
         ConsumeMessage(32);
 
-        g_state.clipboardRxData = new char[lenOfValueInFmtUnits + 1];
-        char *nextWritePoint = g_state.clipboardRxData;
+        platSpec->clipboardRxData = new char[lenOfValueInFmtUnits + 1];
+        char *nextWritePoint = platSpec->clipboardRxData;
 
         uint32_t numBytesLeft = lenOfValueInFmtUnits;
         while (numBytesLeft > 0) {
             ReadFromXServer();
 
-            ssize_t stringLen = IntMin(g_state.recvBufNumBytesAvailable, numBytesLeft);
+            ssize_t stringLen = IntMin(platSpec->recvBufNumBytesAvailable, numBytesLeft);
             memcpy(nextWritePoint, (char const *)buf, stringLen);
             nextWritePoint += stringLen;
             
             ConsumeMessage(stringLen);
             numBytesLeft -= stringLen;
         }
-        g_state.clipboardRxData[lenOfValueInFmtUnits] = '\0';
+        platSpec->clipboardRxData[lenOfValueInFmtUnits] = '\0';
 
         uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
         ConsumeMessage(amtPadding);
@@ -1044,15 +1067,16 @@ static void ReceiveClipboardData() {
 
 
 char *X11InternalClipboardRequestData() {
-    if (g_state.clipboardRxData) return NULL;
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    if (platSpec->clipboardRxData) return NULL;
 
     puts("Sending ConvertSelection request");
     uint32_t packet[6];
     packet[0] = 24 | 6 << 16;
-    packet[1] = g_state.windowId; // requestor
-    packet[2] = g_state.clipboardId; // selection
-    packet[3] = g_state.stringId; // target
-    packet[4] = g_state.xselDataId; // property
+    packet[1] = platSpec->windowId; // requestor
+    packet[2] = platSpec->clipboardId; // selection
+    packet[3] = platSpec->stringId; // target
+    packet[4] = platSpec->xselDataId; // property
     packet[5] = 0; // time
     SendBuf(packet, sizeof(packet));
 
@@ -1060,23 +1084,25 @@ char *X11InternalClipboardRequestData() {
     do {
         InputPoll();
 
-        if (g_state.clipboardRxData) {
+        if (platSpec->clipboardRxData) {
             break;
         }
     } while (GetRealTime() < endTime);
 
-    return g_state.clipboardRxData;
+    return platSpec->clipboardRxData;
 }
 
 
 void X11InternalClipboardReleaseReceivedData() {
-    delete [] g_state.clipboardRxData;
-    g_state.clipboardRxData = NULL;
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    delete [] platSpec->clipboardRxData;
+    platSpec->clipboardRxData = NULL;
 }
 
 
 static void SendChangePropertyRequest(uint32_t destWindow, uint32_t target, uint32_t property) {
-    if (target == g_state.targetsId) {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    if (target == platSpec->targetsId) {
         // This branch sends a change property request that is used as the
         // response to a SelectionRequest. It tells the recipient what format the
         // clipboard data that we are about to send will be in.
@@ -1089,8 +1115,8 @@ static void SendChangePropertyRequest(uint32_t destWindow, uint32_t target, uint
         packet[3] = 4; // type is ATOM.
         packet[4] = 32; // Format unit is 32 bits.
         packet[5] = 2; // Length is 2 format units;
-        packet[6] = g_state.targetsId;
-        packet[7] = g_state.stringId;
+        packet[6] = platSpec->targetsId;
+        packet[7] = platSpec->stringId;
         SendBuf(packet, sizeof(packet));
     }
     else {
@@ -1098,23 +1124,24 @@ static void SendChangePropertyRequest(uint32_t destWindow, uint32_t target, uint
         // clipboard data.
 //        puts("Sending ChangeProperty with clipboard contents");
 
-        const int amtPadding = 4 - g_state.clipboardTxDataNumChars & 3;
-        const int numWords = 6 + (g_state.clipboardTxDataNumChars + amtPadding) / 4;
-//        printf("amtPadding:%d numWords:%d numChars:%d\n", amtPadding, numWords, g_state.clipboardTxDataNumChars);
+        const int amtPadding = 4 - platSpec->clipboardTxDataNumChars & 3;
+        const int numWords = 6 + (platSpec->clipboardTxDataNumChars + amtPadding) / 4;
+//        printf("amtPadding:%d numWords:%d numChars:%d\n", amtPadding, numWords, platSpec->clipboardTxDataNumChars);
         uint32_t packet[6];
         packet[0] = X11_OPCODE_CHANGE_PROPERTY | numWords << 16;
         packet[1] = destWindow;
         packet[2] = property;
-        packet[3] = g_state.stringId; // type is STRING.
+        packet[3] = platSpec->stringId; // type is STRING.
         packet[4] = 8; // Format unit is this many bits.
-        packet[5] = g_state.clipboardTxDataNumChars; // Length in format units;
+        packet[5] = platSpec->clipboardTxDataNumChars; // Length in format units;
         SendBuf(packet, sizeof(packet));
-        SendBuf(g_state.clipboardTxData, g_state.clipboardTxDataNumChars + amtPadding);
+        SendBuf(platSpec->clipboardTxData, platSpec->clipboardTxDataNumChars + amtPadding);
     }
 }
 
 
 static void SendSendEventSelectionNotify(uint32_t destWindow, uint32_t target, uint32_t property, uint32_t time) {
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
 //    puts("Sending SendEvent");
     uint32_t packet[11];
     packet[0] = 25 | 11 << 16;
@@ -1123,7 +1150,7 @@ static void SendSendEventSelectionNotify(uint32_t destWindow, uint32_t target, u
     packet[3] = 31; // SelectionNotify
     packet[4] = time;
     packet[5] = destWindow; // requestor
-    packet[6] = g_state.clipboardId;
+    packet[6] = platSpec->clipboardId;
     packet[7] = target;
     packet[8] = property;
     packet[9] = 0;
@@ -1134,16 +1161,17 @@ static void SendSendEventSelectionNotify(uint32_t destWindow, uint32_t target, u
 
 
 void X11InternalClipboardSetData(char const *data, int numChars) {
-    delete [] g_state.clipboardTxData;
-    g_state.clipboardTxData = new char[numChars + 3]; // +3 to allow for maximum amount of padding needed when buffer is sent to xServer.
-    g_state.clipboardTxDataNumChars = numChars;
-    memcpy(g_state.clipboardTxData, data, numChars);
+    WindowPlatformSpecific *platSpec = g_window->_private->platSpec;
+    delete [] platSpec->clipboardTxData;
+    platSpec->clipboardTxData = new char[numChars + 3]; // +3 to allow for maximum amount of padding needed when buffer is sent to xServer.
+    platSpec->clipboardTxDataNumChars = numChars;
+    memcpy(platSpec->clipboardTxData, data, numChars);
 
 //    puts("Sending SetSelectionOwner request");
     uint32_t packet[4];
     packet[0] = X11_OPCODE_SET_SELECTION_OWNER | 4 << 16;
-    packet[1] = g_state.windowId;
-    packet[2] = g_state.clipboardId;
+    packet[1] = platSpec->windowId;
+    packet[2] = platSpec->clipboardId;
     packet[3] = 0;
     SendBuf(packet, sizeof(packet));
 }

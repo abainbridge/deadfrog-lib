@@ -12,6 +12,9 @@
 #include <stdio.h>
 
 
+struct WindowPlatformSpecific;
+
+
 struct _DfWindowPrivate
 {
     // TODO: Consider removing the m_ prefixes.
@@ -36,6 +39,8 @@ struct _DfWindowPrivate
     unsigned    framesThisSecond;
     double      endOfSecond;
     double      lastUpdateTime;
+
+    WindowPlatformSpecific *platSpec;
 };
 
 
