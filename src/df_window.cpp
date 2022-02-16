@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 
-struct InputPrivate
+struct _DfWindowPrivate
 {
     // TODO: Consider removing the m_ prefixes.
     bool        m_lmbPrivate;
@@ -32,13 +32,12 @@ struct InputPrivate
     signed char	m_newKeyUps[KEY_MAX];
     char		m_newKeysTyped[MAX_KEYS_TYPED_PER_FRAME];
     int			m_newNumKeysTyped;
+
+    unsigned    framesThisSecond;
+    double      endOfSecond;
+    double      lastUpdateTime;
 };
 
-
-static unsigned g_framesThisSecond = 0;
-static double g_endOfSecond = 0.0;
-static double g_lastUpdateTime = 0.0;
-static InputPrivate g_priv = { 0 };
 
 DfInput g_input = { 0 };
 DfWindow *g_window = NULL;
@@ -51,8 +50,8 @@ static void InputPollInternal();
 static void HandleFocusInEvent()
 {
     g_input.windowHasFocus = true;
-    memset(g_priv.m_newKeyDowns, 0, KEY_MAX);
-    memset(g_priv.m_newKeyUps, 0, KEY_MAX);
+    memset(g_window->_private->m_newKeyDowns, 0, KEY_MAX);
+    memset(g_window->_private->m_newKeyUps, 0, KEY_MAX);
     memset(g_input.keys, 0, KEY_MAX);
 }
 
@@ -203,14 +202,14 @@ bool UntypeKey(char key)
 
 static void InputPollInternal()
 {
-    memcpy(g_input.keyDowns, g_priv.m_newKeyDowns, KEY_MAX);
-    memset(g_priv.m_newKeyDowns, 0, KEY_MAX);
-    memcpy(g_input.keyUps, g_priv.m_newKeyUps, KEY_MAX);
-    memset(g_priv.m_newKeyUps, 0, KEY_MAX);
+    memcpy(g_input.keyDowns, g_window->_private->m_newKeyDowns, KEY_MAX);
+    memset(g_window->_private->m_newKeyDowns, 0, KEY_MAX);
+    memcpy(g_input.keyUps, g_window->_private->m_newKeyUps, KEY_MAX);
+    memset(g_window->_private->m_newKeyUps, 0, KEY_MAX);
 
-	g_input.numKeysTyped = g_priv.m_newNumKeysTyped;
-	memcpy(g_input.keysTyped, g_priv.m_newKeysTyped, g_priv.m_newNumKeysTyped);
-	g_priv.m_newNumKeysTyped = 0;
+	g_input.numKeysTyped = g_window->_private->m_newNumKeysTyped;
+	memcpy(g_input.keysTyped, g_window->_private->m_newKeysTyped, g_window->_private->m_newNumKeysTyped);
+	g_window->_private->m_newNumKeysTyped = 0;
 
     // Count the number of key ups and downs this frame
     g_input.numKeyDowns = 0;
@@ -221,47 +220,47 @@ static void InputPollInternal()
         if (g_input.keyDowns[i]) g_input.numKeyDowns++;
     }
 
-    g_input.lmb = g_priv.m_lmbPrivate;
-    g_input.lmbClicked = g_input.lmb == true && g_priv.m_lmbOld == false;
-	g_input.mmbClicked = g_input.mmb == true && g_priv.m_mmbOld == false;
-	g_input.rmbClicked = g_input.rmb == true && g_priv.m_rmbOld == false;
-	g_input.lmbUnClicked = g_input.lmb == false && g_priv.m_lmbOld == true;
-	g_input.mmbUnClicked = g_input.mmb == false && g_priv.m_mmbOld == true;
-	g_input.rmbUnClicked = g_input.rmb == false && g_priv.m_rmbOld == true;
-	g_priv.m_lmbOld = g_input.lmb;
-	g_priv.m_mmbOld = g_input.mmb;
-	g_priv.m_rmbOld = g_input.rmb;
+    g_input.lmb = g_window->_private->m_lmbPrivate;
+    g_input.lmbClicked = g_input.lmb == true && g_window->_private->m_lmbOld == false;
+	g_input.mmbClicked = g_input.mmb == true && g_window->_private->m_mmbOld == false;
+	g_input.rmbClicked = g_input.rmb == true && g_window->_private->m_rmbOld == false;
+	g_input.lmbUnClicked = g_input.lmb == false && g_window->_private->m_lmbOld == true;
+	g_input.mmbUnClicked = g_input.mmb == false && g_window->_private->m_mmbOld == true;
+	g_input.rmbUnClicked = g_input.rmb == false && g_window->_private->m_rmbOld == true;
+	g_window->_private->m_lmbOld = g_input.lmb;
+	g_window->_private->m_mmbOld = g_input.mmb;
+	g_window->_private->m_rmbOld = g_input.rmb;
 
 	g_input.lmbDoubleClicked = false;
 	if (g_input.lmbClicked)
 	{
  		double timeNow = GetRealTime();
-		double delta = timeNow - g_priv.m_lastClickTime;
+		double delta = timeNow - g_window->_private->m_lastClickTime;
 		if (delta < 0.25)
 		{
 			g_input.lmbDoubleClicked = true;
 			g_input.lmbClicked = false;
 		}
-		g_priv.m_lastClickTime = timeNow;
-		g_priv.m_lmbRepeatsSoFar = 0;
+		g_window->_private->m_lastClickTime = timeNow;
+		g_window->_private->m_lmbRepeatsSoFar = 0;
 	}
 
 	// Generate fake mouse up event(s) to compensate for the fact that Windows won't send
 	// them if the last mouse down event was in the client area.
-	if (g_priv.m_lastClickWasNC)
+	if (g_window->_private->m_lastClickWasNC)
 	{
-		g_priv.m_lastClickWasNC = false;
-		g_priv.m_lmbPrivate = false;
+		g_window->_private->m_lastClickWasNC = false;
+		g_window->_private->m_lmbPrivate = false;
 		g_input.mmb = false;
 		g_input.rmb = false;
 	}
 
-	g_input.mouseVelX = g_input.mouseX - g_priv.m_mouseOldX;
-	g_input.mouseVelY = g_input.mouseY - g_priv.m_mouseOldY;
-	g_input.mouseVelZ = g_input.mouseZ - g_priv.m_mouseOldZ;
-	g_priv.m_mouseOldX = g_input.mouseX;
-	g_priv.m_mouseOldY = g_input.mouseY;
-	g_priv.m_mouseOldZ = g_input.mouseZ;
+	g_input.mouseVelX = g_input.mouseX - g_window->_private->m_mouseOldX;
+	g_input.mouseVelY = g_input.mouseY - g_window->_private->m_mouseOldY;
+	g_input.mouseVelZ = g_input.mouseZ - g_window->_private->m_mouseOldZ;
+	g_window->_private->m_mouseOldX = g_input.mouseX;
+	g_window->_private->m_mouseOldY = g_input.mouseY;
+	g_window->_private->m_mouseOldZ = g_input.mouseZ;
 }
 
 
@@ -269,29 +268,29 @@ void UpdateWin()
 {
     // *** FPS Meter ***
 
-    g_framesThisSecond++;
+    g_window->_private->framesThisSecond++;
 
     double currentTime = GetRealTime();
-    if (currentTime > g_endOfSecond)
+    if (currentTime > g_window->_private->endOfSecond)
     {
         // If program has been paused by a debugger, skip the seconds we missed
-        if (currentTime > g_endOfSecond + 2.0)
-            g_endOfSecond = currentTime + 1.0;
+        if (currentTime > g_window->_private->endOfSecond + 2.0)
+            g_window->_private->endOfSecond = currentTime + 1.0;
         else
-            g_endOfSecond += 1.0;
-        g_window->fps = g_framesThisSecond;
-        g_framesThisSecond = 0;
+            g_window->_private->endOfSecond += 1.0;
+        g_window->fps = g_window->_private->framesThisSecond;
+        g_window->_private->framesThisSecond = 0;
     }
-    else if (g_endOfSecond > currentTime + 2.0)
+    else if (g_window->_private->endOfSecond > currentTime + 2.0)
     {
-        g_endOfSecond = currentTime + 1.0;
+        g_window->_private->endOfSecond = currentTime + 1.0;
     }
 
 
     // *** Advance time ***
 
-    g_window->advanceTime = currentTime - g_lastUpdateTime;
-    g_lastUpdateTime = currentTime;
+    g_window->advanceTime = currentTime - g_window->_private->lastUpdateTime;
+    g_window->_private->lastUpdateTime = currentTime;
 
 
     // *** Swap buffers ***

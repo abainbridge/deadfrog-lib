@@ -54,16 +54,16 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 				wParam != KEY_ESC)
 			{
                 ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_CHAR", wParam);
-				g_priv.m_newKeysTyped[g_priv.m_newNumKeysTyped] = wParam;
-				g_priv.m_newNumKeysTyped++;
+				g_window->_private->m_newKeysTyped[g_window->_private->m_newNumKeysTyped] = wParam;
+				g_window->_private->m_newNumKeysTyped++;
 			}
 			break;
 
 		case WM_LBUTTONDOWN:
-			g_priv.m_lmbPrivate = true;
+			g_window->_private->m_lmbPrivate = true;
 			break;
 		case WM_LBUTTONUP:
-			g_priv.m_lmbPrivate = false;
+			g_window->_private->m_lmbPrivate = false;
 			break;
 		case WM_MBUTTONDOWN:
 			g_input.mmb = true;
@@ -84,16 +84,16 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 		   never sends us the button up event. I've chosen the second option and fix some of
 		   the brokenness by generating a fake up event one frame after the down event. */
 		case WM_NCLBUTTONDOWN:
-			g_priv.m_lmbPrivate = true;
-			g_priv.m_lastClickWasNC = true;
+			g_window->_private->m_lmbPrivate = true;
+			g_window->_private->m_lastClickWasNC = true;
 			return -1;
 		case WM_NCMBUTTONDOWN:
 			g_input.mmb = true;
-			g_priv.m_lastClickWasNC = true;
+			g_window->_private->m_lastClickWasNC = true;
 			return -1;
 		case WM_NCRBUTTONDOWN:
 			g_input.rmb = true;
-			g_priv.m_lastClickWasNC = true;
+			g_window->_private->m_lastClickWasNC = true;
 			return -1;
 
 		case WM_MOUSEWHEEL:
@@ -112,14 +112,14 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
                 break;
 
             g_input.keys[wParam] = 0;
-            g_priv.m_newKeyUps[wParam] = 1;
+            g_window->_private->m_newKeyUps[wParam] = 1;
             break;
 
 		case WM_SYSKEYDOWN:
 		{
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
 			g_input.keys[wParam] = 1;
-			g_priv.m_newKeyDowns[wParam] = 1;
+			g_window->_private->m_newKeyDowns[wParam] = 1;
 			break;
 		}
 
@@ -129,7 +129,7 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			// Windows will generate a SYSKEYUP event for the release of F, and a
 			// normal KEYUP event for the release of the ALT. Very strange.
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYUP", wParam);
-            g_priv.m_newKeyUps[wParam] = 1;
+            g_window->_private->m_newKeyUps[wParam] = 1;
             g_input.keys[wParam] = 0;
 			break;
 		}
@@ -147,8 +147,8 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 
             if (wParam == KEY_DEL)
 			{
-                g_priv.m_newKeysTyped[g_input.numKeysTyped] = KEY_DEL;
-				g_priv.m_newNumKeysTyped++;
+                g_window->_private->m_newKeysTyped[g_input.numKeysTyped] = KEY_DEL;
+				g_window->_private->m_newNumKeysTyped++;
 			}
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
             {
@@ -156,7 +156,7 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
                 // will be an event for the alt part too.
                 break;
             }
-			g_priv.m_newKeyDowns[wParam] = 1;
+			g_window->_private->m_newKeyDowns[wParam] = 1;
 			g_input.keys[wParam] = 1;
 			break;
         }
@@ -344,6 +344,8 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
+    wd->_private = new DfWindowPrivate;
+    memset(wd->_private, 0, sizeof(DfWindowPrivate));
 
 	width = ClampInt(width, 100, 4000);
 	height = ClampInt(height, 100, 4000);
@@ -390,8 +392,8 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 		NULL, NULL, 0, NULL);
 
     double now = GetRealTime();
-    g_lastUpdateTime = now;
-    g_endOfSecond = now + 1.0;
+    g_window->_private->lastUpdateTime = now;
+    g_window->_private->endOfSecond = now + 1.0;
 
     HMODULE dwm = LoadLibrary("dwmapi.dll");
     g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");

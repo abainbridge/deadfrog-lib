@@ -27,6 +27,7 @@ extern "C"
 
 typedef void (RedrawCallback)(void);
 typedef void (FileDropCallback)(char const *path);
+typedef struct _DfWindowPrivate DfWindowPrivate;
 
 
 typedef struct
@@ -86,7 +87,9 @@ typedef struct _DfWindow
 
     // A callback that will be called when files are drag-and-dropped onto the window.
     FileDropCallback    *fileDropCallback;
-   
+
+    DfWindowPrivate *_private; // Internal stuff not accessible from the API.
+
     // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
 } DfWindow;
 

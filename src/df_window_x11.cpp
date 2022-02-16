@@ -535,15 +535,15 @@ static void HandleEvent() {
         {
             unsigned char x11_keycode = g_state.recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
-            g_priv.m_newKeyDowns[df_keycode] = 1;
+            g_window->_private->m_newKeyDowns[df_keycode] = 1;
             g_input.keys[df_keycode] = 1;
             int modifiers = g_state.recvBuf[28];
             char ascii = dfKeycodeToAscii(df_keycode, modifiers);
     //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
 
             if (ascii) {
-    			g_priv.m_newKeysTyped[g_priv.m_newNumKeysTyped] = ascii;
-    			g_priv.m_newNumKeysTyped++;
+    			g_window->_private->m_newKeysTyped[g_window->_private->m_newNumKeysTyped] = ascii;
+    			g_window->_private->m_newNumKeysTyped++;
             }
             break;
         }
@@ -552,7 +552,7 @@ static void HandleEvent() {
         {
             unsigned char x11_keycode = g_state.recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
-            g_priv.m_newKeyUps[df_keycode] = 1;
+            g_window->_private->m_newKeyUps[df_keycode] = 1;
             g_input.keys[df_keycode] = 0;
     //printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
             break;
@@ -562,7 +562,7 @@ static void HandleEvent() {
         switch (g_state.recvBuf[1]) {
             case 1:
                 g_input.lmb = 1;
-    			g_priv.m_lmbPrivate = true;
+    			g_window->_private->m_lmbPrivate = true;
                 break;
             case 2: g_input.mmb = 1; break;
             case 3: g_input.rmb = 1; break;
@@ -576,7 +576,7 @@ static void HandleEvent() {
         switch (g_state.recvBuf[1]) {
             case 1:
                 g_input.lmb = 0;
-    			g_priv.m_lmbPrivate = false;
+    			g_window->_private->m_lmbPrivate = false;
                 break;
             case 2: g_input.mmb = 0; break;
             case 3: g_input.rmb = 0; break;
@@ -853,6 +853,9 @@ static void EnableDeleteWindowEvent() {
 bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {
     DfWindow *wd = g_window = new DfWindow;
 	memset(wd, 0, sizeof(DfWindow));
+    wd->_private = new DfWindowPrivate;
+    memset(wd->_private, 0, sizeof(DfWindowPrivate));
+
     wd->bmp = BitmapCreate(width, height);
 
     EnsureState();
