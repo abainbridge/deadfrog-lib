@@ -169,7 +169,7 @@ void ColourWhirlMain()
         {
             // Abort drawing the set if the user presses escape or clicks the close icon
             InputPoll();
-            if (g_window->windowClosed || g_input.keyDowns[KEY_ESC])
+            if (g_window->windowClosed || g_window->input.keyDowns[KEY_ESC])
                 exit(0);
             UpdateWin();
         }
@@ -180,7 +180,7 @@ void ColourWhirlMain()
     DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC])
     {
         InputPoll();
         SleepMillisec(100);

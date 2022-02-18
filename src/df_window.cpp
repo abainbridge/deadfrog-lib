@@ -44,7 +44,6 @@ struct _DfWindowPrivate
 };
 
 
-DfInput g_input = { 0 };
 DfWindow *g_window = NULL;
 
 
@@ -54,16 +53,16 @@ static void InputPollInternal();
 
 static void HandleFocusInEvent()
 {
-    g_input.windowHasFocus = true;
+    g_window->input.windowHasFocus = true;
     memset(g_window->_private->m_newKeyDowns, 0, KEY_MAX);
     memset(g_window->_private->m_newKeyUps, 0, KEY_MAX);
-    memset(g_input.keys, 0, KEY_MAX);
+    memset(g_window->input.keys, 0, KEY_MAX);
 }
 
 
 static void HandleFocusOutEvent()
 {
-    g_input.windowHasFocus = false;
+    g_window->input.windowHasFocus = false;
 }
 
 
@@ -76,8 +75,8 @@ static void HandleFocusOutEvent()
 
 static void InitInput()
 {
-    g_input.eventSinceAdvance = true;
-    g_input.windowHasFocus = true;
+    g_window->input.eventSinceAdvance = true;
+    g_window->input.windowHasFocus = true;
 }
 
 
@@ -191,12 +190,12 @@ int GetKeyId(char const *name)
 
 bool UntypeKey(char key)
 {
-    for (int i = 0; i < g_input.numKeysTyped; ++i)
+    for (int i = 0; i < g_window->input.numKeysTyped; ++i)
     {
-        if (g_input.keysTyped[i] == key)
+        if (g_window->input.keysTyped[i] == key)
         {
-            g_input.keysTyped[i] = g_input.keysTyped[g_input.numKeysTyped - 1];
-            g_input.numKeysTyped--;
+            g_window->input.keysTyped[i] = g_window->input.keysTyped[g_window->input.numKeysTyped - 1];
+            g_window->input.numKeysTyped--;
             return true;
         }
     }
@@ -207,44 +206,44 @@ bool UntypeKey(char key)
 
 static void InputPollInternal()
 {
-    memcpy(g_input.keyDowns, g_window->_private->m_newKeyDowns, KEY_MAX);
+    memcpy(g_window->input.keyDowns, g_window->_private->m_newKeyDowns, KEY_MAX);
     memset(g_window->_private->m_newKeyDowns, 0, KEY_MAX);
-    memcpy(g_input.keyUps, g_window->_private->m_newKeyUps, KEY_MAX);
+    memcpy(g_window->input.keyUps, g_window->_private->m_newKeyUps, KEY_MAX);
     memset(g_window->_private->m_newKeyUps, 0, KEY_MAX);
 
-	g_input.numKeysTyped = g_window->_private->m_newNumKeysTyped;
-	memcpy(g_input.keysTyped, g_window->_private->m_newKeysTyped, g_window->_private->m_newNumKeysTyped);
+	g_window->input.numKeysTyped = g_window->_private->m_newNumKeysTyped;
+	memcpy(g_window->input.keysTyped, g_window->_private->m_newKeysTyped, g_window->_private->m_newNumKeysTyped);
 	g_window->_private->m_newNumKeysTyped = 0;
 
     // Count the number of key ups and downs this frame
-    g_input.numKeyDowns = 0;
-    g_input.numKeyUps = 0;
+    g_window->input.numKeyDowns = 0;
+    g_window->input.numKeyUps = 0;
     for (int i = 0; i < KEY_MAX; ++i)
     {
-        if (g_input.keyUps[i]) g_input.numKeyUps++;
-        if (g_input.keyDowns[i]) g_input.numKeyDowns++;
+        if (g_window->input.keyUps[i]) g_window->input.numKeyUps++;
+        if (g_window->input.keyDowns[i]) g_window->input.numKeyDowns++;
     }
 
-    g_input.lmb = g_window->_private->m_lmbPrivate;
-    g_input.lmbClicked = g_input.lmb == true && g_window->_private->m_lmbOld == false;
-	g_input.mmbClicked = g_input.mmb == true && g_window->_private->m_mmbOld == false;
-	g_input.rmbClicked = g_input.rmb == true && g_window->_private->m_rmbOld == false;
-	g_input.lmbUnClicked = g_input.lmb == false && g_window->_private->m_lmbOld == true;
-	g_input.mmbUnClicked = g_input.mmb == false && g_window->_private->m_mmbOld == true;
-	g_input.rmbUnClicked = g_input.rmb == false && g_window->_private->m_rmbOld == true;
-	g_window->_private->m_lmbOld = g_input.lmb;
-	g_window->_private->m_mmbOld = g_input.mmb;
-	g_window->_private->m_rmbOld = g_input.rmb;
+    g_window->input.lmb = g_window->_private->m_lmbPrivate;
+    g_window->input.lmbClicked = g_window->input.lmb == true && g_window->_private->m_lmbOld == false;
+	g_window->input.mmbClicked = g_window->input.mmb == true && g_window->_private->m_mmbOld == false;
+	g_window->input.rmbClicked = g_window->input.rmb == true && g_window->_private->m_rmbOld == false;
+	g_window->input.lmbUnClicked = g_window->input.lmb == false && g_window->_private->m_lmbOld == true;
+	g_window->input.mmbUnClicked = g_window->input.mmb == false && g_window->_private->m_mmbOld == true;
+	g_window->input.rmbUnClicked = g_window->input.rmb == false && g_window->_private->m_rmbOld == true;
+	g_window->_private->m_lmbOld = g_window->input.lmb;
+	g_window->_private->m_mmbOld = g_window->input.mmb;
+	g_window->_private->m_rmbOld = g_window->input.rmb;
 
-	g_input.lmbDoubleClicked = false;
-	if (g_input.lmbClicked)
+	g_window->input.lmbDoubleClicked = false;
+	if (g_window->input.lmbClicked)
 	{
  		double timeNow = GetRealTime();
 		double delta = timeNow - g_window->_private->m_lastClickTime;
 		if (delta < 0.25)
 		{
-			g_input.lmbDoubleClicked = true;
-			g_input.lmbClicked = false;
+			g_window->input.lmbDoubleClicked = true;
+			g_window->input.lmbClicked = false;
 		}
 		g_window->_private->m_lastClickTime = timeNow;
 		g_window->_private->m_lmbRepeatsSoFar = 0;
@@ -256,16 +255,16 @@ static void InputPollInternal()
 	{
 		g_window->_private->m_lastClickWasNC = false;
 		g_window->_private->m_lmbPrivate = false;
-		g_input.mmb = false;
-		g_input.rmb = false;
+		g_window->input.mmb = false;
+		g_window->input.rmb = false;
 	}
 
-	g_input.mouseVelX = g_input.mouseX - g_window->_private->m_mouseOldX;
-	g_input.mouseVelY = g_input.mouseY - g_window->_private->m_mouseOldY;
-	g_input.mouseVelZ = g_input.mouseZ - g_window->_private->m_mouseOldZ;
-	g_window->_private->m_mouseOldX = g_input.mouseX;
-	g_window->_private->m_mouseOldY = g_input.mouseY;
-	g_window->_private->m_mouseOldZ = g_input.mouseZ;
+	g_window->input.mouseVelX = g_window->input.mouseX - g_window->_private->m_mouseOldX;
+	g_window->input.mouseVelY = g_window->input.mouseY - g_window->_private->m_mouseOldY;
+	g_window->input.mouseVelZ = g_window->input.mouseZ - g_window->_private->m_mouseOldZ;
+	g_window->_private->m_mouseOldX = g_window->input.mouseX;
+	g_window->_private->m_mouseOldY = g_window->input.mouseY;
+	g_window->_private->m_mouseOldZ = g_window->input.mouseZ;
 }
 
 

@@ -249,7 +249,7 @@ void LatticeBoltzmannMain() {
     InitCells();
     InitTracers();
 
-    while (!g_window->windowClosed && !g_input.keys[KEY_ESC]) {
+    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC]) {
         InputPoll();
 
         Simulate();

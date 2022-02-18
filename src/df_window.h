@@ -1,10 +1,10 @@
 // This module implements window creation and mouse and keyboard input.
 
 // You can test if any specific key has been pressed this frame using
-// g_input.keyDowns[KEY_ESC].
+// g_window->input.keyDowns[KEY_ESC].
 
 // You can see how much the mouse has moved along the X axis this frame using
-// g_input.mouseVelX.
+// g_window->input.mouseVelX.
 
 // It also creates a bitmap the same size as the window to use as the back
 // buffer of a double buffer system.
@@ -90,6 +90,7 @@ typedef struct _DfWindow
 
     DfWindowPrivate *_private; // Internal stuff not accessible from the API.
 
+    DfInput             input;
     // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
 } DfWindow;
 
@@ -111,7 +112,6 @@ typedef enum
 
 
 DLL_API DfWindow *g_window;
-DLL_API DfInput g_input;
 
 DLL_API bool GetDesktopRes(int *width, int *height);
 
@@ -160,7 +160,7 @@ DLL_API int	        GetKeyId(char const *name);
 DLL_API bool	    InputPoll();  // Returns true if any events occurred since last call
 
 
-// Defines for indexes into g_input.keys[], keyDowns[] and keyUps[].
+// Defines for indexes into g_window->input.keys[], keyDowns[] and keyUps[].
 enum
 {
     KEY_BACKSPACE = 8,

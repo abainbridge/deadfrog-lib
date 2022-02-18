@@ -21,9 +21,9 @@ void StretchBlitMain() {
     ReleaseAssert(dogBmp, "Couldn't load marlieses_dog.bmp");
 
     // Animate the stretch blit.
-    while (!g_input.keyDowns[KEY_SPACE]) {
+    while (!g_window->input.keyDowns[KEY_SPACE]) {
         InputPoll();
-        if (g_window->windowClosed || g_input.keys[KEY_ESC])
+        if (g_window->windowClosed || g_window->input.keys[KEY_ESC])
             return;
 
         BitmapClear(g_window->bmp, g_colourBlack);
@@ -42,7 +42,7 @@ void StretchBlitMain() {
     }
 
     // Benchmark the stretch blit.
-    while (!g_window->windowClosed && !g_input.keys[KEY_ESC]) {
+    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC]) {
         InputPoll();
 
         BitmapClear(g_window->bmp, g_colourBlack);

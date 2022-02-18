@@ -40,7 +40,7 @@ void HelloWorldMain()
         UpdateWin();
         WaitVsync();
         if (g_window->windowClosed) return;
-        if (g_input.numKeyDowns > 0) break;
+        if (g_window->input.numKeyDowns > 0) break;
     }
 
 
@@ -70,6 +70,6 @@ void HelloWorldMain()
         UpdateWin();
         WaitVsync();
         if (g_window->windowClosed) return;
-        if (g_input.numKeyDowns > 0) break;
+        if (g_window->input.numKeyDowns > 0) break;
     }
 }

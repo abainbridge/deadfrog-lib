@@ -199,7 +199,7 @@ void GasMain()
     InitParticles();
 
     unsigned frameNum = 0;
-    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC])
     {
         BitmapClear(g_window->bmp, g_colourBlack);
         InputPoll();

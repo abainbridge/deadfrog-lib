@@ -541,7 +541,7 @@ static void HandleEvent() {
             unsigned char x11_keycode = platSpec->recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
             g_window->_private->m_newKeyDowns[df_keycode] = 1;
-            g_input.keys[df_keycode] = 1;
+            g_window->input.keys[df_keycode] = 1;
             int modifiers = platSpec->recvBuf[28];
             char ascii = dfKeycodeToAscii(df_keycode, modifiers);
     //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
@@ -558,7 +558,7 @@ static void HandleEvent() {
             unsigned char x11_keycode = platSpec->recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
             g_window->_private->m_newKeyUps[df_keycode] = 1;
-            g_input.keys[df_keycode] = 0;
+            g_window->input.keys[df_keycode] = 0;
     //printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
             break;
         }
@@ -566,13 +566,13 @@ static void HandleEvent() {
     case 4: // Mouse down button event (includes scroll motion).
         switch (platSpec->recvBuf[1]) {
             case 1:
-                g_input.lmb = 1;
+                g_window->input.lmb = 1;
     			g_window->_private->m_lmbPrivate = true;
                 break;
-            case 2: g_input.mmb = 1; break;
-            case 3: g_input.rmb = 1; break;
-            case 4: g_input.mouseZ++; break;
-            case 5: g_input.mouseZ--; break;
+            case 2: g_window->input.mmb = 1; break;
+            case 3: g_window->input.rmb = 1; break;
+            case 4: g_window->input.mouseZ++; break;
+            case 5: g_window->input.mouseZ--; break;
         }
         //printf("down:%i\n", platSpec->recvBuf[1]);
         break;
@@ -580,11 +580,11 @@ static void HandleEvent() {
     case 5: // Mouse button up event.
         switch (platSpec->recvBuf[1]) {
             case 1:
-                g_input.lmb = 0;
+                g_window->input.lmb = 0;
     			g_window->_private->m_lmbPrivate = false;
                 break;
-            case 2: g_input.mmb = 0; break;
-            case 3: g_input.rmb = 0; break;
+            case 2: g_window->input.mmb = 0; break;
+            case 3: g_window->input.rmb = 0; break;
         }
         //printf("up:%i\n", platSpec->recvBuf[1]);
         break;
@@ -594,8 +594,8 @@ static void HandleEvent() {
             int16_t *x = (int16_t*)&platSpec->recvBuf[24];
             int16_t *y = (int16_t*)&platSpec->recvBuf[26];
             //printf("detail:%i rx=%i ry=%i\n", platSpec->recvBuf[1], *x, *y);
-            g_input.mouseX = *x;
-            g_input.mouseY = *y;
+            g_window->input.mouseX = *x;
+            g_window->input.mouseY = *y;
             break;
         }
 

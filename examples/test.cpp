@@ -193,7 +193,7 @@ void TestFillConvexPolygon(DfBitmap *bmp)
     QuickBlit(g_window->bmp, 600, textY, backBmp); \
     UpdateWin(); \
     InputPoll(); \
-if (g_window->windowClosed || g_input.keyDowns[KEY_ESC]) return; \
+if (g_window->windowClosed || g_window->input.keyDowns[KEY_ESC]) return; \
     ClearClipRect(backBmp); \
     BitmapClear(backBmp, g_colourBlack); \
     SetClipRect(backBmp, 1, 1, backBmp->width - 2, backBmp->height - 2); \
@@ -251,7 +251,7 @@ void TestMain()
         "Press ESC to quit");
 
     UpdateWin();
-    while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
+    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
     {
         InputPoll();
         SleepMillisec(100);

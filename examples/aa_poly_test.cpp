@@ -94,7 +94,7 @@ void AaPolyTestMain()
     double avgDuration = 0.0;
     DfColour bgCol1 = Colour(200, 200, 200);
     DfColour bgCol2 = Colour(180, 180, 180);
-    while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
+    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
     {
         BitmapClear(g_window->bmp, bgCol1);
         BitmapClear(bmp, bgCol2);
@@ -108,12 +108,12 @@ void AaPolyTestMain()
         QuickBlit(g_window->bmp, 0, 0, bmp);
         ScaleUpBlit(g_window->bmp, 100, 0, 6, bmp);
 
-        xOffset -= g_input.keyDowns[KEY_LEFT];
-        xOffset += g_input.keyDowns[KEY_RIGHT];
-        yOffset -= g_input.keyDowns[KEY_UP];
-        yOffset += g_input.keyDowns[KEY_DOWN];
-        zoom += 0.01 * g_input.keyDowns[KEY_EQUALS];
-        zoom -= 0.01 * g_input.keyDowns[KEY_MINUS];
+        xOffset -= g_window->input.keyDowns[KEY_LEFT];
+        xOffset += g_window->input.keyDowns[KEY_RIGHT];
+        yOffset -= g_window->input.keyDowns[KEY_UP];
+        yOffset += g_window->input.keyDowns[KEY_DOWN];
+        zoom += 0.01 * g_window->input.keyDowns[KEY_EQUALS];
+        zoom -= 0.01 * g_window->input.keyDowns[KEY_MINUS];
 
         avgDuration = 0.99 * avgDuration + 0.01 * thisDuration;
         DrawTextLeft(g_defaultFont, g_colourBlack, g_window->bmp, 10, 110, "Duration = %.2f ms", avgDuration);

@@ -222,17 +222,17 @@ void HarmonographMain()
     InitPendula();
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC])
     {
         InputPoll();
         
-        if (g_input.keyDowns[KEY_SPACE])
+        if (g_window->input.keyDowns[KEY_SPACE])
         {
             InitPendula();
             BitmapClear(g_window->bmp, g_colourBlack);
             BitmapClear(g_bigBmp, g_colourBlack);
         }
-        if (g_input.keyDowns[KEY_S])
+        if (g_window->input.keyDowns[KEY_S])
         {
             SaveBmp(g_bigBmp, "foo.bmp");
         }

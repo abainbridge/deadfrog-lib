@@ -102,9 +102,9 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			break;
 
 		case WM_CHAR:
-			if (g_input.numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
-				!g_input.keys[KEY_CONTROL] &&
-				!g_input.keys[KEY_ALT] &&
+			if (g_window->input.numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
+				!g_window->input.keys[KEY_CONTROL] &&
+				!g_window->input.keys[KEY_ALT] &&
 				wParam != KEY_ESC)
 			{
                 ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_CHAR", wParam);
@@ -120,16 +120,16 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			g_window->_private->m_lmbPrivate = false;
 			break;
 		case WM_MBUTTONDOWN:
-			g_input.mmb = true;
+			g_window->input.mmb = true;
 			break;
 		case WM_MBUTTONUP:
-			g_input.mmb = false;
+			g_window->input.mmb = false;
 			break;
 		case WM_RBUTTONDOWN:
-			g_input.rmb = true;
+			g_window->input.rmb = true;
 			break;
 		case WM_RBUTTONUP:
-			g_input.rmb = false;
+			g_window->input.rmb = false;
 			break;
 
 		/* Mouse clicks in the Non-client area (ie titlebar) of the window are weird. If we
@@ -142,18 +142,18 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			g_window->_private->m_lastClickWasNC = true;
 			return -1;
 		case WM_NCMBUTTONDOWN:
-			g_input.mmb = true;
+			g_window->input.mmb = true;
 			g_window->_private->m_lastClickWasNC = true;
 			return -1;
 		case WM_NCRBUTTONDOWN:
-			g_input.rmb = true;
+			g_window->input.rmb = true;
 			g_window->_private->m_lastClickWasNC = true;
 			return -1;
 
 		case WM_MOUSEWHEEL:
 		{
 			int move = (short)HIWORD(wParam) / 120;
-			g_input.mouseZ += move;
+			g_window->input.mouseZ += move;
 			break;
 		}
 
@@ -165,14 +165,14 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
             if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
                 break;
 
-            g_input.keys[wParam] = 0;
+            g_window->input.keys[wParam] = 0;
             g_window->_private->m_newKeyUps[wParam] = 1;
             break;
 
 		case WM_SYSKEYDOWN:
 		{
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
-			g_input.keys[wParam] = 1;
+			g_window->input.keys[wParam] = 1;
 			g_window->_private->m_newKeyDowns[wParam] = 1;
 			break;
 		}
@@ -184,7 +184,7 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			// normal KEYUP event for the release of the ALT. Very strange.
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYUP", wParam);
             g_window->_private->m_newKeyUps[wParam] = 1;
-            g_input.keys[wParam] = 0;
+            g_window->input.keys[wParam] = 0;
 			break;
 		}
 
@@ -201,7 +201,7 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 
             if (wParam == KEY_DEL)
 			{
-                g_window->_private->m_newKeysTyped[g_input.numKeysTyped] = KEY_DEL;
+                g_window->_private->m_newKeysTyped[g_window->input.numKeysTyped] = KEY_DEL;
 				g_window->_private->m_newNumKeysTyped++;
 			}
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
@@ -211,7 +211,7 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
                 break;
             }
 			g_window->_private->m_newKeyDowns[wParam] = 1;
-			g_input.keys[wParam] = 1;
+			g_window->input.keys[wParam] = 1;
 			break;
         }
 
@@ -219,7 +219,7 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			return -1;
 	}
 
-    g_input.eventSinceAdvance = true;
+    g_window->input.eventSinceAdvance = true;
 
     return 0;
 }
@@ -244,15 +244,15 @@ bool InputPoll()
     {
         if (ScreenToClient(g_window->_private->platSpec->hWnd, &point))
         {
-            g_input.mouseX = point.x;
-            g_input.mouseY = point.y;
+            g_window->input.mouseX = point.x;
+            g_window->input.mouseY = point.y;
         }
     }
 
     InputPollInternal();
 
-    bool rv = g_input.eventSinceAdvance;
-    g_input.eventSinceAdvance = false;
+    bool rv = g_window->input.eventSinceAdvance;
+    g_window->input.eventSinceAdvance = false;
     return rv;
 }
 
@@ -293,8 +293,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 //             if ((wParam & 0xfff0) == SC_SIZE)
 //             {
 //                 GetWindowRect(g_window->_private->platSpec->hWnd, &g_rect);
-//                 xx = g_input.mouseX;
-//                 yy = g_input.mouseY;
+//                 xx = g_window->input.mouseX;
+//                 yy = g_window->input.mouseY;
 //                 moving = 1;
 //                 return 0;
 //             }
@@ -520,10 +520,10 @@ void SetMouseCursor(MouseCursorType t)
     // otherwise if your app sets the mouse cursor repeatedly, in the main loop 
     // say, then this would clash with the Windows' window manager setting the 
     // resizing cursor when the mouse was in the non-client rectangle.
-    if (g_input.mouseX < 0 ||
-        g_input.mouseX >= g_window->bmp->width ||
-        g_input.mouseY < 0 ||
-        g_input.mouseY >= g_window->bmp->height)
+    if (g_window->input.mouseX < 0 ||
+        g_window->input.mouseX >= g_window->bmp->width ||
+        g_window->input.mouseY < 0 ||
+        g_window->input.mouseY >= g_window->bmp->height)
     {
         return;
     }

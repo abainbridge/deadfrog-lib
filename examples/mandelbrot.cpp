@@ -43,14 +43,14 @@ void MandelbrotMain()
         if ((y & 7) == 7)
         {
             // Abort drawing the set if the user presses escape or clicks the close icon
-            if (g_window->windowClosed || g_input.keys[KEY_ESC])
+            if (g_window->windowClosed || g_window->input.keys[KEY_ESC])
                 return;
             UpdateWin();
         }
     }
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_input.keys[KEY_ESC])
+    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC])
     {
         InputPoll();
         SleepMillisec(100);

@@ -92,18 +92,18 @@ void Sierpinski3DMain()
 
     CreateSierpinski3D();
 
-    while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
+    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
     {
         BitmapClear(g_window->bmp, g_colourBlack);
         InputPoll();
 
-        if (g_input.keys[KEY_UP])
+        if (g_window->input.keys[KEY_UP])
             g_cameraPos.z += 20.0f * g_window->advanceTime;
-        if (g_input.keys[KEY_DOWN])
+        if (g_window->input.keys[KEY_DOWN])
             g_cameraPos.z -= 20.0f * g_window->advanceTime;
-        if (g_input.keys[KEY_LEFT])
+        if (g_window->input.keys[KEY_LEFT])
             g_rotationX += 0.9f * g_window->advanceTime;
-        if (g_input.keys[KEY_RIGHT])
+        if (g_window->input.keys[KEY_RIGHT])
             g_rotationX -= 0.9f * g_window->advanceTime;
 
         Render();

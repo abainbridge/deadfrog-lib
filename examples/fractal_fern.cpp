@@ -23,7 +23,7 @@ void FractalFernMain()
     double y = 0;
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_input.keyDowns[KEY_ESC])
+    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
     {
         InputPoll();
 
