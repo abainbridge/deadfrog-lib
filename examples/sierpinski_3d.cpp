@@ -44,12 +44,12 @@ static void CreateSierpinski3D()
 }
 
 
-static void Render()
+static void Render(DfWindow *win)
 {
-    float scale = 1.0f * g_window->bmp->width;
+    float scale = 1.0f * win->bmp->width;
 
-    float halfWidth = g_window->bmp->width / 2;
-    float halfHeight = g_window->bmp->height / 2;
+    float halfWidth = win->bmp->width / 2;
+    float halfHeight = win->bmp->height / 2;
 
     float cosRotX = cos(g_rotationX);
     float sinRotX = sin(g_rotationX);
@@ -71,11 +71,11 @@ static void Render()
         unsigned x = p.x * tmp + halfWidth;
         unsigned y = -p.z * tmp + halfHeight;
 
-        if (x < g_window->bmp->width && y < g_window->bmp->height)
+        if (x < win->bmp->width && y < win->bmp->height)
         {
             unsigned brightness = 15;
             unsigned char invA = 255 - brightness;
-            DfColour *pixel = &g_window->bmp->pixels[y * g_window->bmp->width] + x;
+            DfColour *pixel = &win->bmp->pixels[y * win->bmp->width] + x;
             pixel->r = (pixel->r * invA + 255 * brightness) >> 8;
             pixel->g = pixel->r;
             pixel->b = pixel->r;
@@ -86,32 +86,32 @@ static void Render()
 
 void Sierpinski3DMain()
 {
-    CreateWin(800, 600, WT_WINDOWED, "Sierpinski Gasket Example");
-    BitmapClear(g_window->bmp, g_colourBlack);
+    DfWindow *win = CreateWin(800, 600, WT_WINDOWED, "Sierpinski Gasket Example");
+    BitmapClear(win->bmp, g_colourBlack);
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     CreateSierpinski3D();
 
-    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
+    while (!win->windowClosed && !win->input.keyDowns[KEY_ESC])
     {
-        BitmapClear(g_window->bmp, g_colourBlack);
-        InputPoll();
+        BitmapClear(win->bmp, g_colourBlack);
+        InputPoll(win);
 
-        if (g_window->input.keys[KEY_UP])
-            g_cameraPos.z += 20.0f * g_window->advanceTime;
-        if (g_window->input.keys[KEY_DOWN])
-            g_cameraPos.z -= 20.0f * g_window->advanceTime;
-        if (g_window->input.keys[KEY_LEFT])
-            g_rotationX += 0.9f * g_window->advanceTime;
-        if (g_window->input.keys[KEY_RIGHT])
-            g_rotationX -= 0.9f * g_window->advanceTime;
+        if (win->input.keys[KEY_UP])
+            g_cameraPos.z += 20.0f * win->advanceTime;
+        if (win->input.keys[KEY_DOWN])
+            g_cameraPos.z -= 20.0f * win->advanceTime;
+        if (win->input.keys[KEY_LEFT])
+            g_rotationX += 0.9f * win->advanceTime;
+        if (win->input.keys[KEY_RIGHT])
+            g_rotationX -= 0.9f * win->advanceTime;
 
-        Render();
+        Render(win);
 
         // Draw frames per second counter
-        DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
+        DrawTextRight(font, g_colourWhite, win->bmp, win->bmp->width - 5, 0, "FPS:%i", win->fps);
 
-        UpdateWin();
+        UpdateWin(win);
 //        WaitVsync();
     }
 }

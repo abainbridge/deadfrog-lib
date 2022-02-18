@@ -277,13 +277,13 @@ double CalcBillionPolyFillPixelsPerSec(DfBitmap *bmp)
 }
 
 
-double CalcWindowUpdatesPerSecond()
+double CalcWindowUpdatesPerSecond(DfWindow *win)
 {
     g_iterations = 500;
     double startTime = GetRealTime();
     for (unsigned i = 0; i < g_iterations; i++)
     {
-        UpdateWin();
+        UpdateWin(win);
     }
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
@@ -293,12 +293,12 @@ double CalcWindowUpdatesPerSecond()
 
 
 #define END_TEST \
-    QuickBlit(g_window->bmp, 600, textY, backBmp); \
-    UpdateWin(); \
-    InputPoll(); \
-    if (g_window->windowClosed || g_window->input.keyDowns[KEY_ESC]) return; \
+    QuickBlit(win->bmp, 600, textY, backBmp); \
+    UpdateWin(win); \
+    InputPoll(win); \
+    if (win->windowClosed || win->input.keyDowns[KEY_ESC]) return; \
     BitmapClear(backBmp, g_colourBlack); \
-    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY, "%-42s %7.2f %5.2f %9u", g_testFmtString, score, g_duration, g_iterations); \
+    DrawTextLeft(font, g_colourWhite, win->bmp, 10, textY, "%-42s %7.2f %5.2f %9u", g_testFmtString, score, g_duration, g_iterations); \
     fprintf(file, "%-42s %7.2f %6.2f %9u\n", g_testFmtString, score, g_duration, g_iterations); \
     textY += yInc;
 
@@ -308,8 +308,8 @@ void BenchmarkMain()
     FILE *file = fopen("report.txt", "w");
     ReleaseAssert(file, "Couldn't open report.txt");
 
-	CreateWin(1024, 768, WT_WINDOWED, "Benchmark");
-    BitmapClear(g_window->bmp, g_colourBlack);
+    DfWindow *win = CreateWin(1024, 768, WT_WINDOWED, "Benchmark");
+    BitmapClear(win->bmp, g_colourBlack);
 
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
     DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
@@ -317,7 +317,7 @@ void BenchmarkMain()
     DfBitmap *backBmp = BitmapCreate(1920, 1200);
     BitmapClear(backBmp, g_colourBlack);
 
-    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "%-42s %7s %5s %9s", "", "Result", "Time", "Iterations");
+    DrawTextLeft(font, g_colourWhite, win->bmp, 10, 10, "%-42s %7s %5s %9s", "", "Result", "Time", "Iterations");
     
     int textY = 30;
     int yInc = font->charHeight * 4;
@@ -364,19 +364,19 @@ void BenchmarkMain()
     END_TEST;
 
     // Window updates
-    score = CalcWindowUpdatesPerSecond();
+    score = CalcWindowUpdatesPerSecond(win);
     END_TEST;
 
     fclose(file);
 
     textY += yInc;
-    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
+    DrawTextLeft(font, g_colourWhite, win->bmp, 10, textY,
         "Press ESC to quit");
 
-    UpdateWin();
-    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
+    UpdateWin(win);
+    while (!win->windowClosed && !win->input.keyDowns[KEY_ESC])
     {
-		InputPoll();
+		InputPoll(win);
         SleepMillisec(100);
     }
 }

@@ -44,25 +44,22 @@ struct _DfWindowPrivate
 };
 
 
-DfWindow *g_window = NULL;
+static void InitInput(DfWindow *);
+static void InputPollInternal(DfWindow *win);
 
 
-static void InitInput();
-static void InputPollInternal();
-
-
-static void HandleFocusInEvent()
+static void HandleFocusInEvent(DfWindow *win)
 {
-    g_window->input.windowHasFocus = true;
-    memset(g_window->_private->m_newKeyDowns, 0, KEY_MAX);
-    memset(g_window->_private->m_newKeyUps, 0, KEY_MAX);
-    memset(g_window->input.keys, 0, KEY_MAX);
+    win->input.windowHasFocus = true;
+    memset(win->_private->m_newKeyDowns, 0, KEY_MAX);
+    memset(win->_private->m_newKeyUps, 0, KEY_MAX);
+    memset(win->input.keys, 0, KEY_MAX);
 }
 
 
-static void HandleFocusOutEvent()
+static void HandleFocusOutEvent(DfWindow *win)
 {
-    g_window->input.windowHasFocus = false;
+    win->input.windowHasFocus = false;
 }
 
 
@@ -73,10 +70,10 @@ static void HandleFocusOutEvent()
 #endif
 
 
-static void InitInput()
+static void InitInput(DfWindow *win)
 {
-    g_window->input.eventSinceAdvance = true;
-    g_window->input.windowHasFocus = true;
+    win->input.eventSinceAdvance = true;
+    win->input.windowHasFocus = true;
 }
 
 
@@ -188,14 +185,14 @@ int GetKeyId(char const *name)
 }
 
 
-bool UntypeKey(char key)
+bool UntypeKey(DfWindow *win, char key)
 {
-    for (int i = 0; i < g_window->input.numKeysTyped; ++i)
+    for (int i = 0; i < win->input.numKeysTyped; ++i)
     {
-        if (g_window->input.keysTyped[i] == key)
+        if (win->input.keysTyped[i] == key)
         {
-            g_window->input.keysTyped[i] = g_window->input.keysTyped[g_window->input.numKeysTyped - 1];
-            g_window->input.numKeysTyped--;
+            win->input.keysTyped[i] = win->input.keysTyped[win->input.numKeysTyped - 1];
+            win->input.numKeysTyped--;
             return true;
         }
     }
@@ -204,106 +201,106 @@ bool UntypeKey(char key)
 }
 
 
-static void InputPollInternal()
+static void InputPollInternal(DfWindow *win)
 {
-    memcpy(g_window->input.keyDowns, g_window->_private->m_newKeyDowns, KEY_MAX);
-    memset(g_window->_private->m_newKeyDowns, 0, KEY_MAX);
-    memcpy(g_window->input.keyUps, g_window->_private->m_newKeyUps, KEY_MAX);
-    memset(g_window->_private->m_newKeyUps, 0, KEY_MAX);
+    memcpy(win->input.keyDowns, win->_private->m_newKeyDowns, KEY_MAX);
+    memset(win->_private->m_newKeyDowns, 0, KEY_MAX);
+    memcpy(win->input.keyUps, win->_private->m_newKeyUps, KEY_MAX);
+    memset(win->_private->m_newKeyUps, 0, KEY_MAX);
 
-	g_window->input.numKeysTyped = g_window->_private->m_newNumKeysTyped;
-	memcpy(g_window->input.keysTyped, g_window->_private->m_newKeysTyped, g_window->_private->m_newNumKeysTyped);
-	g_window->_private->m_newNumKeysTyped = 0;
+	win->input.numKeysTyped = win->_private->m_newNumKeysTyped;
+	memcpy(win->input.keysTyped, win->_private->m_newKeysTyped, win->_private->m_newNumKeysTyped);
+	win->_private->m_newNumKeysTyped = 0;
 
     // Count the number of key ups and downs this frame
-    g_window->input.numKeyDowns = 0;
-    g_window->input.numKeyUps = 0;
+    win->input.numKeyDowns = 0;
+    win->input.numKeyUps = 0;
     for (int i = 0; i < KEY_MAX; ++i)
     {
-        if (g_window->input.keyUps[i]) g_window->input.numKeyUps++;
-        if (g_window->input.keyDowns[i]) g_window->input.numKeyDowns++;
+        if (win->input.keyUps[i]) win->input.numKeyUps++;
+        if (win->input.keyDowns[i]) win->input.numKeyDowns++;
     }
 
-    g_window->input.lmb = g_window->_private->m_lmbPrivate;
-    g_window->input.lmbClicked = g_window->input.lmb == true && g_window->_private->m_lmbOld == false;
-	g_window->input.mmbClicked = g_window->input.mmb == true && g_window->_private->m_mmbOld == false;
-	g_window->input.rmbClicked = g_window->input.rmb == true && g_window->_private->m_rmbOld == false;
-	g_window->input.lmbUnClicked = g_window->input.lmb == false && g_window->_private->m_lmbOld == true;
-	g_window->input.mmbUnClicked = g_window->input.mmb == false && g_window->_private->m_mmbOld == true;
-	g_window->input.rmbUnClicked = g_window->input.rmb == false && g_window->_private->m_rmbOld == true;
-	g_window->_private->m_lmbOld = g_window->input.lmb;
-	g_window->_private->m_mmbOld = g_window->input.mmb;
-	g_window->_private->m_rmbOld = g_window->input.rmb;
+    win->input.lmb = win->_private->m_lmbPrivate;
+    win->input.lmbClicked = win->input.lmb == true && win->_private->m_lmbOld == false;
+	win->input.mmbClicked = win->input.mmb == true && win->_private->m_mmbOld == false;
+	win->input.rmbClicked = win->input.rmb == true && win->_private->m_rmbOld == false;
+	win->input.lmbUnClicked = win->input.lmb == false && win->_private->m_lmbOld == true;
+	win->input.mmbUnClicked = win->input.mmb == false && win->_private->m_mmbOld == true;
+	win->input.rmbUnClicked = win->input.rmb == false && win->_private->m_rmbOld == true;
+	win->_private->m_lmbOld = win->input.lmb;
+	win->_private->m_mmbOld = win->input.mmb;
+	win->_private->m_rmbOld = win->input.rmb;
 
-	g_window->input.lmbDoubleClicked = false;
-	if (g_window->input.lmbClicked)
+	win->input.lmbDoubleClicked = false;
+	if (win->input.lmbClicked)
 	{
  		double timeNow = GetRealTime();
-		double delta = timeNow - g_window->_private->m_lastClickTime;
+		double delta = timeNow - win->_private->m_lastClickTime;
 		if (delta < 0.25)
 		{
-			g_window->input.lmbDoubleClicked = true;
-			g_window->input.lmbClicked = false;
+			win->input.lmbDoubleClicked = true;
+			win->input.lmbClicked = false;
 		}
-		g_window->_private->m_lastClickTime = timeNow;
-		g_window->_private->m_lmbRepeatsSoFar = 0;
+		win->_private->m_lastClickTime = timeNow;
+		win->_private->m_lmbRepeatsSoFar = 0;
 	}
 
 	// Generate fake mouse up event(s) to compensate for the fact that Windows won't send
 	// them if the last mouse down event was in the client area.
-	if (g_window->_private->m_lastClickWasNC)
+	if (win->_private->m_lastClickWasNC)
 	{
-		g_window->_private->m_lastClickWasNC = false;
-		g_window->_private->m_lmbPrivate = false;
-		g_window->input.mmb = false;
-		g_window->input.rmb = false;
+		win->_private->m_lastClickWasNC = false;
+		win->_private->m_lmbPrivate = false;
+		win->input.mmb = false;
+		win->input.rmb = false;
 	}
 
-	g_window->input.mouseVelX = g_window->input.mouseX - g_window->_private->m_mouseOldX;
-	g_window->input.mouseVelY = g_window->input.mouseY - g_window->_private->m_mouseOldY;
-	g_window->input.mouseVelZ = g_window->input.mouseZ - g_window->_private->m_mouseOldZ;
-	g_window->_private->m_mouseOldX = g_window->input.mouseX;
-	g_window->_private->m_mouseOldY = g_window->input.mouseY;
-	g_window->_private->m_mouseOldZ = g_window->input.mouseZ;
+	win->input.mouseVelX = win->input.mouseX - win->_private->m_mouseOldX;
+	win->input.mouseVelY = win->input.mouseY - win->_private->m_mouseOldY;
+	win->input.mouseVelZ = win->input.mouseZ - win->_private->m_mouseOldZ;
+	win->_private->m_mouseOldX = win->input.mouseX;
+	win->_private->m_mouseOldY = win->input.mouseY;
+	win->_private->m_mouseOldZ = win->input.mouseZ;
 }
 
 
-void UpdateWin()
+void UpdateWin(DfWindow *win)
 {
     // *** FPS Meter ***
 
-    g_window->_private->framesThisSecond++;
+    win->_private->framesThisSecond++;
 
     double currentTime = GetRealTime();
-    if (currentTime > g_window->_private->endOfSecond)
+    if (currentTime > win->_private->endOfSecond)
     {
         // If program has been paused by a debugger, skip the seconds we missed
-        if (currentTime > g_window->_private->endOfSecond + 2.0)
-            g_window->_private->endOfSecond = currentTime + 1.0;
+        if (currentTime > win->_private->endOfSecond + 2.0)
+            win->_private->endOfSecond = currentTime + 1.0;
         else
-            g_window->_private->endOfSecond += 1.0;
-        g_window->fps = g_window->_private->framesThisSecond;
-        g_window->_private->framesThisSecond = 0;
+            win->_private->endOfSecond += 1.0;
+        win->fps = win->_private->framesThisSecond;
+        win->_private->framesThisSecond = 0;
     }
-    else if (g_window->_private->endOfSecond > currentTime + 2.0)
+    else if (win->_private->endOfSecond > currentTime + 2.0)
     {
-        g_window->_private->endOfSecond = currentTime + 1.0;
+        win->_private->endOfSecond = currentTime + 1.0;
     }
 
 
     // *** Advance time ***
 
-    g_window->advanceTime = currentTime - g_window->_private->lastUpdateTime;
-    g_window->_private->lastUpdateTime = currentTime;
+    win->advanceTime = currentTime - win->_private->lastUpdateTime;
+    win->_private->lastUpdateTime = currentTime;
 
 
     // *** Swap buffers ***
 
-    BlitBitmapToWindow(g_window);
+    BlitBitmapToWindow(win);
 }
 
 
-void RegisterRedrawCallback(RedrawCallback *proc)
+void RegisterRedrawCallback(DfWindow *win, RedrawCallback *proc)
 {
-    g_window->redrawCallback = proc;
+    win->redrawCallback = proc;
 }

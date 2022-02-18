@@ -10,22 +10,22 @@ void FractalFernMain()
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-//    CreateWin(width - 200, height - 100, WT_WINDOWED, "Fractal Fern");
-    CreateWin(width, height, WT_FULLSCREEN, "Fractal Fern");
-    HideMouse();
+//    DfWindow *win = CreateWin(width - 200, height - 100, WT_WINDOWED, "Fractal Fern");
+    DfWindow *win = CreateWin(width, height, WT_FULLSCREEN, "Fractal Fern");
+    HideMouse(win);
 
     int antialiasFactor = 3;
-    unsigned bw = g_window->bmp->width * antialiasFactor;
-    DfBitmap *bmp = BitmapCreate(bw, g_window->bmp->height * antialiasFactor);
+    unsigned bw = win->bmp->width * antialiasFactor;
+    DfBitmap *bmp = BitmapCreate(bw, win->bmp->height * antialiasFactor);
     BitmapClear(bmp, g_colourBlack);
     double scale = bmp->width * 0.09;
     double x = 0;
     double y = 0;
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
+    while (!win->windowClosed && !win->input.keyDowns[KEY_ESC])
     {
-        InputPoll();
+        InputPoll(win);
 
         for (int i = 0; i < 400000; i++) {
             int rnd = rand() % 100;
@@ -53,7 +53,7 @@ void FractalFernMain()
             PutPixUnclipped(bmp, scale * (y + 0.56), scale * (x + 3.3), Colour(60, 255, 20, 10));
         }
 
-        ScaleDownBlit(g_window->bmp, 0, 0, antialiasFactor, bmp);
-        UpdateWin();
+        ScaleDownBlit(win->bmp, 0, 0, antialiasFactor, bmp);
+        UpdateWin(win);
     }
 }

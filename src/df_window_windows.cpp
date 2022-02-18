@@ -39,7 +39,7 @@ static DwmFlushFunc *g_dwmFlush = NULL;
 
 static __declspec(thread) DfWindow *g_newWindow = NULL;
 enum { MAX_NUM_WINDOWS = 8 };
-DfWindow *g_windows[MAX_NUM_WINDOWS] = { 0 };
+static DfWindow *g_windows[MAX_NUM_WINDOWS] = { 0 };
 
 DfWindow *GetWindowFromHWnd(HWND hWnd)
 {
@@ -73,7 +73,7 @@ DfWindow *GetWindowFromHWnd(HWND hWnd)
 
 
 // Returns 0 if the event is handled here, -1 otherwise
-static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
+static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam, int lParam)
 {
     static char const *s_keypressOutOfRangeMsg = "Keypress value out of range (%s: wParam = %d)";
 
@@ -95,41 +95,41 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
             }
 
         case WM_SETFOCUS:
-            HandleFocusInEvent();
+            HandleFocusInEvent(win);
             return -1;
 		case WM_KILLFOCUS:
-            HandleFocusOutEvent();
+            HandleFocusOutEvent(win);
 			break;
 
 		case WM_CHAR:
-			if (g_window->input.numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
-				!g_window->input.keys[KEY_CONTROL] &&
-				!g_window->input.keys[KEY_ALT] &&
+			if (win->input.numKeysTyped < MAX_KEYS_TYPED_PER_FRAME &&
+				!win->input.keys[KEY_CONTROL] &&
+				!win->input.keys[KEY_ALT] &&
 				wParam != KEY_ESC)
 			{
                 ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_CHAR", wParam);
-				g_window->_private->m_newKeysTyped[g_window->_private->m_newNumKeysTyped] = wParam;
-				g_window->_private->m_newNumKeysTyped++;
+				win->_private->m_newKeysTyped[win->_private->m_newNumKeysTyped] = wParam;
+				win->_private->m_newNumKeysTyped++;
 			}
 			break;
 
 		case WM_LBUTTONDOWN:
-			g_window->_private->m_lmbPrivate = true;
+			win->_private->m_lmbPrivate = true;
 			break;
 		case WM_LBUTTONUP:
-			g_window->_private->m_lmbPrivate = false;
+			win->_private->m_lmbPrivate = false;
 			break;
 		case WM_MBUTTONDOWN:
-			g_window->input.mmb = true;
+			win->input.mmb = true;
 			break;
 		case WM_MBUTTONUP:
-			g_window->input.mmb = false;
+			win->input.mmb = false;
 			break;
 		case WM_RBUTTONDOWN:
-			g_window->input.rmb = true;
+			win->input.rmb = true;
 			break;
 		case WM_RBUTTONUP:
-			g_window->input.rmb = false;
+			win->input.rmb = false;
 			break;
 
 		/* Mouse clicks in the Non-client area (ie titlebar) of the window are weird. If we
@@ -138,22 +138,22 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 		   never sends us the button up event. I've chosen the second option and fix some of
 		   the brokenness by generating a fake up event one frame after the down event. */
 		case WM_NCLBUTTONDOWN:
-			g_window->_private->m_lmbPrivate = true;
-			g_window->_private->m_lastClickWasNC = true;
+			win->_private->m_lmbPrivate = true;
+			win->_private->m_lastClickWasNC = true;
 			return -1;
 		case WM_NCMBUTTONDOWN:
-			g_window->input.mmb = true;
-			g_window->_private->m_lastClickWasNC = true;
+			win->input.mmb = true;
+			win->_private->m_lastClickWasNC = true;
 			return -1;
 		case WM_NCRBUTTONDOWN:
-			g_window->input.rmb = true;
-			g_window->_private->m_lastClickWasNC = true;
+			win->input.rmb = true;
+			win->_private->m_lastClickWasNC = true;
 			return -1;
 
 		case WM_MOUSEWHEEL:
 		{
 			int move = (short)HIWORD(wParam) / 120;
-			g_window->input.mouseZ += move;
+			win->input.mouseZ += move;
 			break;
 		}
 
@@ -165,15 +165,15 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
             if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
                 break;
 
-            g_window->input.keys[wParam] = 0;
-            g_window->_private->m_newKeyUps[wParam] = 1;
+            win->input.keys[wParam] = 0;
+            win->_private->m_newKeyUps[wParam] = 1;
             break;
 
 		case WM_SYSKEYDOWN:
 		{
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
-			g_window->input.keys[wParam] = 1;
-			g_window->_private->m_newKeyDowns[wParam] = 1;
+			win->input.keys[wParam] = 1;
+			win->_private->m_newKeyDowns[wParam] = 1;
 			break;
 		}
 
@@ -183,8 +183,8 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			// Windows will generate a SYSKEYUP event for the release of F, and a
 			// normal KEYUP event for the release of the ALT. Very strange.
 			ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYUP", wParam);
-            g_window->_private->m_newKeyUps[wParam] = 1;
-            g_window->input.keys[wParam] = 0;
+            win->_private->m_newKeyUps[wParam] = 1;
+            win->input.keys[wParam] = 0;
 			break;
 		}
 
@@ -201,8 +201,8 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 
             if (wParam == KEY_DEL)
 			{
-                g_window->_private->m_newKeysTyped[g_window->input.numKeysTyped] = KEY_DEL;
-				g_window->_private->m_newNumKeysTyped++;
+                win->_private->m_newKeysTyped[win->input.numKeysTyped] = KEY_DEL;
+				win->_private->m_newNumKeysTyped++;
 			}
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0)
             {
@@ -210,8 +210,8 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
                 // will be an event for the alt part too.
                 break;
             }
-			g_window->_private->m_newKeyDowns[wParam] = 1;
-			g_window->input.keys[wParam] = 1;
+			win->_private->m_newKeyDowns[wParam] = 1;
+			win->input.keys[wParam] = 1;
 			break;
         }
 
@@ -219,13 +219,13 @@ static int EventHandler(unsigned int message, unsigned int wParam, int lParam)
 			return -1;
 	}
 
-    g_window->input.eventSinceAdvance = true;
+    win->input.eventSinceAdvance = true;
 
     return 0;
 }
 
 
-bool InputPoll()
+bool InputPoll(DfWindow *win)
 {
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) 
@@ -242,17 +242,17 @@ bool InputPoll()
     POINT point;
     if (GetCursorPos(&point) != 0)
     {
-        if (ScreenToClient(g_window->_private->platSpec->hWnd, &point))
+        if (ScreenToClient(win->_private->platSpec->hWnd, &point))
         {
-            g_window->input.mouseX = point.x;
-            g_window->input.mouseY = point.y;
+            win->input.mouseX = point.x;
+            win->input.mouseY = point.y;
         }
     }
 
-    InputPollInternal();
+    InputPollInternal(win);
 
-    bool rv = g_window->input.eventSinceAdvance;
-    g_window->input.eventSinceAdvance = false;
+    bool rv = win->input.eventSinceAdvance;
+    win->input.eventSinceAdvance = false;
     return rv;
 }
 
@@ -292,9 +292,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 //         case WM_SYSCOMMAND:
 //             if ((wParam & 0xfff0) == SC_SIZE)
 //             {
-//                 GetWindowRect(g_window->_private->platSpec->hWnd, &g_rect);
-//                 xx = g_window->input.mouseX;
-//                 yy = g_window->input.mouseY;
+//                 GetWindowRect(win->_private->platSpec->hWnd, &g_rect);
+//                 xx = win->input.mouseX;
+//                 yy = win->input.mouseY;
 //                 moving = 1;
 //                 return 0;
 //             }
@@ -311,13 +311,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 // dragging the frame. We know the cursor is in our client area,
                 // rather than someone else's, because this event is only sent if
                 // the cursor is over our window.
-                SetMouseCursor(g_window->_private->platSpec->currentMouseCursorType);
+                SetMouseCursor(win, win->_private->platSpec->currentMouseCursorType);
                 break;
             }
             goto _default; // Pretend we didn't handle this message.
 
         case WM_DROPFILES:
-            if (g_window->fileDropCallback)
+            if (win->fileDropCallback)
             {
                 HDROP drop = (HDROP)wParam;
                 int numFiles = DragQueryFile(drop, -1, NULL, 0);
@@ -325,7 +325,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 {
                     char buf[MAX_PATH + 1];
                     DragQueryFile(drop, i, buf, MAX_PATH);
-                    g_window->fileDropCallback(buf);
+                    win->fileDropCallback(buf);
                 }
             }
             break;
@@ -344,9 +344,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             int w = LOWORD(lParam);
             int h = HIWORD(lParam);
             win->bmp = BitmapCreate(w, h);
-            if (g_window->redrawCallback)
+            if (win->redrawCallback)
             {
-                g_window->redrawCallback();
+                win->redrawCallback();
             }
             break;
         }
@@ -358,7 +358,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         _default:
 		default:
-			if (!win || EventHandler(message, wParam, lParam) == -1)
+			if (!win || EventHandler(win, message, wParam, lParam) == -1)
 				return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 
@@ -383,27 +383,24 @@ bool GetDesktopRes(int *width, int *height)
 }
 
 
-bool CreateWin(int width, int height, WindowType winType, char const *winName)
+DfWindow *CreateWin(int width, int height, WindowType winType, char const *winName)
 {
     return CreateWinPos(CW_USEDEFAULT, CW_USEDEFAULT, width, height, winType, winName);
 }
 
 
-bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char const *winName)
+DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, char const *winName)
 {
-	if (g_window)
-        return false;
-
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
-    DfWindow *wd = g_window = new DfWindow;
-	memset(wd, 0, sizeof(DfWindow));
-    wd->_private = new DfWindowPrivate;
-    memset(wd->_private, 0, sizeof(DfWindowPrivate));
-    wd->_private->platSpec = new WindowPlatformSpecific;
-    wd->_private->platSpec->currentMouseCursorType = MCT_ARROW;
+    DfWindow *win = new DfWindow;
+	memset(win, 0, sizeof(DfWindow));
+    win->_private = new DfWindowPrivate;
+    memset(win->_private, 0, sizeof(DfWindowPrivate));
+    win->_private->platSpec = new WindowPlatformSpecific;
+    win->_private->platSpec->currentMouseCursorType = MCT_ARROW;
 
-    g_newWindow = wd;
+    g_newWindow = win;
 
 	width = ClampInt(width, 100, 4000);
 	height = ClampInt(height, 100, 4000);
@@ -415,7 +412,7 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 	wc.lpszClassName = winName;
 	RegisterClass(&wc);
 
-    wd->bmp = BitmapCreate(width, height);
+    win->bmp = BitmapCreate(width, height);
 
     unsigned windowStyle = WS_VISIBLE;
 	if (winType == WT_WINDOWED)
@@ -452,25 +449,26 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
 		NULL, NULL, 0, NULL);
 
     double now = GetRealTime();
-    g_window->_private->lastUpdateTime = now;
-    g_window->_private->endOfSecond = now + 1.0;
+    win->_private->lastUpdateTime = now;
+    win->_private->endOfSecond = now + 1.0;
 
     HMODULE dwm = LoadLibrary("dwmapi.dll");
     g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
 
     // Register as a drag-and-drop target.
-    DragAcceptFiles(wd->_private->platSpec->hWnd, true);
+    DragAcceptFiles(win->_private->platSpec->hWnd, true);
 
-    InitInput();
-	return true;
+    InitInput(win);
+
+    return win;
 }
 
 
 // This function copies a DfBitmap to the window, so you can actually see it.
 // SetBIBitsToDevice seems to be the fastest way to achieve this on most hardware.
-static void BlitBitmapToWindow(DfWindow *wd)
+static void BlitBitmapToWindow(DfWindow *win)
 {
-    DfBitmap *bmp = wd->bmp;
+    DfBitmap *bmp = win->bmp;
     BITMAPINFO binfo;
     binfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     binfo.bmiHeader.biWidth = bmp->width;
@@ -484,7 +482,7 @@ static void BlitBitmapToWindow(DfWindow *wd)
     binfo.bmiHeader.biClrUsed = 0;
     binfo.bmiHeader.biClrImportant = 0;
 
-    HDC dc = GetDC(g_window->_private->platSpec->hWnd);
+    HDC dc = GetDC(win->_private->platSpec->hWnd);
 
     SetDIBitsToDevice(dc,
         0, 0, bmp->width, bmp->height,
@@ -492,38 +490,38 @@ static void BlitBitmapToWindow(DfWindow *wd)
         bmp->pixels, &binfo, DIB_RGB_COLORS
     );
 
-    ReleaseDC(g_window->_private->platSpec->hWnd, dc);
+    ReleaseDC(win->_private->platSpec->hWnd, dc);
 }
 
 
-void *GetWindowHandle()
+void *GetWindowHandle(DfWindow *win)
 {
-    return g_window->_private->platSpec->hWnd;
+    return win->_private->platSpec->hWnd;
 }
 
 
-void ShowMouse()
+void ShowMouse(DfWindow *)
 {
 	ShowCursor(true);
 }
 
 
-void HideMouse()
+void HideMouse(DfWindow *)
 {
 	ShowCursor(false);
 }
 
 
-void SetMouseCursor(MouseCursorType t)
+void SetMouseCursor(DfWindow *win, MouseCursorType t)
 {
     // Ignore the request if the cursor is outside the client rectangle because
     // otherwise if your app sets the mouse cursor repeatedly, in the main loop 
     // say, then this would clash with the Windows' window manager setting the 
     // resizing cursor when the mouse was in the non-client rectangle.
-    if (g_window->input.mouseX < 0 ||
-        g_window->input.mouseX >= g_window->bmp->width ||
-        g_window->input.mouseY < 0 ||
-        g_window->input.mouseY >= g_window->bmp->height)
+    if (win->input.mouseX < 0 ||
+        win->input.mouseX >= win->bmp->width ||
+        win->input.mouseY < 0 ||
+        win->input.mouseY >= win->bmp->height)
     {
         return;
     }
@@ -544,60 +542,60 @@ void SetMouseCursor(MouseCursorType t)
         break;
     }
 
-    g_window->_private->platSpec->currentMouseCursorType = t;
+    win->_private->platSpec->currentMouseCursorType = t;
 }
 
 
-void SetWindowIcon()
+void SetWindowIcon(DfWindow *win)
 {
     HINSTANCE hInstance = GetModuleHandle(0);
 	HANDLE hIcon = LoadImageA(hInstance, "#101", IMAGE_ICON, 16, 16, 0);
     if (hIcon)
     {
-        SendMessage(g_window->_private->platSpec->hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-        SendMessage(g_window->_private->platSpec->hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(win->_private->platSpec->hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage(win->_private->platSpec->hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
     }
 	hIcon = LoadImageA(hInstance, "#101", IMAGE_ICON, 32, 32, 0);
     if (hIcon)
     {
-        SendMessage(g_window->_private->platSpec->hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(win->_private->platSpec->hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 	}
 }
 
 
 
-bool IsWindowMaximized()
+bool IsWindowMaximized(DfWindow *win)
 {
     WINDOWPLACEMENT winPlacement;
     winPlacement.length = sizeof(WINDOWPLACEMENT);
-    GetWindowPlacement(g_window->_private->platSpec->hWnd, &winPlacement);
+    GetWindowPlacement(win->_private->platSpec->hWnd, &winPlacement);
     return winPlacement.showCmd == SW_SHOWMAXIMIZED;
 }
 
 
-void SetMaximizedState(bool maximize)
+void SetMaximizedState(DfWindow *win, bool maximize)
 {
     if (maximize)
     {
-        ShowWindow(g_window->_private->platSpec->hWnd, SW_MAXIMIZE);
+        ShowWindow(win->_private->platSpec->hWnd, SW_MAXIMIZE);
     }
     else
     {
-        ShowWindow(g_window->_private->platSpec->hWnd, SW_RESTORE);
+        ShowWindow(win->_private->platSpec->hWnd, SW_RESTORE);
     }
 }
 
 
-void BringWindowToFront()
+void BringWindowToFront(DfWindow *win)
 {
-    BringWindowToTop(g_window->_private->platSpec->hWnd);
-    SetForegroundWindow(g_window->_private->platSpec->hWnd);
+    BringWindowToTop(win->_private->platSpec->hWnd);
+    SetForegroundWindow(win->_private->platSpec->hWnd);
 }
 
 
-void SetWindowTitle(char const *title)
+void SetWindowTitle(DfWindow *win, char const *title)
 {
-    SetWindowText(g_window->_private->platSpec->hWnd, title);
+    SetWindowText(win->_private->platSpec->hWnd, title);
 }
 
 

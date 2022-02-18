@@ -135,9 +135,9 @@ void InitPendula()
 }
 
 
-void RunSim()
+void RunSim(DfWindow *win)
 {
-    double const zoom = g_window->bmp->width * 0.6e-3 * (double)BIG_BITMAP_MULTIPLE;
+    double const zoom = win->bmp->width * 0.6e-3 * (double)BIG_BITMAP_MULTIPLE;
     double xOffset = 140.0;
     double yOffset = 290.0;
 
@@ -150,9 +150,9 @@ void RunSim()
     if (pendulaAtRest)
         return;
 
-    int y = g_window->bmp->height - 220;
-    //        RectFill(g_window->backBuffer, 0, y, g_window->width, g_window->height - y, g_colourBlack);
-    //        BitmapClear(g_window->backBuffer, g_colourBlack);
+    int y = win->bmp->height - 220;
+    //        RectFill(win->backBuffer, 0, y, win->width, win->height - y, g_colourBlack);
+    //        BitmapClear(win->backBuffer, g_colourBlack);
 
     for (int i = 0; i < 4000; i++)
     {
@@ -161,15 +161,15 @@ void RunSim()
         // Project pendulums onto table's plane
         Point p1 = { 300 + g_pendula[0].xDisp, 300 + g_pendula[1].xDisp };
         Point p2 = { 600 + g_pendula[2].xDisp, 600 + g_pendula[3].xDisp };
-        //             PutPix(g_window->backBuffer, p1.x, p1.y, g_colourWhite);
-        //             PutPix(g_window->backBuffer, 300, 300, g_colourWhite);
-        //             PutPix(g_window->backBuffer, p2.x, p2.y, g_colourWhite);
-        //             PutPix(g_window->backBuffer, 600, 600, g_colourWhite);
+        //             PutPix(win->backBuffer, p1.x, p1.y, g_colourWhite);
+        //             PutPix(win->backBuffer, 300, 300, g_colourWhite);
+        //             PutPix(win->backBuffer, p2.x, p2.y, g_colourWhite);
+        //             PutPix(win->backBuffer, 600, 600, g_colourWhite);
 
         // Draw Circles 
         double stickLen = 400;
-        //             DrawCircle(g_window->backBuffer, p1.x, p1.y, stickLen);
-        //             DrawCircle(g_window->backBuffer, p2.x, p2.y, stickLen);
+        //             DrawCircle(win->backBuffer, p1.x, p1.y, stickLen);
+        //             DrawCircle(win->backBuffer, p2.x, p2.y, stickLen);
 
         Point i1, i2;
         if (FindCircleCircleIntersections(p1, stickLen, p2, stickLen, &i1, &i2))
@@ -197,7 +197,7 @@ void RunSim()
             c.r += 16;
 
             PutPix(g_bigBmp, i1.x, i1.y, c);
-            PutPix(g_window->bmp, i1.x/(double)BIG_BITMAP_MULTIPLE, i1.y/(double)BIG_BITMAP_MULTIPLE, c);
+            PutPix(win->bmp, i1.x/(double)BIG_BITMAP_MULTIPLE, i1.y/(double)BIG_BITMAP_MULTIPLE, c);
         }
     }
 }
@@ -209,12 +209,12 @@ void HarmonographMain()
     int width = 1024;
     int height = width * 9 / 16;
     GetDesktopRes(&width, &height);
-    CreateWin(width, height, WT_WINDOWED, "Harmonograph");
+    DfWindow *win = CreateWin(width, height, WT_WINDOWED, "Harmonograph");
 
     g_bigBmp = BitmapCreate(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
-    BitmapClear(g_window->bmp, g_colourBlack);
+    BitmapClear(win->bmp, g_colourBlack);
     BitmapClear(g_bigBmp, g_colourBlack);
 
     g_advanceTime = 0.004 / (double)BIG_BITMAP_MULTIPLE;
@@ -222,26 +222,26 @@ void HarmonographMain()
     InitPendula();
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC])
+    while (!win->windowClosed && !win->input.keys[KEY_ESC])
     {
-        InputPoll();
+        InputPoll(win);
         
-        if (g_window->input.keyDowns[KEY_SPACE])
+        if (win->input.keyDowns[KEY_SPACE])
         {
             InitPendula();
-            BitmapClear(g_window->bmp, g_colourBlack);
+            BitmapClear(win->bmp, g_colourBlack);
             BitmapClear(g_bigBmp, g_colourBlack);
         }
-        if (g_window->input.keyDowns[KEY_S])
+        if (win->input.keyDowns[KEY_S])
         {
             SaveBmp(g_bigBmp, "foo.bmp");
         }
 
-        RunSim();
+        RunSim(win);
 
-        DrawTextSimple(font, g_colourWhite, g_window->bmp, 5, height - 20, "Keys: Space to restart  S to save");
+        DrawTextSimple(font, g_colourWhite, win->bmp, 5, height - 20, "Keys: Space to restart  S to save");
 
-        UpdateWin();
+        UpdateWin(win);
         WaitVsync();
     }
 }

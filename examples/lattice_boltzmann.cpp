@@ -188,16 +188,16 @@ void MoveTracers() {
 }
 
 
-void DrawTracers() {
+void DrawTracers(DfWindow *win) {
     for (int i = 0; i < NUM_TRACERS; i++) {
-        RectFill(g_window->bmp, g_tracers_x[i] * RENDER_SCALE, g_tracers_y[i] * RENDER_SCALE, 
+        RectFill(win->bmp, g_tracers_x[i] * RENDER_SCALE, g_tracers_y[i] * RENDER_SCALE, 
             RENDER_SCALE, RENDER_SCALE, g_colourBlack);
     }
 }
 
 
-void Draw() {
-    BitmapClear(g_window->bmp, g_colourWhite);
+void Draw(DfWindow *win) {
+    BitmapClear(win->bmp, g_colourWhite);
 
     for (int y = 1; y < Y_DIM - 1; y++) {
         for (int x = 1; x < X_DIM - 1; x++) {
@@ -223,12 +223,12 @@ void Draw() {
                 }
             }
 
-            RectFill(g_window->bmp, x * RENDER_SCALE, y * RENDER_SCALE,
+            RectFill(win->bmp, x * RENDER_SCALE, y * RENDER_SCALE,
                 RENDER_SCALE, RENDER_SCALE, col);
         }
     }
 
-    DrawTracers();
+    DrawTracers(win);
 }
 
 
@@ -242,24 +242,24 @@ void Simulate() {
 
 
 void LatticeBoltzmannMain() {
-    CreateWin(X_DIM * RENDER_SCALE, Y_DIM * RENDER_SCALE, WT_WINDOWED, 
+    DfWindow *win = CreateWin(X_DIM * RENDER_SCALE, Y_DIM * RENDER_SCALE, WT_WINDOWED,
         "Lattice Boltzmann Method Fluid Simulation Example");
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     InitCells();
     InitTracers();
 
-    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC]) {
-        InputPoll();
+    while (!win->windowClosed && !win->input.keys[KEY_ESC]) {
+        InputPoll(win);
 
         Simulate();
-        Draw();
+        Draw(win);
 
         // Draw frames per second counter
-        RectFill(g_window->bmp, g_window->bmp->width - 55, 0, 55, g_defaultFont->charHeight + 2, g_colourBlack);
-        DrawTextLeft(g_defaultFont, g_colourWhite, g_window->bmp, g_window->bmp->width - 50, 0, "FPS:%i", g_window->fps);
+        RectFill(win->bmp, win->bmp->width - 55, 0, 55, g_defaultFont->charHeight + 2, g_colourBlack);
+        DrawTextLeft(g_defaultFont, g_colourWhite, win->bmp, win->bmp->width - 50, 0, "FPS:%i", win->fps);
 
-        UpdateWin();
+        UpdateWin(win);
         WaitVsync();
     }
 }

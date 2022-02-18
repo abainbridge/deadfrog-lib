@@ -37,12 +37,12 @@ static float frand(float range)
 }
 
 
-static void InitParticles()
+static void InitParticles(DfWindow *win)
 {
     for (unsigned i = 0; i < NUM_PARTICLES; i++)
     {
-        g_particles[i].x = frand(g_window->bmp->width);
-        g_particles[i].y = frand(g_window->bmp->height);
+        g_particles[i].x = frand(win->bmp->width);
+        g_particles[i].y = frand(win->bmp->height);
         g_particles[i].vx = MAX_INITIAL_SPEED;
         g_particles[i].vy = MAX_INITIAL_SPEED;
     }
@@ -61,7 +61,7 @@ static inline bool isPositive(float x)
 }
 
 
-static void Advance()
+static void Advance(DfWindow *win)
 {
     static double prevTime = GetRealTime();
     double now = GetRealTime();
@@ -70,8 +70,8 @@ static void Advance()
         advanceTime = 0.1f;
     prevTime = now;
 
-    float const WORLD_SIZE_X = g_window->bmp->width;
-    float const WORLD_SIZE_Y = g_window->bmp->height;
+    float const WORLD_SIZE_X = win->bmp->width;
+    float const WORLD_SIZE_Y = win->bmp->height;
 
     for (unsigned i = 0; i < NUM_PARTICLES; i++)
     {
@@ -173,12 +173,12 @@ static void Advance()
 }
 
 
-static void Render()
+static void Render(DfWindow *win)
 {
     for (unsigned i = 0; i < NUM_PARTICLES; i++)
     {
         Particle *p = g_particles + i;
-        CircleFill(g_window->bmp, p->x, p->y, RADIUS, g_colourWhite);
+        CircleFill(win->bmp, p->x, p->y, RADIUS, g_colourWhite);
     }
 
     for (unsigned i = 0; i < SPEED_HISTOGRAM_NUM_BINS; i++)
@@ -186,31 +186,31 @@ static void Render()
         const unsigned barWidth = 4;
         const float scale = 1000.0f / (float)NUM_PARTICLES;
         unsigned h = g_speedHistogram[i] * scale;
-        RectFill(g_window->bmp, i * barWidth, g_window->bmp->height - h, barWidth, h, Colour(255, 99, 99));
+        RectFill(win->bmp, i * barWidth, win->bmp->height - h, barWidth, h, Colour(255, 99, 99));
     }
 }
 
 
 void GasMain()
 {
-    CreateWin(800, 600, WT_WINDOWED, "Ideal Gas Simulation Example");
+    DfWindow *win = CreateWin(800, 600, WT_WINDOWED, "Ideal Gas Simulation Example");
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
-    InitParticles();
+    InitParticles(win);
 
     unsigned frameNum = 0;
-    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC])
+    while (!win->windowClosed && !win->input.keys[KEY_ESC])
     {
-        BitmapClear(g_window->bmp, g_colourBlack);
-        InputPoll();
+        BitmapClear(win->bmp, g_colourBlack);
+        InputPoll(win);
 
-        Advance();
-        Render();
+        Advance(win);
+        Render(win);
 
         // Draw frames per second counter
-        DrawTextRight(font, g_colourWhite, g_window->bmp, g_window->bmp->width - 5, 0, "FPS:%i", g_window->fps);
+        DrawTextRight(font, g_colourWhite, win->bmp, win->bmp->width - 5, 0, "FPS:%i", win->fps);
 
-        UpdateWin();
+        UpdateWin(win);
         WaitVsync();
     }
 }

@@ -1,10 +1,10 @@
 // This module implements window creation and mouse and keyboard input.
 
 // You can test if any specific key has been pressed this frame using
-// g_window->input.keyDowns[KEY_ESC].
+// win->input.keyDowns[KEY_ESC].
 
 // You can see how much the mouse has moved along the X axis this frame using
-// g_window->input.mouseVelX.
+// win->input.mouseVelX.
 
 // It also creates a bitmap the same size as the window to use as the back
 // buffer of a double buffer system.
@@ -49,8 +49,8 @@ typedef struct
 	bool		mmbUnClicked;
     bool		rmbUnClicked;
 
-    int			mouseX;				// Mouse pos captured the when InputPoll() was called last.
-    int			mouseY;             // Coords are relative to the top left of g_window->bmp.
+    int			mouseX;				// Mouse pos captured the when InputPoll(win) was called last.
+    int			mouseY;             // Coords are relative to the top left of win->bmp.
     int			mouseZ;
 
     int			mouseVelX;
@@ -82,7 +82,7 @@ typedef struct _DfWindow
 
     bool                windowClosed;
     unsigned int	    fps;
-    double              advanceTime; // Time between last two calls of UpdateWin().
+    double              advanceTime; // Time between last two calls of UpdateWin(win).
     RedrawCallback      *redrawCallback;
 
     // A callback that will be called when files are drag-and-dropped onto the window.
@@ -91,7 +91,7 @@ typedef struct _DfWindow
     DfWindowPrivate *_private; // Internal stuff not accessible from the API.
 
     DfInput             input;
-    // TODO - add an isMinimized flag and use it where you see if (g_window->bmp->width < 100)
+    // TODO - add an isMinimized flag and use it where you see if (win->bmp->width < 100)
 } DfWindow;
 
 
@@ -111,38 +111,36 @@ typedef enum
 } MouseCursorType;
 
 
-DLL_API DfWindow *g_window;
-
 DLL_API bool GetDesktopRes(int *width, int *height);
 
 // Creates a Window (fullscreen is really just a big window) and a bitmap the size of the window
 // to use as the back buffer of a double buffer. Position of the window is determined by the
 // system.
-DLL_API bool CreateWin(int width, int height, WindowType windowed, char const *winName);
+DLL_API DfWindow *CreateWin(int width, int height, WindowType windowed, char const *winName);
 
 // Same as above but position of the window is specified as x, y.
-DLL_API bool CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName);
+DLL_API DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName);
 
 // Blit back buffer to screen and update FPS counter.
-DLL_API void UpdateWin();
+DLL_API void UpdateWin(DfWindow *win);
 
 // Windows only. Returns the Window handle because lots of things on Windows
 // need this. Cast the return value to HWND.
-DLL_API void *GetWindowHandle();
+DLL_API void *GetWindowHandle(DfWindow *win);
 
-DLL_API void ShowMouse();
-DLL_API void HideMouse();
+DLL_API void ShowMouse(DfWindow *win);
+DLL_API void HideMouse(DfWindow *win);
 
-DLL_API void SetMouseCursor(MouseCursorType t);
+DLL_API void SetMouseCursor(DfWindow *win, MouseCursorType t);
 
 // Currently Windows only. Assumes that you have a 16x16 and optionally a 32x32 icon
 // resource in your executable and that the id is 101.
-DLL_API void SetWindowIcon();
+DLL_API void SetWindowIcon(DfWindow *win);
 
-DLL_API bool IsWindowMaximized();
-DLL_API void SetMaximizedState(bool maximize);
-DLL_API void BringWindowToFront();
-DLL_API void SetWindowTitle(char const *title);
+DLL_API bool IsWindowMaximized(DfWindow *win);
+DLL_API void SetMaximizedState(DfWindow *win, bool maximize);
+DLL_API void BringWindowToFront(DfWindow *win);
+DLL_API void SetWindowTitle(DfWindow *win, char const *title);
 
 DLL_API bool WaitVsync();   // Returns false if not supported.
 
@@ -152,15 +150,15 @@ DLL_API bool WaitVsync();   // Returns false if not supported.
 // drag ends. This can also be used to resize any window sized bitmaps you have. The
 // one in the DfWindow struct will have been resized by the time the callback is
 // called.
-DLL_API void RegisterRedrawCallback(RedrawCallback *proc);
+DLL_API void RegisterRedrawCallback(DfWindow *win, RedrawCallback *proc);
 
 
 DLL_API char const *GetKeyName(int i);
 DLL_API int	        GetKeyId(char const *name);
-DLL_API bool	    InputPoll();  // Returns true if any events occurred since last call
+DLL_API bool	    InputPoll(DfWindow *win);  // Returns true if any events occurred since last call
 
 
-// Defines for indexes into g_window->input.keys[], keyDowns[] and keyUps[].
+// Defines for indexes into win->input.keys[], keyDowns[] and keyUps[].
 enum
 {
     KEY_BACKSPACE = 8,

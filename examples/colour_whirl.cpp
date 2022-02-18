@@ -29,17 +29,17 @@ inline unsigned ColourDiff(DfColour a, DfColour b)
 
 
 // Calculate diff between specified colour and neighbours of specified location
-unsigned CalcDiff(unsigned x, unsigned y, DfColour target_colour)
+unsigned CalcDiff(DfWindow *win, unsigned x, unsigned y, DfColour target_colour)
 {
     unsigned min_diff = UINT_MAX;
 
-    DfColour *row = g_window->bmp->pixels + (y-1) * g_window->bmp->width + x;
+    DfColour *row = win->bmp->pixels + (y-1) * win->bmp->width + x;
 
     unsigned diff = ColourDiff(row[0], target_colour);
     if (diff < min_diff)
         min_diff = diff;
 
-    row += g_window->bmp->width;
+    row += win->bmp->width;
     
     diff = ColourDiff(row[-1], target_colour);
     if (diff < min_diff)
@@ -49,7 +49,7 @@ unsigned CalcDiff(unsigned x, unsigned y, DfColour target_colour)
     if (diff < min_diff)
         min_diff = diff;
 
-    row += g_window->bmp->width;
+    row += win->bmp->width;
 
     diff = ColourDiff(row[0], target_colour);
     if (diff < min_diff)
@@ -59,7 +59,7 @@ unsigned CalcDiff(unsigned x, unsigned y, DfColour target_colour)
 }
 
 
-unsigned FindBest(DfColour c)
+unsigned FindBest(DfWindow *win, DfColour c)
 {
     unsigned best = 0;
 
@@ -68,7 +68,7 @@ unsigned FindBest(DfColour c)
     {
         unsigned x = available[i] >> 16;
         unsigned y = available[i] & 0xffff;
-        unsigned diff = CalcDiff(x, y, c);
+        unsigned diff = CalcDiff(win, x, y, c);
         if (diff < min_diff)
         {
             min_diff = diff;
@@ -83,33 +83,33 @@ unsigned FindBest(DfColour c)
 DfColour alreadyAddedCol = g_colourBlack;
 
 
-inline void AddIfNew(unsigned x, unsigned y)
+inline void AddIfNew(DfWindow *win, unsigned x, unsigned y)
 {
-    if (GetPix(g_window->bmp, x, y).c == g_colourBlack.c)
+    if (GetPix(win->bmp, x, y).c == g_colourBlack.c)
     {
-        if (x > 1 && x < (g_window->bmp->width-1) &&
-            y > 1 && y < (g_window->bmp->height-1))
+        if (x > 1 && x < (win->bmp->width-1) &&
+            y > 1 && y < (win->bmp->height-1))
         {
             if (num_available < 10000)
                 available[num_available++] = Coord(x, y);
-            PutPix(g_window->bmp, x, y, alreadyAddedCol);
+            PutPix(win->bmp, x, y, alreadyAddedCol);
         }
     }
 }
 
 
-void PlaceColour(unsigned x, unsigned y, DfColour colour)
+void PlaceColour(DfWindow *win, unsigned x, unsigned y, DfColour colour)
 {
-    PutPix(g_window->bmp, x, y, colour);
+    PutPix(win->bmp, x, y, colour);
 
-    AddIfNew(x-1, y-1);
-    AddIfNew(x  , y-1);
-    AddIfNew(x+1, y-1);
-    AddIfNew(x-1, y  );
-    AddIfNew(x+1, y  );
-    AddIfNew(x-1, y+1);
-    AddIfNew(x  , y+1);
-    AddIfNew(x+1, y+1);
+    AddIfNew(win, x-1, y-1);
+    AddIfNew(win, x, y - 1);
+    AddIfNew(win, x + 1, y - 1);
+    AddIfNew(win, x - 1, y);
+    AddIfNew(win, x + 1, y);
+    AddIfNew(win, x - 1, y + 1);
+    AddIfNew(win, x, y + 1);
+    AddIfNew(win, x + 1, y + 1);
 }
 
 
@@ -118,9 +118,9 @@ void ColourWhirlMain()
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-//    CreateWin(width, height, false, "Colour Whirl Example");
-    CreateWin(1200, 900, WT_WINDOWED, "Colour Whirl Example");
-    BitmapClear(g_window->bmp, g_colourBlack);
+//    DfWindow *win = CreateWin(width, height, false, "Colour Whirl Example");
+    DfWindow *win = CreateWin(1200, 900, WT_WINDOWED, "Colour Whirl Example");
+    BitmapClear(win->bmp, g_colourBlack);
 
     // Create an array of colours
     int const max_component = 100;
@@ -147,42 +147,42 @@ void ColourWhirlMain()
     double start_time = GetRealTime();
 
     alreadyAddedCol.b = 1;
-    PlaceColour(100, 100, colours[n++]);
-    PlaceColour(101, 100, colours[n++]);
-    PlaceColour(100, 110, colours[n++]);
-    PlaceColour(101, 110, colours[n++]);
-    PlaceColour(g_window->bmp->width/2, g_window->bmp->height/2, colours[n++]);
+    PlaceColour(win, 100, 100, colours[n++]);
+    PlaceColour(win, 101, 100, colours[n++]);
+    PlaceColour(win, 100, 110, colours[n++]);
+    PlaceColour(win, 101, 110, colours[n++]);
+    PlaceColour(win, win->bmp->width/2, win->bmp->height/2, colours[n++]);
  
     for (; n && num_available; n--)
     {         
-        unsigned i = FindBest(colours[n]);
+        unsigned i = FindBest(win, colours[n]);
         unsigned x = available[i] >> 16;
         unsigned y = available[i] & 0xffff;
         if (num_available > 1)
             available[i] = available[num_available - 1];
         num_available--;
 
-        PlaceColour(x, y, colours[n]);
+        PlaceColour(win, x, y, colours[n]);
 
         // Every so often, copy the bitmap to the screen
         if ((n & 511) == 0)
         {
             // Abort drawing the set if the user presses escape or clicks the close icon
-            InputPoll();
-            if (g_window->windowClosed || g_window->input.keyDowns[KEY_ESC])
+            InputPoll(win);
+            if (win->windowClosed || win->input.keyDowns[KEY_ESC])
                 exit(0);
-            UpdateWin();
+            UpdateWin(win);
         }
     }
 
     double endTime = GetRealTime();
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
-    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
+    DrawTextLeft(font, g_colourWhite, win->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC])
+    while (!win->windowClosed && !win->input.keys[KEY_ESC])
     {
-        InputPoll();
+        InputPoll(win);
         SleepMillisec(100);
     }
 }

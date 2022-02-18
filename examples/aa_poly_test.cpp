@@ -81,7 +81,7 @@ void AaPolyTestMain()
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-    CreateWin(1280, 1024, WT_WINDOWED, "AA Poly Test");
+    DfWindow *win = CreateWin(1280, 1024, WT_WINDOWED, "AA Poly Test");
 
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
@@ -94,9 +94,9 @@ void AaPolyTestMain()
     double avgDuration = 0.0;
     DfColour bgCol1 = Colour(200, 200, 200);
     DfColour bgCol2 = Colour(180, 180, 180);
-    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
+    while (!win->windowClosed && !win->input.keyDowns[KEY_ESC])
     {
-        BitmapClear(g_window->bmp, bgCol1);
+        BitmapClear(win->bmp, bgCol1);
         BitmapClear(bmp, bgCol2);
         double start = GetRealTime();
 #if 0
@@ -105,21 +105,21 @@ void AaPolyTestMain()
         Chevron(bmp, xOffset, yOffset, zoom); // Use this version for interactive testing.
 #endif
         double thisDuration = (GetRealTime() - start) * 1000.0;
-        QuickBlit(g_window->bmp, 0, 0, bmp);
-        ScaleUpBlit(g_window->bmp, 100, 0, 6, bmp);
+        QuickBlit(win->bmp, 0, 0, bmp);
+        ScaleUpBlit(win->bmp, 100, 0, 6, bmp);
 
-        xOffset -= g_window->input.keyDowns[KEY_LEFT];
-        xOffset += g_window->input.keyDowns[KEY_RIGHT];
-        yOffset -= g_window->input.keyDowns[KEY_UP];
-        yOffset += g_window->input.keyDowns[KEY_DOWN];
-        zoom += 0.01 * g_window->input.keyDowns[KEY_EQUALS];
-        zoom -= 0.01 * g_window->input.keyDowns[KEY_MINUS];
+        xOffset -= win->input.keyDowns[KEY_LEFT];
+        xOffset += win->input.keyDowns[KEY_RIGHT];
+        yOffset -= win->input.keyDowns[KEY_UP];
+        yOffset += win->input.keyDowns[KEY_DOWN];
+        zoom += 0.01 * win->input.keyDowns[KEY_EQUALS];
+        zoom -= 0.01 * win->input.keyDowns[KEY_MINUS];
 
         avgDuration = 0.99 * avgDuration + 0.01 * thisDuration;
-        DrawTextLeft(g_defaultFont, g_colourBlack, g_window->bmp, 10, 110, "Duration = %.2f ms", avgDuration);
+        DrawTextLeft(g_defaultFont, g_colourBlack, win->bmp, 10, 110, "Duration = %.2f ms", avgDuration);
 
-        InputPoll();
-        UpdateWin();
+        InputPoll(win);
+        UpdateWin(win);
 //        WaitVsync();
     }
 }

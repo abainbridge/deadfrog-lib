@@ -190,10 +190,10 @@ void TestFillConvexPolygon(DfBitmap *bmp)
 
 
 #define END_TEST \
-    QuickBlit(g_window->bmp, 600, textY, backBmp); \
-    UpdateWin(); \
-    InputPoll(); \
-if (g_window->windowClosed || g_window->input.keyDowns[KEY_ESC]) return; \
+    QuickBlit(win->bmp, 600, textY, backBmp); \
+    UpdateWin(win); \
+    InputPoll(win); \
+if (win->windowClosed || win->input.keyDowns[KEY_ESC]) return; \
     ClearClipRect(backBmp); \
     BitmapClear(backBmp, g_colourBlack); \
     SetClipRect(backBmp, 1, 1, backBmp->width - 2, backBmp->height - 2); \
@@ -202,8 +202,8 @@ if (g_window->windowClosed || g_window->input.keyDowns[KEY_ESC]) return; \
 
 void TestMain()
 {
-    CreateWin(1024, 768, WT_WINDOWED, "Test");
-    BitmapClear(g_window->bmp, g_colourBlack);
+    DfWindow *win = CreateWin(1024, 768, WT_WINDOWED, "Test");
+    BitmapClear(win->bmp, g_colourBlack);
 
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
     DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
@@ -247,13 +247,13 @@ void TestMain()
     END_TEST;
 
     textY += yInc;
-    DrawTextLeft(font, g_colourWhite, g_window->bmp, 10, textY,
+    DrawTextLeft(font, g_colourWhite, win->bmp, 10, textY,
         "Press ESC to quit");
 
-    UpdateWin();
-    while (!g_window->windowClosed && !g_window->input.keyDowns[KEY_ESC])
+    UpdateWin(win);
+    while (!win->windowClosed && !win->input.keyDowns[KEY_ESC])
     {
-        InputPoll();
+        InputPoll(win);
         SleepMillisec(100);
     }
 }
