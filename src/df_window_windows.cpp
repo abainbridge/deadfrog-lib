@@ -11,6 +11,7 @@
 // Prototype of DwmFlush function from Win API.
 typedef void (WINAPI DwmFlushFunc)();
 
+
 struct WindowPlatformSpecific
 {
     HWND hWnd;
@@ -20,6 +21,55 @@ struct WindowPlatformSpecific
 
 static DwmFlushFunc *g_dwmFlush = NULL;
 
+
+// ***************************************************************************
+// Horrible mechanism to map HWNDs to DfWindows. Needed so that WndProc() can
+// figure out which DfWindow() it is associated with. This wouldn't be needed
+// if we could pass our DfWindow pointer into CreateWindow() as some void*
+// data that it would give to every WndProc() call. But MS didn't think of that.
+// Worse still, by the time CreateWindow() returns the HWND, WndProc() will
+// already have been called. So we need to have stored the mapping before
+// CreateWindow() returns. We do this by taking advantage of the fact that
+// the initial call of WndProc() is guaranteed to be on the same thread that
+// called CreateWindow(). We use a thread local to store the DfWindow we're
+// in the process of making, before we call CreateWindow(). We check that in
+// every call of GetWindowFromHwnd(), which is called at the start of every
+// call of WndProc(). If the thread local DfWindow pointer it is set, we unset
+// it and add the HWND->DfWindow mapping.
+
+static __declspec(thread) DfWindow *g_newWindow = NULL;
+enum { MAX_NUM_WINDOWS = 8 };
+DfWindow *g_windows[MAX_NUM_WINDOWS] = { 0 };
+
+DfWindow *GetWindowFromHWnd(HWND hWnd)
+{
+    if (g_newWindow)
+    {
+        for (int i = 0; i < MAX_NUM_WINDOWS; i++)
+        {
+            if (g_windows[i] == NULL)
+            {
+                g_windows[i] = g_newWindow;
+                g_windows[i]->_private->platSpec->hWnd = hWnd;
+                g_newWindow = NULL;
+                return g_windows[i];
+            }
+        }
+
+        ReleaseAssert(0, "Too many windows");
+    }
+
+    for (int i = 0; i < MAX_NUM_WINDOWS; i++)
+    {
+        if (g_windows[i] && g_windows[i]->_private->platSpec->hWnd == hWnd)
+            return g_windows[i];
+    }
+
+    return NULL;
+}
+
+// End of horrible mechanism.
+// ***************************************************************************
 
 
 // Returns 0 if the event is handled here, -1 otherwise
@@ -214,7 +264,7 @@ bool InputPoll()
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    DfWindow *win = g_window;
+    DfWindow *win = GetWindowFromHWnd(hWnd);
 
     if (message == WM_SYSKEYDOWN && wParam == 115)
         SendMessage(hWnd, WM_CLOSE, 0, 0);
@@ -353,6 +403,8 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
     wd->_private->platSpec = new WindowPlatformSpecific;
     wd->_private->platSpec->currentMouseCursorType = MCT_ARROW;
 
+    g_newWindow = wd;
+
 	width = ClampInt(width, 100, 4000);
 	height = ClampInt(height, 100, 4000);
 
@@ -392,8 +444,10 @@ bool CreateWinPos(int x, int y, int width, int height, WindowType winType, char 
             "Couldn't change screen resolution to %i x %i", width, height);
 	}
 
-	// Create main window
-	wd->_private->platSpec->hWnd = CreateWindow(wc.lpszClassName, wc.lpszClassName,
+	// Create main window.
+    // We ignore the returned HWND because it will already have been stored
+    // in the HWND->DfWindow mapping before this function returns.
+	CreateWindow(wc.lpszClassName, wc.lpszClassName,
 		windowStyle, x, y, width, height,
 		NULL, NULL, 0, NULL);
 
