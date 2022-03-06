@@ -88,7 +88,7 @@ typedef struct _DfWindow
     // A callback that will be called when files are drag-and-dropped onto the window.
     FileDropCallback    *fileDropCallback;
 
-    DfWindowPrivate *_private; // Internal stuff not accessible from the API.
+    DfWindowPrivate     *_private; // Internal stuff not accessible from the API.
 
     DfInput             input;
     // TODO - add an isMinimized flag and use it where you see if (win->bmp->width < 100)
@@ -274,6 +274,9 @@ enum
     KEY_TILDE = 222,
     KEY_BACK_TICK = 223
 };
+
+
+extern DfWindow *g_window;
 
 
 #ifdef __cplusplus

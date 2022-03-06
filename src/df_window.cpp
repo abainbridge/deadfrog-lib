@@ -44,6 +44,9 @@ struct _DfWindowPrivate
 };
 
 
+DfWindow *g_window = NULL;
+
+
 static void InitInput(DfWindow *);
 static void InputPollInternal(DfWindow *win);
 
