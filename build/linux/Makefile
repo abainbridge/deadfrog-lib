@@ -7,7 +7,7 @@ cxxflags=-MMD -g -march=native -Wno-unused-result -fno-strict-aliasing
 c_files_raw=\
  df_bitmap.cpp \
  df_bmp.cpp \
- df_clipboar.cpp \
+ df_clipboard.cpp \
  df_colour.cpp \
  df_common_linux.cpp \
  df_font.cpp \
