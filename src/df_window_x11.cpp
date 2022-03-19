@@ -999,6 +999,14 @@ bool InputPoll(DfWindow *win) {
 }
 
 
+void ShowMouse(DfWindow *win) {
+}
+
+
+void HideMouse(DfWindow *win) {
+}
+
+
 void SetMouseCursor(DfWindow *win, MouseCursorType t) {
 }
 
