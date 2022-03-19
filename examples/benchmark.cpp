@@ -2,14 +2,11 @@
 #include "df_time.h"
 #include "df_polygon.h"
 #include "df_font.h"
-#include "df_font_aa.h"
 #include "df_window.h"
 #include "fonts/df_mono.h"
 
 #include <stdio.h>
 #include <string.h>
-
-#include "df_master_glyph.h"
 
 
 const char *g_testFmtString = NULL;
@@ -207,29 +204,6 @@ double CalcMillionCharsPerSec(DfBitmap *bmp, DfFont *font)
 }
 
 
-double CalcMillionAaCharsPerSec(DfBitmap *bmp, DfFontAa *font)
-{
-    static char const *str = "Here's some interesting text []£# !";
-    g_iterations = 1000 * 100;
-    double startTime = GetRealTime();
-    for (unsigned i = 0; i < g_iterations; i++) 
-    {
-        int x = GetRand() % bmp->width;
-        int y = i % bmp->height;
-        DrawTextSimpleAa(font, Colour(255, 255, 255, 60), bmp, x, y, 10, str);
-    }
-    double endTime = GetRealTime();
-
-//    RectFill(bmp, 10, 10, 500, font->charHeight, g_colourBlack);
-    DrawTextSimpleAa(font, Colour(255,255,255,255), bmp, 10, 10, 10, str);
-
-    g_duration = endTime - startTime;
-    g_testFmtString = "Million DrawText AA chars per sec";
-    double numChars = g_iterations * (double)strlen(str);
-    return (numChars / g_duration) / 1e6;
-}
-
-
 double CalcBillionPolyFillPixelsPerSec(DfBitmap *bmp)
 {
     g_iterations = 1000 * 4;
@@ -312,7 +286,6 @@ void BenchmarkMain()
     BitmapClear(win->bmp, g_colourBlack);
 
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
-    DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
 
     DfBitmap *backBmp = BitmapCreate(1920, 1200);
     BitmapClear(backBmp, g_colourBlack);
@@ -353,10 +326,6 @@ void BenchmarkMain()
 
     // Text render
     score = CalcMillionCharsPerSec(backBmp, font);
-    END_TEST;
-
-    // Text render AA
-    score = CalcMillionAaCharsPerSec(backBmp, fontAa);
     END_TEST;
 
     // Polygon fill

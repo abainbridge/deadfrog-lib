@@ -1,14 +1,11 @@
 #include "df_time.h"
 #include "df_polygon.h"
 #include "df_font.h"
-#include "df_font_aa.h"
 #include "df_window.h"
 #include "fonts/df_mono.h"
 
 #include <stdint.h>
 #include <string.h>
-
-#include "df_master_glyph.h"
 
 
 inline unsigned GetRand()
@@ -131,21 +128,6 @@ void TestDrawText(DfBitmap *bmp, DfFont *font)
 }
 
 
-void TestDrawTextAa(DfBitmap *bmp, DfFontAa *font)
-{
-    static char const *str = "Here's some interesting text []£# !";
-    int iterations = 1000 * 100;
-    for (unsigned i = 0; i < iterations; i++)
-    {
-        int x = GetRand() % bmp->width;
-        int y = i % bmp->height;
-        DrawTextSimpleAa(font, Colour(255, 255, 255, 60), bmp, x, y, 10, str);
-    }
-
-    Check(bmp);
-}
-
-
 void TestFillConvexPolygon(DfBitmap *bmp)
 {
     int iterations = 1;
@@ -206,7 +188,6 @@ void TestMain()
     BitmapClear(win->bmp, g_colourBlack);
 
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
-    DfFontAa *fontAa = FontAaCreate("Lucida Console", 4);
 
     DfBitmap *backBmp = BitmapCreate(1920, 1200);
     BitmapClear(backBmp, g_colourBlack);
@@ -236,10 +217,6 @@ void TestMain()
 
     // Text render
     TestDrawText(backBmp, font);
-    END_TEST;
-
-    // Text render AA
-    TestDrawTextAa(backBmp, fontAa);
     END_TEST;
 
     // Polygon fill

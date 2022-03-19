@@ -25,12 +25,9 @@
     <ClCompile Include="..\..\src\df_colour.cpp" />
     <ClCompile Include="..\..\src\df_common.cpp" />
     <ClCompile Include="..\..\src\df_font.cpp" />
-    <ClCompile Include="..\..\src\df_font_aa.cpp" />
-    <ClCompile Include="..\..\src\df_master_glyph.cpp" />
     <ClCompile Include="..\..\src\df_message_dialog.cpp" />
     <ClCompile Include="..\..\src\df_polygon.cpp" />
     <ClCompile Include="..\..\src\df_polygon_aa.cpp" />
-    <ClCompile Include="..\..\src\df_sized_glyph.cpp" />
     <ClCompile Include="..\..\src\df_time.cpp" />
     <ClCompile Include="..\..\src\df_window.cpp" />
   </ItemGroup>
@@ -41,13 +38,9 @@
     <ClInclude Include="..\..\src\df_colour.h" />
     <ClInclude Include="..\..\src\df_common.h" />
     <ClInclude Include="..\..\src\df_font.h" />
-    <ClInclude Include="..\..\src\df_font_aa.h" />
-    <ClInclude Include="..\..\src\df_font_aa_internals.h" />
-    <ClInclude Include="..\..\src\df_master_glyph.h" />
     <ClInclude Include="..\..\src\df_message_dialog.h" />
     <ClInclude Include="..\..\src\df_polygon.h" />
     <ClInclude Include="..\..\src\df_polygon_aa.h" />
-    <ClInclude Include="..\..\src\df_sized_glyph.h" />
     <ClInclude Include="..\..\src\df_time.h" />
     <ClInclude Include="..\..\src\df_window.h" />
     <ClInclude Include="..\..\src\fonts\df_mono.h" />
