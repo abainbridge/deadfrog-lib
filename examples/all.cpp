@@ -11,6 +11,7 @@ void MandelbrotMain();
 void Sierpinski3DMain();
 void StretchBlitMain();
 void TestMain();
+void TwoWindowsMain();
 
 
 #ifdef _MSC_VER
@@ -31,8 +32,9 @@ int main()
 //     LatticeBoltzmannMain();
 //     MandelbrotMain();
 //     Sierpinski3DMain();
-    StretchBlitMain();
+//     StretchBlitMain();
 //     TestMain();
+    TwoWindowsMain();
 
     return 0;
 }
