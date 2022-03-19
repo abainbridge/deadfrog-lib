@@ -1,7 +1,6 @@
 #include "df_time.h"
 #include "df_bitmap.h"
 #include "df_window.h"
-#include <windows.h>
 
 
 void MandelbrotMain()
