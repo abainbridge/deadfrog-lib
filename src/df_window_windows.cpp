@@ -41,7 +41,7 @@ static __declspec(thread) DfWindow *g_newWindow = NULL;
 enum { MAX_NUM_WINDOWS = 8 };
 static DfWindow *g_windows[MAX_NUM_WINDOWS] = { 0 };
 
-DfWindow *GetWindowFromHWnd(HWND hWnd)
+static DfWindow *GetWindowFromHWnd(HWND hWnd)
 {
     if (g_newWindow)
     {
@@ -66,6 +66,16 @@ DfWindow *GetWindowFromHWnd(HWND hWnd)
     }
 
     return NULL;
+}
+
+
+static void RemoveHwnd(HWND hWnd)
+{
+    for (int i = 0; i < MAX_NUM_WINDOWS; i++)
+    {
+        if (g_windows[i] && g_windows[i]->_private->platSpec->hWnd == hWnd)
+            g_windows[i] = NULL;
+    }
 }
 
 // End of horrible mechanism.
@@ -265,6 +275,7 @@ bool InputPoll(DfWindow *win)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     DfWindow *win = GetWindowFromHWnd(hWnd);
+    if (!win) goto _default;
 
     if (message == WM_SYSKEYDOWN && wParam == 115)
         SendMessage(hWnd, WM_CLOSE, 0, 0);
@@ -461,6 +472,15 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     InitInput(win);
 
     return win;
+}
+
+
+void DestroyWin(DfWindow *win)
+{
+    RemoveHwnd(win->_private->platSpec->hWnd);
+    DestroyWindow(win->_private->platSpec->hWnd);
+    BitmapDelete(win->bmp);
+    delete win;
 }
 
 

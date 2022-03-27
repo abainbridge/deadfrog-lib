@@ -121,6 +121,8 @@ DLL_API DfWindow *CreateWin(int width, int height, WindowType windowed, char con
 // Same as above but position of the window is specified as x, y.
 DLL_API DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName);
 
+DLL_API void DestroyWin(DfWindow *win);
+
 // Blit back buffer to screen and update FPS counter.
 DLL_API void UpdateWin(DfWindow *win);
 
