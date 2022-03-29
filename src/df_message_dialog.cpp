@@ -84,7 +84,6 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 
     int textSpaceX = font->charHeight * 1.5;
     int textSpaceY = font->charHeight * 2;
-
     int buttonHeight = font->charHeight * 2;
     int buttonBarHeight = buttonHeight * 2;
     int buttonBarTop = textSpaceY * 2 + numLines * font->charHeight;
@@ -123,6 +122,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     }
 
     DestroyWin(win);
+    FontDelete(font);
 
     exit(0);
     return 0;

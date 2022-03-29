@@ -230,6 +230,18 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen)
 }
 
 
+void FontDelete(DfFont *font)
+{
+    for (int i = 32; i < 256; i++)
+    {
+        delete[] font->glyphs[i]->m_pixelRuns;
+        delete font->glyphs[i];
+    }
+
+    delete font;
+}
+
+
 int ListFontSizesInFile(char const *filename, int result[16])
 {
     FILE *f = fopen(filename, "rb");

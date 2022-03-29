@@ -46,6 +46,8 @@ DLL_API DfFont *LoadFontFromFile(char const *filename, int pixHeight);
 // a font in C code format that has been #include'd.
 DLL_API DfFont *LoadFontFromMemory(void *buf, int numBytes);
 
+DLL_API void FontDelete(DfFont *font);
+
 // All the DrawText... functions below return rendered text length in pixels.
 
 // Renders "text" up to the NULL terminator.
