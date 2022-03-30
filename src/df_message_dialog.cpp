@@ -40,11 +40,19 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 #include <string.h>
 
 
-static bool DoButton(DfWindow *win, DfFont *font, int x, int y, int w, int h, char const *text)
+struct Button
+{
+    char const *label;
+    int x, y, w, h;
+};
+
+
+static bool DoButton(DfWindow *win, DfFont *font, Button *button)
 {
     DfColour light = { 0xffe3e3e3 };
     DfColour medium = { 0xffa0a0a0 };
     DfColour dark = { 0xff646464 };
+    int x = button->x, y = button->y, w = button->w, h = button->h;
     RectOutline(win->bmp, x, y, w, h, dark);
     HLine(win->bmp, x + 1, y + 1, w - 3, g_colourWhite);
     VLine(win->bmp, x + 1, y + 2, h - 4, g_colourWhite);
@@ -52,26 +60,29 @@ static bool DoButton(DfWindow *win, DfFont *font, int x, int y, int w, int h, ch
     VLine(win->bmp, x+w-2, y + 2, h - 3, medium);
 
     int textY = y + h / 2 - font->charHeight / 2;
-    DrawTextCentre(font, g_colourBlack, win->bmp, x + w/2, textY, text);
+    DrawTextCentre(font, g_colourBlack, win->bmp, x + w/2, textY, button->label);
 
     int mx = win->input.mouseX;
     int my = win->input.mouseY;
     if (win->input.lmbUnClicked && mx >= x && my >= y && mx < (x + w) && my < (y + h)) {
         return true;
     }
+    if (win->input.keyDowns[KEY_ENTER]) {
+        return true;
+    }
     return false;
 }
 
 
-int MessageDialog(char const *title, char const *message, MessageDialogType type)
-{
+int MessageDialog(char const *title, char const *message, MessageDialogType type) {
+    type = MsgDlgTypeYesNoCancel;
     DfFont *font = LoadFontFromMemory(df_prop_8x15, sizeof(df_prop_8x15));
 
     int numLines = 0;
     int longestLinePixels = 0;
     {
         char const *lineStart = message;
-        for (char const *c = message; ; c++) {
+        for (char const *c = message;; c++) {
             if (*c == '\n' || *c == '\0') {
                 int lineLen = GetTextWidth(font, lineStart, c - lineStart);
                 if (lineLen > longestLinePixels) longestLinePixels = lineLen;
@@ -88,16 +99,40 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     int buttonBarHeight = buttonHeight * 2;
     int buttonBarTop = textSpaceY * 2 + numLines * font->charHeight;
     int buttonTop = buttonBarTop + font->charHeight;
-
+    int buttonWidth = font->charHeight * 6;
     DfColour buttonColour = { 0xffe0e0e0 };
 
+    Button buttons[3];
+    int numButtons;
+    switch (type) {
+    case MsgDlgTypeYesNo: numButtons = 2; buttons[0].label = "Yes"; buttons[1].label = "No"; break;
+    case MsgDlgTypeYesNoCancel: numButtons = 3; buttons[0].label = "Yes"; buttons[1].label = "No"; buttons[2].label = "Cancel"; break;
+    case MsgDlgTypeOk: numButtons = 1; buttons[0].label = "OK"; break;
+    case MsgDlgTypeOkCancel: numButtons = 2; buttons[0].label = "OK"; buttons[1].label = "Cancel"; break;
+    }
+
+    int widthNeededForButtons = textSpaceX * (3 + numButtons) + buttonWidth * numButtons;
     int winWidth = textSpaceX * 2 + longestLinePixels;
+    if (widthNeededForButtons > winWidth)
+        winWidth = widthNeededForButtons;
     int winHeight = buttonBarTop + buttonBarHeight;
+
+    // Place buttons, right-most first.
+    {
+        int x = winWidth - textSpaceX * 2 - buttonWidth;
+        for (int i = numButtons - 1; i > -1; i--) {
+            buttons[i].x = x;
+            buttons[i].y = buttonTop;
+            buttons[i].w = buttonWidth;
+            buttons[i].h = buttonHeight;
+            x -= buttonWidth + textSpaceX;
+        }
+    }
 
     DfWindow *win = CreateWin(winWidth, winHeight, WT_WINDOWED, title);
 
-    while (!win->windowClosed && !win->input.keys[KEY_ESC])
-    {
+    int result = -1;
+    while (!win->windowClosed && !win->input.keys[KEY_ESC] && result == -1) {
         InputPoll(win);
         RectFill(win->bmp, 0, 0, winWidth, buttonBarTop, g_colourWhite);
 
@@ -114,8 +149,11 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
         }
 
         RectFill(win->bmp, 0, buttonBarTop, winWidth, buttonBarHeight, buttonColour);
-        bool clicked = DoButton(win, font, 50, buttonTop, winWidth / 2, buttonHeight, "OK");
-        if (clicked) break;
+        
+        for (int i = 0; i < numButtons; i++) {
+            bool clicked = DoButton(win, font, &buttons[i]);
+            if (clicked) result = i;
+        }
 
         UpdateWin(win);
         WaitVsync();
@@ -125,7 +163,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     FontDelete(font);
 
     exit(0);
-    return 0;
+    return result;
 }
 
 #endif
