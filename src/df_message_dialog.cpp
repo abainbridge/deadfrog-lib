@@ -1,6 +1,6 @@
 #include "df_message_dialog.h"
 
-#if 1
+#if 0
 #include <windows.h>
 
 int MessageDialog(char const *title, char const *message, MessageDialogType type)
@@ -47,35 +47,44 @@ struct Button
 };
 
 
-static bool DoButton(DfWindow *win, DfFont *font, Button *button)
+static bool DoButton(DfWindow *win, DfFont *font, Button *button, bool isSelected)
 {
     DfColour light = { 0xffe3e3e3 };
     DfColour medium = { 0xffa0a0a0 };
     DfColour dark = { 0xff646464 };
     int x = button->x, y = button->y, w = button->w, h = button->h;
+    int mx = win->input.mouseX;
+    int my = win->input.mouseY;
+    bool mouseOver = mx >= x && my >= y && mx < (x + w) && my < (y + h);
+
     RectOutline(win->bmp, x, y, w, h, dark);
-    HLine(win->bmp, x + 1, y + 1, w - 3, g_colourWhite);
-    VLine(win->bmp, x + 1, y + 2, h - 4, g_colourWhite);
-    HLine(win->bmp, x + 2, y+h-2, w - 4, medium);
-    VLine(win->bmp, x+w-2, y + 2, h - 3, medium);
+    DfColour tlColour = g_colourWhite;
+    DfColour brColour = medium;
+    if (win->input.lmb && mouseOver) {
+        tlColour = medium;
+        brColour = g_colourWhite;
+    }
+    HLine(win->bmp, x + 1, y + 1, w - 3, tlColour);
+    VLine(win->bmp, x + 1, y + 2, h - 4, tlColour);
+    HLine(win->bmp, x + 2, y+h-2, w - 4, brColour);
+    VLine(win->bmp, x+w-2, y + 2, h - 3, brColour);
 
     int textY = y + h / 2 - font->charHeight / 2;
     DrawTextCentre(font, g_colourBlack, win->bmp, x + w/2, textY, button->label);
 
-    int mx = win->input.mouseX;
-    int my = win->input.mouseY;
-    if (win->input.lmbUnClicked && mx >= x && my >= y && mx < (x + w) && my < (y + h)) {
+    if (isSelected)
+        RectOutline(win->bmp, button->x + 4, button->y + 4, button->w - 8, button->h - 8, medium);
+
+    if (win->input.lmbUnClicked && mouseOver)
         return true;
-    }
-    if (win->input.keyDowns[KEY_ENTER]) {
+    if (win->input.keyDowns[KEY_ENTER])
         return true;
-    }
+
     return false;
 }
 
 
 int MessageDialog(char const *title, char const *message, MessageDialogType type) {
-    type = MsgDlgTypeYesNoCancel;
     DfFont *font = LoadFontFromMemory(df_prop_8x15, sizeof(df_prop_8x15));
 
     int numLines = 0;
@@ -131,6 +140,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 
     DfWindow *win = CreateWin(winWidth, winHeight, WT_WINDOWED, title);
 
+    int selectedButton = 0;
     int result = -1;
     while (!win->windowClosed && !win->input.keys[KEY_ESC] && result == -1) {
         InputPoll(win);
@@ -150,8 +160,14 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 
         RectFill(win->bmp, 0, buttonBarTop, winWidth, buttonBarHeight, buttonColour);
         
+        if (win->input.keyDowns[KEY_TAB])
+            if (win->input.keys[KEY_SHIFT])
+                selectedButton = (selectedButton + numButtons - 1) % numButtons;
+            else
+                selectedButton = (selectedButton + 1) % numButtons;
+
         for (int i = 0; i < numButtons; i++) {
-            bool clicked = DoButton(win, font, &buttons[i]);
+            bool clicked = DoButton(win, font, &buttons[i], i == selectedButton);
             if (clicked) result = i;
         }
 
@@ -162,7 +178,6 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     DestroyWin(win);
     FontDelete(font);
 
-    exit(0);
     return result;
 }
 
