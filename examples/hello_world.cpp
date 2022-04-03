@@ -6,7 +6,7 @@
 
 void HelloWorldMain()
 {
-    DfWindow *win = CreateWin(800, 600, WT_WINDOWED, "Hello World Example");
+    DfWindow *win = CreateWin(800, 600, WD_WINDOWED_RESIZEABLE, "Hello World Example");
 
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 

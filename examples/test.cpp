@@ -184,7 +184,7 @@ if (win->windowClosed || win->input.keyDowns[KEY_ESC]) return; \
 
 void TestMain()
 {
-    DfWindow *win = CreateWin(1024, 768, WT_WINDOWED, "Test");
+    DfWindow *win = CreateWin(1024, 768, WD_WINDOWED_RESIZEABLE, "Test");
     BitmapClear(win->bmp, g_colourBlack);
 
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));

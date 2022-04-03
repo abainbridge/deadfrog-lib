@@ -209,7 +209,7 @@ void HarmonographMain()
     int width = 1024;
     int height = width * 9 / 16;
     GetDesktopRes(&width, &height);
-    DfWindow *win = CreateWin(width, height, WT_WINDOWED, "Harmonograph");
+    DfWindow *win = CreateWin(width, height, WD_WINDOWED_RESIZEABLE, "Harmonograph");
 
     g_bigBmp = BitmapCreate(width * BIG_BITMAP_MULTIPLE, height * BIG_BITMAP_MULTIPLE);
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));

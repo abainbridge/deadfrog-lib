@@ -86,7 +86,7 @@ static void Render(DfWindow *win)
 
 void Sierpinski3DMain()
 {
-    DfWindow *win = CreateWin(800, 600, WT_WINDOWED, "Sierpinski Gasket Example");
+    DfWindow *win = CreateWin(800, 600, WD_WINDOWED_RESIZEABLE, "Sierpinski Gasket Example");
     BitmapClear(win->bmp, g_colourBlack);
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 

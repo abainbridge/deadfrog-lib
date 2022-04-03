@@ -426,31 +426,34 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     win->bmp = BitmapCreate(width, height);
 
     unsigned windowStyle = WS_VISIBLE;
-	if (winType == WT_WINDOWED)
-	{
-		windowStyle |= WS_OVERLAPPEDWINDOW;
-
-		RECT windowRect = { 0, 0, width, height };
-		AdjustWindowRect(&windowRect, windowStyle, false);
-		int borderWidth = (windowRect.right - windowRect.left) - width;
-		int titleHeight = ((windowRect.bottom - windowRect.top) - height) - borderWidth;
-		width += borderWidth;
-		height += borderWidth + titleHeight;
-	}
-	else
-	{
+	if (winType == WT_FULLSCREEN)
+    {
         windowStyle |= WS_POPUP;
 
-		DEVMODE devmode;
-		devmode.dmSize = sizeof(DEVMODE);
-		devmode.dmBitsPerPel = 32;
-		devmode.dmPelsWidth = width;
-		devmode.dmPelsHeight = height;
-		devmode.dmDisplayFrequency = 60;
-		devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
-		ReleaseAssert(ChangeDisplaySettings(&devmode, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL,
+        DEVMODE devmode;
+        devmode.dmSize = sizeof(DEVMODE);
+        devmode.dmBitsPerPel = 32;
+        devmode.dmPelsWidth = width;
+        devmode.dmPelsHeight = height;
+        devmode.dmDisplayFrequency = 60;
+        devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
+        ReleaseAssert(ChangeDisplaySettings(&devmode, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL,
             "Couldn't change screen resolution to %i x %i", width, height);
-	}
+    }
+    else
+    {
+        if (winType == WD_WINDOWED_RESIZEABLE)
+            windowStyle |= WS_OVERLAPPEDWINDOW;
+        else
+            windowStyle |= WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU;
+
+        RECT windowRect = { 0, 0, width, height };
+        AdjustWindowRect(&windowRect, windowStyle, false);
+        int borderWidth = (windowRect.right - windowRect.left) - width;
+        int titleHeight = ((windowRect.bottom - windowRect.top) - height) - borderWidth;
+        width += borderWidth;
+        height += borderWidth + titleHeight;
+    }
 
 	// Create main window.
     // We ignore the returned HWND because it will already have been stored

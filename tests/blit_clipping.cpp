@@ -5,7 +5,7 @@
 
 void HelloWorldMain()
 {
-    CreateWin(800, 600, WT_WINDOWED, "Clipping test");
+    CreateWin(800, 600, WD_WINDOWED_RESIZEABLE, "Clipping test");
 
     BitmapClear(win->bmp, g_colourBlack);
 

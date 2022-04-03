@@ -242,7 +242,7 @@ void Simulate() {
 
 
 void LatticeBoltzmannMain() {
-    DfWindow *win = CreateWin(X_DIM * RENDER_SCALE, Y_DIM * RENDER_SCALE, WT_WINDOWED,
+    DfWindow *win = CreateWin(X_DIM * RENDER_SCALE, Y_DIM * RENDER_SCALE, WD_WINDOWED_RESIZEABLE,
         "Lattice Boltzmann Method Fluid Simulation Example");
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 

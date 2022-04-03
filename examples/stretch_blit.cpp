@@ -10,7 +10,7 @@
 
 
 void StretchBlitMain() {
-    DfWindow *win = CreateWin(1024, 768, WT_WINDOWED, "Stretch Blit Example");
+    DfWindow *win = CreateWin(1024, 768, WD_WINDOWED_RESIZEABLE, "Stretch Blit Example");
 
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 

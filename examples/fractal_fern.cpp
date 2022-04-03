@@ -10,7 +10,7 @@ void FractalFernMain()
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-//    DfWindow *win = CreateWin(width - 200, height - 100, WT_WINDOWED, "Fractal Fern");
+//    DfWindow *win = CreateWin(width - 200, height - 100, WD_WINDOWED_RESIZEABLE, "Fractal Fern");
     DfWindow *win = CreateWin(width, height, WT_FULLSCREEN, "Fractal Fern");
     HideMouse(win);
 

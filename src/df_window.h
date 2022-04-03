@@ -98,7 +98,8 @@ typedef struct _DfWindow
 typedef enum
 {
     WT_FULLSCREEN = 0,
-    WT_WINDOWED = 1
+    WD_WINDOWED_RESIZEABLE = 1,
+    WD_WINDOWED_FIXED = 2
 } WindowType;
 
 

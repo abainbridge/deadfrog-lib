@@ -81,7 +81,7 @@ void AaPolyTestMain()
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-    DfWindow *win = CreateWin(1280, 1024, WT_WINDOWED, "AA Poly Test");
+    DfWindow *win = CreateWin(1280, 1024, WD_WINDOWED_RESIZEABLE, "AA Poly Test");
 
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
