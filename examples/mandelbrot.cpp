@@ -8,7 +8,7 @@ void MandelbrotMain()
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-    DfWindow *win = CreateWin(width - 200, height - 90, WD_WINDOWED_RESIZEABLE, "Broken Mandelbrot Example");
+    DfWindow *win = CreateWin(width - 200, height - 90, WT_WINDOWED_RESIZEABLE, "Broken Mandelbrot Example");
     HideMouse(win);
 
     double zoomFactor = 4.0 / (double)win->bmp->height;

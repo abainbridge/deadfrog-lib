@@ -138,7 +138,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
         }
     }
 
-    DfWindow *win = CreateWin(winWidth, winHeight, WD_WINDOWED_FIXED, title);
+    DfWindow *win = CreateWin(winWidth, winHeight, WT_WINDOWED_FIXED, title);
 
     int selectedButton = 0;
     int result = -1;

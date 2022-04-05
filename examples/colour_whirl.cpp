@@ -119,7 +119,7 @@ void ColourWhirlMain()
     int width, height;
     GetDesktopRes(&width, &height);
 //    DfWindow *win = CreateWin(width, height, false, "Colour Whirl Example");
-    DfWindow *win = CreateWin(1200, 900, WD_WINDOWED_RESIZEABLE, "Colour Whirl Example");
+    DfWindow *win = CreateWin(1200, 900, WT_WINDOWED_RESIZEABLE, "Colour Whirl Example");
     BitmapClear(win->bmp, g_colourBlack);
 
     // Create an array of colours

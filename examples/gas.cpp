@@ -193,7 +193,7 @@ static void Render(DfWindow *win)
 
 void GasMain()
 {
-    DfWindow *win = CreateWin(800, 600, WD_WINDOWED_RESIZEABLE, "Ideal Gas Simulation Example");
+    DfWindow *win = CreateWin(800, 600, WT_WINDOWED_RESIZEABLE, "Ideal Gas Simulation Example");
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     InitParticles(win);

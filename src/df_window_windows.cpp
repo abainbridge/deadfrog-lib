@@ -442,7 +442,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     }
     else
     {
-        if (winType == WD_WINDOWED_RESIZEABLE)
+        if (winType == WT_WINDOWED_RESIZEABLE)
             windowStyle |= WS_OVERLAPPEDWINDOW;
         else
             windowStyle |= WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU;

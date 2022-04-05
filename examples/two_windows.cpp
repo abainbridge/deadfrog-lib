@@ -12,8 +12,8 @@ void TwoWindowsMain()
         "\n"
         "http://deadfrog.co.uk", MsgDlgTypeOk);
 
-    DfWindow *win = CreateWin(600, 400, WD_WINDOWED_RESIZEABLE, "Window 1");
-    DfWindow *win2 = CreateWin(600, 400, WD_WINDOWED_RESIZEABLE, "Window the other");
+    DfWindow *win = CreateWin(600, 400, WT_WINDOWED_RESIZEABLE, "Window 1");
+    DfWindow *win2 = CreateWin(600, 400, WT_WINDOWED_RESIZEABLE, "Window the other");
 
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 

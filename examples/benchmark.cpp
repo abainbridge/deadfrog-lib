@@ -282,7 +282,7 @@ void BenchmarkMain()
     FILE *file = fopen("report.txt", "w");
     ReleaseAssert(file, "Couldn't open report.txt");
 
-    DfWindow *win = CreateWin(1024, 768, WD_WINDOWED_RESIZEABLE, "Benchmark");
+    DfWindow *win = CreateWin(1024, 768, WT_WINDOWED_RESIZEABLE, "Benchmark");
     BitmapClear(win->bmp, g_colourBlack);
 
     DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
