@@ -30,12 +30,7 @@ DfBitmap *BitmapCreate(int width, int height)
     bmp->clipBottom = height;
 
 	bmp->pixels = new DfColour[width * height];
-	bmp->lines = new DfColour *[height];
-
-	DebugAssert(bmp->pixels && bmp->lines);
-
-	for (int y = 0; y < height; ++y)
-		bmp->lines[y] = &bmp->pixels[y * width];
+	DebugAssert(bmp->pixels);
 
     return bmp;
 }
@@ -44,9 +39,7 @@ DfBitmap *BitmapCreate(int width, int height)
 void BitmapDelete(DfBitmap *bmp)
 {
 	delete [] bmp->pixels;
-	delete [] bmp->lines;
 	bmp->pixels = NULL;
-	bmp->lines = NULL;
     delete bmp;
 }
 
@@ -906,17 +899,19 @@ void ScaleDownBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src)
 }
 
 
-void ScaleUpBlit(DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp)
+void ScaleUpBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src)
 {
-    int maxSx = IntMin(srcBmp->width, destBmp->width / scale);
-    int maxSy = IntMin(srcBmp->height, destBmp->height / scale);
+    int maxSx = IntMin(src->width, dest->width / scale);
+    int maxSy = IntMin(src->height, dest->height / scale);
 
     for (int sy = 0; sy < maxSy; sy++)
     {
+        DfColour *srcPixel = GetLine(src, sy);
+
         for (int j = 0; j < scale; j++)
         {
-            DfColour *srcPixel = srcBmp->lines[sy];
-            DfColour *destPixel = destBmp->lines[y + sy * scale + j] + x;
+            int destY = y + sy * scale + j;
+            DfColour *destPixel = GetLine(dest, destY) + x;
 
             for (int sx = 0; sx < maxSx; sx++)
             {

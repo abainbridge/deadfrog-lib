@@ -27,8 +27,7 @@ typedef struct _DfBitmap
     int clipTop;
     int clipBottom;
 
-    DfColour *pixels;   // TODO: remove lines and embed pixels in-line. Then remove BitmapDelete().
-	DfColour **lines;
+    DfColour *pixels;
 } DfBitmap;
 
 
