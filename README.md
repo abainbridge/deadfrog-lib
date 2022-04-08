@@ -81,8 +81,6 @@ int main() {
         UpdateWin(win);
         WaitVsync();
     }
-
-    return 0;
 }
 ~~~~
 
