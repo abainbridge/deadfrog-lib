@@ -11,7 +11,7 @@ c_files_raw=\
  df_colour.cpp \
  df_common_linux.cpp \
  df_font.cpp \
- df_message_dialog_x11.cpp \
+ df_message_dialog.cpp \
  df_polygon_aa.cpp \
  df_time.cpp \
  df_window.cpp
