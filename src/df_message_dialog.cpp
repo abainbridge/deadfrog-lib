@@ -49,8 +49,7 @@ struct Button
 
 static bool DoButton(DfWindow *win, DfFont *font, Button *button, bool isSelected)
 {
-    DfColour light = { 0xffe3e3e3 };
-    DfColour medium = { 0xffa0a0a0 };
+    DfColour light = { 0xffa0a0a0 };
     DfColour dark = { 0xff646464 };
     int x = button->x, y = button->y, w = button->w, h = button->h;
     int mx = win->input.mouseX;
@@ -59,9 +58,9 @@ static bool DoButton(DfWindow *win, DfFont *font, Button *button, bool isSelecte
 
     RectOutline(win->bmp, x, y, w, h, dark);
     DfColour tlColour = g_colourWhite;
-    DfColour brColour = medium;
+    DfColour brColour = light;
     if (win->input.lmb && mouseOver) {
-        tlColour = medium;
+        tlColour = light;
         brColour = g_colourWhite;
     }
     HLine(win->bmp, x + 1, y + 1, w - 3, tlColour);
@@ -73,7 +72,7 @@ static bool DoButton(DfWindow *win, DfFont *font, Button *button, bool isSelecte
     DrawTextCentre(font, g_colourBlack, win->bmp, x + w/2, textY, button->label);
 
     if (isSelected)
-        RectOutline(win->bmp, button->x + 4, button->y + 4, button->w - 8, button->h - 8, medium);
+        RectOutline(win->bmp, button->x + 4, button->y + 4, button->w - 8, button->h - 8, light);
 
     if (win->input.lmbUnClicked && mouseOver)
         return true;
