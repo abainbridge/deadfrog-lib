@@ -86,6 +86,7 @@ int main() {
 }
 ~~~~
 
-## Project Information
+## Projects using Deadfrog-lib
 
-The project was created on Apr 10, 2012.
+* [Code Trowel](http://deadfrog.co.uk) - A programmer's text editor.
+* [Sound Shovel](https://github.com/abainbridge/sound_shovel) - A very incomplete WAV file editor.
