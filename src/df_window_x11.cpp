@@ -919,6 +919,22 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed,
 }
 
 
+void DestroyWin(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    uint32_t packet[2] = { 0 };
+    packet[0] = 4; // OPCODE_DESTROY_WINDOW
+    packet[0] |= 2 << 16; // Length
+    packet[1] = platSpec->windowId;
+    SendBuf(platSpec, packet, sizeof(packet));
+
+    BitmapDelete(win->bmp);
+    delete[] platSpec->connectionReplySuccessBody;
+    delete win->_private->platSpec;
+    delete win->_private;
+    delete win;
+}
+
+
 static void BlitBitmapToWindow(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
 
