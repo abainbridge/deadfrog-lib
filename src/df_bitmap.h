@@ -15,8 +15,7 @@ extern "C"
 #endif
 
 
-typedef struct _DfBitmap
-{
+typedef struct _DfBitmap {
 	int width;
 	int height;
 
@@ -96,8 +95,7 @@ inline void PutPixUnclipped(DfBitmap *bmp, int x, int y, DfColour c)
 //    DfColour *pixel = bmp->lines[y] + x;
     if (c.a == 255)
         *pixel = c;
-    else
-    {
+    else {
         unsigned char invA = 255 - c.a;
         unsigned crb = (c.c & 0xff00ff) * c.a;
         unsigned cg = c.g * c.a;

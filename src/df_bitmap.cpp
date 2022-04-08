@@ -18,8 +18,7 @@ static inline void __movsb(unsigned char *dst, unsigned char *src, size_t n) {
 #endif
 
 
-DfBitmap *BitmapCreate(int width, int height)
-{
+DfBitmap *BitmapCreate(int width, int height) {
 	DfBitmap *bmp = new DfBitmap;
 	bmp->width = width;
 	bmp->height = height;
@@ -36,16 +35,14 @@ DfBitmap *BitmapCreate(int width, int height)
 }
 
 
-void BitmapDelete(DfBitmap *bmp)
-{
+void BitmapDelete(DfBitmap *bmp) {
 	delete [] bmp->pixels;
 	bmp->pixels = NULL;
     delete bmp;
 }
 
 
-void SetClipRect(DfBitmap *bmp, int x, int y, int w, int h)
-{
+void SetClipRect(DfBitmap *bmp, int x, int y, int w, int h) {
     bmp->clipLeft = IntMax(0, x);
     bmp->clipTop = IntMax(0, y);
     bmp->clipRight = IntMin(x + w, bmp->width);
@@ -53,8 +50,7 @@ void SetClipRect(DfBitmap *bmp, int x, int y, int w, int h)
 }
 
 
-void GetClipRect(DfBitmap *bmp, int *x, int *y, int *w, int *h)
-{
+void GetClipRect(DfBitmap *bmp, int *x, int *y, int *w, int *h) {
     *x = bmp->clipLeft;
     *y = bmp->clipTop;
     *w = bmp->clipRight - bmp->clipLeft;
@@ -62,8 +58,7 @@ void GetClipRect(DfBitmap *bmp, int *x, int *y, int *w, int *h)
 }
 
 
-void ClearClipRect(DfBitmap *bmp)
-{
+void ClearClipRect(DfBitmap *bmp) {
     bmp->clipLeft = bmp->clipTop = 0;
     bmp->clipRight = bmp->width;
     bmp->clipBottom = bmp->height;
@@ -73,20 +68,17 @@ void ClearClipRect(DfBitmap *bmp)
 #define GetLine(bmp, y) ((bmp)->pixels + (bmp)->width * (y))
 
 
-void BitmapClear(DfBitmap *bmp, DfColour colour)
-{
+void BitmapClear(DfBitmap *bmp, DfColour colour) {
     RectFill(bmp, 0, 0, bmp->width, bmp->height, colour);
 }
 
 
-DfColour GetPixUnclipped(DfBitmap *bmp, int x, int y)
-{
+DfColour GetPixUnclipped(DfBitmap *bmp, int x, int y) {
 	return GetLine(bmp, y)[x];
 }
 
 
-void PutPix(DfBitmap *bmp, int x, int y, DfColour colour)
-{
+void PutPix(DfBitmap *bmp, int x, int y, DfColour colour) {
     if (x < bmp->clipLeft || x >= bmp->clipRight || y < bmp->clipTop || y >= bmp->clipBottom)
 		return;
 
@@ -94,20 +86,17 @@ void PutPix(DfBitmap *bmp, int x, int y, DfColour colour)
 }
 
 
-DfColour GetPix(DfBitmap *bmp, int x, int y)
-{
+DfColour GetPix(DfBitmap *bmp, int x, int y) {
     if (x < bmp->clipLeft || x >= bmp->clipRight || y < bmp->clipTop || y >= bmp->clipBottom)
 		return g_colourBlack;
 
-	return GetLine(bmp, y)[x]; 
+	return GetLine(bmp, y)[x];
 }
 
 
-void HLineUnclipped(DfBitmap *bmp, int x, int y, int len, DfColour c)
-{
+void HLineUnclipped(DfBitmap *bmp, int x, int y, int len, DfColour c) {
     DfColour * __restrict row = GetLine(bmp, y) + x;
-    if (c.a == 255)
-    {
+    if (c.a == 255) {
 #ifdef _MSC_VER
         __stosd((unsigned long*)row, c.c, len);
 #else
@@ -115,14 +104,12 @@ void HLineUnclipped(DfBitmap *bmp, int x, int y, int len, DfColour c)
             row[i] = c;
 #endif
     }
-    else
-    {
+    else {
         unsigned crb = (c.c & 0xff00ff) * c.a;
         unsigned cg = c.g * c.a;
 
         unsigned char invA = 255 - c.a;
-        for (int i = 0; i < len; i++)
-        {
+        for (int i = 0; i < len; i++) {
             DfColour *pixel = row + i;
             unsigned rb = (pixel->c & 0xff00ff) * invA + crb;
             unsigned g = pixel->g * invA + cg;
@@ -134,16 +121,14 @@ void HLineUnclipped(DfBitmap *bmp, int x, int y, int len, DfColour c)
 }
 
 
-void HLine(DfBitmap *bmp, int x, int y, int len, DfColour c)
-{
+void HLine(DfBitmap *bmp, int x, int y, int len, DfColour c) {
     // Clip against top and bottom of bmp
     if (y < bmp->clipTop || y >= bmp->clipBottom)
         return;
 
     // Clip against left
     int amtClipped = bmp->clipLeft - x;
-    if (amtClipped > 0)
-    {
+    if (amtClipped > 0) {
         len -= amtClipped;
         x = bmp->clipLeft;
     }
@@ -160,27 +145,22 @@ void HLine(DfBitmap *bmp, int x, int y, int len, DfColour c)
 }
 
 
-void VLineUnclipped(DfBitmap *bmp, int x, int y, int len, DfColour c)
-{
+void VLineUnclipped(DfBitmap *bmp, int x, int y, int len, DfColour c) {
     DfColour * __restrict pixel = GetLine(bmp, y) + x;
     int const bw = bmp->width;
-    if (c.a == 255)
-    {
-        for (int i = 0; i < len; i++)
-        {
+    if (c.a == 255) {
+        for (int i = 0; i < len; i++) {
             *pixel = c;
             pixel += bw;
         }
     }
-    else
-    {
+    else {
         unsigned char invA = 255 - c.a;
         unsigned cr = c.r * c.a;
         unsigned cg = c.g * c.a;
         unsigned cb = c.b * c.a;
 
-        for (int i = 0; i < len; i++)
-        {
+        for (int i = 0; i < len; i++) {
             pixel->r = (pixel->r * invA + cr) >> 8;
             pixel->g = (pixel->g * invA + cg) >> 8;
             pixel->b = (pixel->b * invA + cb) >> 8;
@@ -190,16 +170,14 @@ void VLineUnclipped(DfBitmap *bmp, int x, int y, int len, DfColour c)
 }
 
 
-void VLine(DfBitmap *bmp, int x, int y, int len, DfColour c)
-{
+void VLine(DfBitmap *bmp, int x, int y, int len, DfColour c) {
     // Clip against left and right of bmp
     if (x < bmp->clipLeft || x >= bmp->clipRight)
         return;
 
     // Clip against top
     int amtClipped = bmp->clipTop - y;
-    if (amtClipped > 0)
-    {
+    if (amtClipped > 0) {
         len -= amtClipped;
         y = bmp->clipTop;
     }
@@ -216,15 +194,13 @@ void VLine(DfBitmap *bmp, int x, int y, int len, DfColour c)
 }
 
 
-void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
-{
+void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour) {
     // This implementation is based on that presented in Michael Abrash's Zen of
     // Graphics Programming (2nd Edition), listing 15-1, page 250.
 
     // We'll always draw top to bottom, to reduce the number of cases we have to
     // handle, and to make lines between the same endpoints draw the same pixels
-    if (y1 > y2)
-    {
+    if (y1 > y2) {
         int temp = y1;
         y1 = y2;
         y2 = temp;
@@ -235,12 +211,11 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
 
     int xDelta = x2 - x1;
     int yDelta = y2 - y1;
-    
+
     // Special case horizontal and vertical lines
     if (xDelta == 0)
         return VLine(bmp, x1, y1, yDelta+1, colour);
-    if (yDelta == 0)
-    {
+    if (yDelta == 0) {
         if (xDelta > 0)
             return HLine(bmp, x1, y1, xDelta+1, colour);
         else
@@ -249,12 +224,11 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
 
     // Clipping
     if (x1 < bmp->clipLeft || x1 >= bmp->clipRight || y1 < bmp->clipTop || y1 >= bmp->clipBottom ||
-        x2 < bmp->clipLeft || x2 >= bmp->clipRight || y2 < bmp->clipTop || y2 >= bmp->clipBottom)
-    {
+        x2 < bmp->clipLeft || x2 >= bmp->clipRight || y2 < bmp->clipTop || y2 >= bmp->clipBottom) {
         // Parametric line equation can be written as:
         //   x = rx + t * ux
         //   y = ry + t * uy
-        // Where (x,y) is a point on the line. (rx,ry) is another 
+        // Where (x,y) is a point on the line. (rx,ry) is another
         // point on the line. (ux, uy) is a vector along the line.
         // We can use (xDelta, yDelta) for (ux, uy).
         // t is a real number that ranges from 0 to 1 for our line segment.
@@ -289,13 +263,11 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
         // If x = clipLeft then clipLeft = rx + t * xDelta
         // or t = (clipLeft - rx) / xDelta
         t = double(bmp->clipLeft - x1) / double(xDelta);
-        if (xDelta > 0)
-        {
+        if (xDelta > 0) {
             if (t > tMin)
                 tMin = t;
         }
-        else
-        {
+        else {
             if (t < tMax)
                 tMax = t;
         }
@@ -304,13 +276,11 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
         // If x = clipRight then clipRight = rx + t * xDelta
         // or t = (clipRight - rx) / xDelta
         t = double(bmp->clipRight - 1 - x1) / double(xDelta);
-        if (xDelta > 0)
-        {
+        if (xDelta > 0) {
             if (t < tMax)
                 tMax = t;
         }
-        else
-        {
+        else {
             if (t > tMin)
                 tMin = t;
         }
@@ -339,8 +309,7 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
         // Special case horizontal and vertical lines
         if (xDelta == 0)
             return VLineUnclipped(bmp, x1, y1, yDelta, colour);
-        if (yDelta == 0)
-        {
+        if (yDelta == 0) {
             if (xDelta > 0)
                 return HLineUnclipped(bmp, x1, y1, xDelta, colour);
             else
@@ -349,15 +318,13 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
     }
 
     int xAdvance = 1;
-    if (xDelta < 0)
-    {
+    if (xDelta < 0) {
         xAdvance = -1;
         xDelta = -xDelta;
     }
 
     // Special case diagonal line
-    if (xDelta == yDelta)
-    {
+    if (xDelta == yDelta) {
         for (int i = 0; i <= xDelta; i++)
             PutPixUnclipped(bmp, x1 + i * xAdvance, y1 + i, colour);
         return;
@@ -366,25 +333,24 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
     DfColour * __restrict pixel = GetLine(bmp, y1) + x1;
 
     // Is the line X major or y major?
-    if (xDelta >= yDelta)
-    {
+    if (xDelta >= yDelta) {
         // Min number pixels in a run in this line
         int wholeStep = xDelta / yDelta;
-        
+
         // Error term adjust each time Y steps by 1; used to tell when one
         // extra pixel should be drawn as part of a run, to account for
         // fractional steps along the X axis per 1-pixel steps along Y.
         int adjUp = (xDelta %  yDelta) * 2;
-        
+
         // Error term adjust when the error term turns over, used to factor
         // out the X step made at that time.
         int adjDown = yDelta * 2;
-        
+
         // Initial error term; reflects an initial step of 0.5 along the Y axis
         int errorTerm = (xDelta % yDelta) - (yDelta * 2);
-        
+
         // The initial and last runs are partial because Y advances only 0.5
-        // for these runs. Divide one full run, plus the initial pixel, between 
+        // for these runs. Divide one full run, plus the initial pixel, between
         // the initial and last runs.
         int initialPixelCount = (wholeStep / 2) + 1;
         int finalPixelCount = initialPixelCount;
@@ -398,31 +364,27 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
 
         // If there are an odd number of pixels per run, we have 1 pixel that can't
         // be allocated to either the initial or last partial run, so we'll add 0.5
-        // to the error term so this pixel will be handled by the normal full-run 
+        // to the error term so this pixel will be handled by the normal full-run
         // loop.
         if ((wholeStep & 1) != 0)
             errorTerm += yDelta;
 
         // Draw the first partial run of pixels
-        for (; initialPixelCount; initialPixelCount--)
-        {
+        for (; initialPixelCount; initialPixelCount--) {
             *pixel = colour;
             pixel += xAdvance;
         }
         pixel += bmp->width;
 
         // Do the main loop
-        for (int i = 0; i < yDelta - 1; i++)
-        {
+        for (int i = 0; i < yDelta - 1; i++) {
             int runLength = wholeStep;
-            if ((errorTerm += adjUp) > 0)
-            {
+            if ((errorTerm += adjUp) > 0) {
                 runLength++;
                 errorTerm -= adjDown;
             }
-        
-            for (; runLength; runLength--)
-            {
+
+            for (; runLength; runLength--) {
                 *pixel = colour;
                 pixel += xAdvance;
             }
@@ -430,14 +392,12 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
         }
 
         // Draw the last partial run
-        for (; finalPixelCount; finalPixelCount--)
-        {
+        for (; finalPixelCount; finalPixelCount--) {
             *pixel = colour;
             pixel += xAdvance;
         }
     }
-    else
-    {
+    else {
         // Line is Y major
 
         int wholeStep = yDelta / xDelta;
@@ -446,7 +406,7 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
         int errorTerm = (yDelta % xDelta) - xDelta * 2;
         int initialPixelCount = (wholeStep / 2) + 1;
         int finalPixelCount = initialPixelCount;
-        
+
         if (adjUp == 0 && (wholeStep & 1) == 0)
             initialPixelCount--;
 
@@ -455,25 +415,21 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
 
         // Draw vertical run
         int lineInc = bmp->width;
-        for (; initialPixelCount; initialPixelCount--)
-        {
+        for (; initialPixelCount; initialPixelCount--) {
             *pixel = colour;
             pixel += lineInc;
         }
         pixel += xAdvance;
 
         // Do the main loop
-        for (int i = 0; i < xDelta - 1; i++)
-        {
+        for (int i = 0; i < xDelta - 1; i++) {
             int runlength = wholeStep;
-            if ((errorTerm += adjUp) > 0)
-            {
+            if ((errorTerm += adjUp) > 0) {
                 runlength++;
                 errorTerm -= adjDown;
             }
 
-            for (; runlength; runlength--)
-            {
+            for (; runlength; runlength--) {
                 *pixel = colour;
                 pixel += lineInc;
             }
@@ -481,8 +437,7 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
         }
 
         // Draw the last partial run
-        for (; finalPixelCount; finalPixelCount--)
-        {
+        for (; finalPixelCount; finalPixelCount--) {
             *pixel = colour;
             pixel += lineInc;
         }
@@ -491,8 +446,7 @@ void DrawLine(DfBitmap *bmp, int x1, int y1, int x2, int y2, DfColour colour)
 
 
 // Calculate the position on a Bezier curve. t is in range 0 to 63356.
-void GetBezierPos(int const *a, int const *b, int const *c, int const *d, int t, int *result)
-{
+void GetBezierPos(int const *a, int const *b, int const *c, int const *d, int t, int *result) {
     double dt = (double)t / 65536.0;
     double nt = 1.0 - dt;
 
@@ -506,8 +460,7 @@ void GetBezierPos(int const *a, int const *b, int const *c, int const *d, int t,
 }
 
 
-void GetBezierDir(int const *a, int const *b, int const *c, int const *d, int t, int *result)
-{
+void GetBezierDir(int const *a, int const *b, int const *c, int const *d, int t, int *result) {
     double dt = (double)t / 65536.0;
     double nt = 1.0 - dt;
 
@@ -521,8 +474,7 @@ void GetBezierDir(int const *a, int const *b, int const *c, int const *d, int t,
 }
 
 
-static double GetLineLen(int const *a, int const *b)
-{
+static double GetLineLen(int const *a, int const *b) {
     int dx = a[0] - b[0];
     int dy = a[1] - b[1];
     double len = sqrt((double)dx * dx + (double)dy * dy);
@@ -530,21 +482,19 @@ static double GetLineLen(int const *a, int const *b)
 }
 
 
-void DrawBezier(DfBitmap *bmp, int const *a, int const *b, int const *c, int const *d, DfColour col)
-{
-    // Calculate approximate length of a Bezier curve by sampling at a low 
+void DrawBezier(DfBitmap *bmp, int const *a, int const *b, int const *c, int const *d, DfColour col) {
+    // Calculate approximate length of a Bezier curve by sampling at a low
     // resolution and summing distances between samples.
     double totalLen = 0;
     {
         int v[2];
         v[0] = a[0];
         v[1] = a[1];
-       
-        for (int t = 65536/4; t < 65536; t += 16384)
-        {
+
+        for (int t = 65536/4; t < 65536; t += 16384) {
             int w[2];
             GetBezierPos(a, b, c, d, t, w);
-            
+
             totalLen += GetLineLen(v, w);
 
             v[0] = w[0];
@@ -563,8 +513,7 @@ void DrawBezier(DfBitmap *bmp, int const *a, int const *b, int const *c, int con
     int oldP[2];
     oldP[0] = a[0];
     oldP[1] = a[1];
-    for (int t = inc; t < 65536; t += inc)
-    {
+    for (int t = inc; t < 65536; t += inc) {
         int p[2];
         GetBezierPos(a, b, c, d, t, p);
         DrawLine(bmp, oldP[0], oldP[1], p[0], p[1], col);
@@ -576,8 +525,7 @@ void DrawBezier(DfBitmap *bmp, int const *a, int const *b, int const *c, int con
 }
 
 
-void RectFill(DfBitmap *bmp, int x1, int y1, int w, int h, DfColour c)
-{
+void RectFill(DfBitmap *bmp, int x1, int y1, int w, int h, DfColour c) {
     int x2 = IntMin(x1 + w, bmp->clipRight);
     int y2 = IntMin(y1 + h, bmp->clipBottom);
     x1 = IntMax(x1, bmp->clipLeft);
@@ -587,16 +535,14 @@ void RectFill(DfBitmap *bmp, int x1, int y1, int w, int h, DfColour c)
     if (w <= 0) return;
 
     DfColour * __restrict line = GetLine(bmp, y1) + x1;
-    if (c.a == 255)
-    {
-        for (int a = y1; a < y2; a++)
-        {
+    if (c.a == 255) {
+        for (int a = y1; a < y2; a++) {
 #ifdef _MSC_VER
             __stosd((unsigned long*)line, c.c, w);
 #else
             for (int b = 0; b < w; b++)
                 line[b].c = c.c;
-#endif            
+#endif
             line += bmp->width;
         }
     }
@@ -608,8 +554,7 @@ void RectFill(DfBitmap *bmp, int x1, int y1, int w, int h, DfColour c)
 }
 
 
-void RectOutline(DfBitmap *bmp, int x, int y, int w, int h, DfColour c)
-{
+void RectOutline(DfBitmap *bmp, int x, int y, int w, int h, DfColour c) {
     HLine(bmp, x, y,     w, c);
     HLine(bmp, x, y+h-1, w, c);
     VLine(bmp, x, y,     h, c);
@@ -617,15 +562,13 @@ void RectOutline(DfBitmap *bmp, int x, int y, int w, int h, DfColour c)
 }
 
 
-void CircleOutline(DfBitmap *bmp, int x0, int y0, int radius, DfColour c)
-{
+void CircleOutline(DfBitmap *bmp, int x0, int y0, int radius, DfColour c) {
     // This is the standard Bresenham or Mid-point circle algorithm
     int x = radius;
     int y = 0;
     int radiusError = 1 - x;
 
-    do
-    {
+    do {
         PutPix(bmp, x0 + x, y0 + y, c);
         PutPix(bmp, x0 + y, y0 + x, c);
         PutPix(bmp, x0 - x, y0 + y, c);
@@ -635,12 +578,10 @@ void CircleOutline(DfBitmap *bmp, int x0, int y0, int radius, DfColour c)
         PutPix(bmp, x0 + x, y0 - y, c);
         PutPix(bmp, x0 + y, y0 - x, c);
         y++;
-        if (radiusError < 0)
-        {
+        if (radiusError < 0) {
             radiusError += 2 * y + 1;
         }
-        else
-        {
+        else {
             x--;
             radiusError += 2 * (y - x + 1);
         }
@@ -648,28 +589,24 @@ void CircleOutline(DfBitmap *bmp, int x0, int y0, int radius, DfColour c)
 }
 
 
-void CircleFill(DfBitmap *bmp, int x0, int y0, int radius, DfColour c)
-{
+void CircleFill(DfBitmap *bmp, int x0, int y0, int radius, DfColour c) {
     int x = radius;
     int y = 0;
     int radiusError = 1 - x;
 
     // Iterate through all points along an arc of 1/8th of the circle, drawing
     // horizontal chords for all 4 symmetries at the same time.
-    do 
-    {
+    do {
         HLine(bmp, x0 - x, y0 - y, x*2+1, c);
         HLine(bmp, x0 - x, y0 + y, x*2+1, c);
         HLine(bmp, x0 - y, y0 - x, y*2+1, c);
         HLine(bmp, x0 - y, y0 + x, y*2+1, c);
 
         y++;
-        if (radiusError < 0)
-        {
+        if (radiusError < 0) {
             radiusError += 2 * y + 1;
         }
-        else
-        {
+        else {
             x--;
             radiusError += 2 * (y - x + 1);
         }
@@ -677,8 +614,7 @@ void CircleFill(DfBitmap *bmp, int x0, int y0, int radius, DfColour c)
 }
 
 
-static void EllipsePlotPoints(DfBitmap *bmp, int x0, int y0, int x, int y, DfColour c)
-{
+static void EllipsePlotPoints(DfBitmap *bmp, int x0, int y0, int x, int y, DfColour c) {
     PutPix(bmp, x0 + x, y0 + y, c);
     PutPix(bmp, x0 - x, y0 + y, c);
     PutPix(bmp, x0 + x, y0 - y, c);
@@ -686,8 +622,7 @@ static void EllipsePlotPoints(DfBitmap *bmp, int x0, int y0, int x, int y, DfCol
 }
 
 
-void EllipseOutline(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c)
-{
+void EllipseOutline(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c) {
     int rxSqrd = rx * rx;
     int rySqrd = ry * ry;
     int x = 0;
@@ -700,14 +635,12 @@ void EllipseOutline(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c)
 
     // Region 1
     int p = rySqrd - (rxSqrd * ry) + RoundToInt(0.25 * (double)rxSqrd);
-    while (px < py) 
-    {
+    while (px < py) {
         x++;
         px += 2 * rySqrd;
         if (p < 0)
             p += rySqrd + px;
-        else 
-        {
+        else {
             y--;
             py -= 2 * rxSqrd;
             p += rySqrd + px - py;
@@ -718,33 +651,29 @@ void EllipseOutline(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c)
 
     // Region 2
     p = RoundToInt(rySqrd * (x+0.5) * (x+0.5) + rxSqrd * (y-1) * (y-1) - rxSqrd * rySqrd);
-    while (y > 0) 
-    {
+    while (y > 0) {
         y--;
         py -= 2 * rxSqrd;
         if (p > 0)
             p += rxSqrd - py;
-        else 
-        {
+        else {
             x++;
             px += 2 * rySqrd;
             p += rxSqrd - py + px;
         }
-        
+
         EllipsePlotPoints(bmp, x0, y0, x, y, c);
     }
 }
 
 
-static void EllipsePlotHlines(DfBitmap *bmp, int x0, int y0, int x, int y, DfColour c)
-{
+static void EllipsePlotHlines(DfBitmap *bmp, int x0, int y0, int x, int y, DfColour c) {
     HLine(bmp, x0 - x, y0 + y, x * 2 + 1, c);
     HLine(bmp, x0 - x, y0 - y, x * 2 + 1, c);
 }
 
 
-void EllipseFill(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c)
-{
+void EllipseFill(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c) {
     int rxSqrd = rx * rx;
     int rySqrd = ry * ry;
     int x = 0;
@@ -757,14 +686,12 @@ void EllipseFill(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c)
 
     // Region 1
     int p = rySqrd - (rxSqrd * ry) + RoundToInt(0.25 * (double)rxSqrd);
-    while (px < py) 
-    {
+    while (px < py) {
         x++;
         px += 2 * rySqrd;
         if (p < 0)
             p += rySqrd + px;
-        else 
-        {
+        else {
             y--;
             py -= 2 * rxSqrd;
             p += rySqrd + px - py;
@@ -775,14 +702,12 @@ void EllipseFill(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c)
 
     // Region 2
     p = RoundToInt(rySqrd * (x+0.5) * (x+0.5) + rxSqrd * (y-1) * (y-1) - rxSqrd * rySqrd);
-    while (y > 0) 
-    {
+    while (y > 0) {
         y--;
         py -= 2 * rxSqrd;
         if (p > 0)
             p += rxSqrd - py;
-        else 
-        {
+        else {
             x++;
             px += 2 * rySqrd;
             p += rxSqrd - py + px;
@@ -794,65 +719,57 @@ void EllipseFill(DfBitmap *bmp, int x0, int y0, int rx, int ry, DfColour c)
 
 
 static void BlitClip(DfBitmap *destBmp, int *dx, int *dy, DfBitmap *srcBmp,
-                     int *w, int *h, int *sx, int *sy)
-{
+                     int *w, int *h, int *sx, int *sy) {
     *w = srcBmp->width;
     *h = srcBmp->height;
     *sx = 0;
     *sy = 0;
 
-    if (*dx < destBmp->clipLeft)
-    { 
+    if (*dx < destBmp->clipLeft) {
         *dx -= destBmp->clipLeft;
         *w += *dx;
         *sx -= *dx;
         *dx = destBmp->clipLeft;
     }
 
-    if (*dy < destBmp->clipTop)
-    { 
+    if (*dy < destBmp->clipTop) {
         *dy -= destBmp->clipTop;
         *h += *dy;
         *sy -= *dy;
         *dy = destBmp->clipTop;
     }
 
-    if (*dx+*w > destBmp->clipRight) 
+    if (*dx+*w > destBmp->clipRight)
         *w = destBmp->clipRight - *dx;
 
-    if (*dy+*h > destBmp->clipBottom) 
+    if (*dy+*h > destBmp->clipBottom)
         *h = destBmp->clipBottom - *dy;
 
-    if (*w <= 0) 
+    if (*w <= 0)
         *h = 0;
 }
 
 
-void MaskedBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp)
-{
+void MaskedBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp) {
     int w, h, sx, sy;
     BlitClip(destBmp, &dx, &dy, srcBmp, &w, &h, &sx, &sy);
-        
-	for (int y = 0; y < h; y++)
-	{
-		DfColour *srcLine = GetLine(srcBmp, sy + y) + sx;
-		DfColour *destLine = GetLine(destBmp, dy + y) + dx;
-		for (int x = 0; x < w; x++)
-		{
-			if (srcLine[x].a > 0)
-				destLine[x] = srcLine[x];
-		}
-	}
+
+    for (int y = 0; y < h; y++) {
+        DfColour *srcLine = GetLine(srcBmp, sy + y) + sx;
+        DfColour *destLine = GetLine(destBmp, dy + y) + dx;
+        for (int x = 0; x < w; x++) {
+            if (srcLine[x].a > 0)
+                destLine[x] = srcLine[x];
+        }
+    }
 }
 
 
-void QuickBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp)
-{
+void QuickBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp) {
     int w, h, sx, sy;
     BlitClip(destBmp, &dx, &dy, srcBmp, &w, &h, &sx, &sy);
 
-    for (int y = 0; y < h; y++)
-    {
+    for (int y = 0; y < h; y++) {
         DfColour *srcLine = GetLine(srcBmp, sy + y) + sx;
         DfColour *destLine = GetLine(destBmp, dy + y) + dx;
 
@@ -863,25 +780,20 @@ void QuickBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp)
 }
 
 
-void ScaleDownBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src)
-{
+void ScaleDownBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src) {
     int outW = src->width / scale;
     int outH = src->height / scale;
     float scaleSqrd = 1.0 / (scale * scale);
 
-    for (int dy = 0; dy < outH; dy++)
-    {
+    for (int dy = 0; dy < outH; dy++) {
         DfColour *pixel = dest->pixels + (y + dy) * dest->width;
-        for (int dx = 0; dx < outW; dx++)
-        {
+        for (int dx = 0; dx < outW; dx++) {
             int r = 0, g = 0, b = 0;
-            for (int sy = dy * scale; sy < (dy+1) * scale; sy++)
-            {
+            for (int sy = dy * scale; sy < (dy+1) * scale; sy++) {
                 DfColour *srcPix = GetLine(src, sy);
                 DfColour *lastPix = srcPix + (dx + 1) * scale;
                 srcPix += dx * scale;
-                while (srcPix < lastPix)
-                {
+                while (srcPix < lastPix) {
                     r += srcPix->r;
                     g += srcPix->g;
                     b += srcPix->b;
@@ -899,24 +811,19 @@ void ScaleDownBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src)
 }
 
 
-void ScaleUpBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src)
-{
+void ScaleUpBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src) {
     int maxSx = IntMin(src->width, dest->width / scale);
     int maxSy = IntMin(src->height, dest->height / scale);
 
-    for (int sy = 0; sy < maxSy; sy++)
-    {
+    for (int sy = 0; sy < maxSy; sy++) {
         DfColour *srcPixel = GetLine(src, sy);
 
-        for (int j = 0; j < scale; j++)
-        {
+        for (int j = 0; j < scale; j++) {
             int destY = y + sy * scale + j;
             DfColour *destPixel = GetLine(dest, destY) + x;
 
-            for (int sx = 0; sx < maxSx; sx++)
-            {
-                for (int i = 0; i < scale; i++)
-                {
+            for (int sx = 0; sx < maxSx; sx++) {
+                for (int i = 0; i < scale; i++) {
                     *destPixel = *srcPixel;
                     destPixel++;
                 }
@@ -928,10 +835,8 @@ void ScaleUpBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src)
 }
 
 
-void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBitmap *srcBmp)
-{
-    if (srcBmp->width < dstW && srcBmp->height < dstH) 
-    {
+void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBitmap *srcBmp) {
+    if (srcBmp->width < dstW && srcBmp->height < dstH) {
         // *** Bilinear upscale ***
 
         unsigned heightRatio = (double)(1 << 8) * 255.5 * srcBmp->height / dstH;
@@ -1020,12 +925,11 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
             }
         }
     }
-    else
-    {
+    else {
         // Based on Ryan Geiss's code from http://www.geisswerks.com/ryan/FAQS/resize.html
 
-        // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more) 
-        // (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
+        // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or more)
+        // (2800 ~= sqrt(2^23)) - for a lazy fix, just call this in two passes.
 
         int srcW = srcBmp->width;
         int srcH = srcBmp->height;
@@ -1049,8 +953,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
         weightShift = IntMin(15, weightShift);  // this could go to 15 and still be ok.
 
         // For every output pixel...
-        for (int y2 = 0; y2 < dstH; y2++)
-        {
+        for (int y2 = 0; y2 < dstH; y2++) {
             if (dstY + y2 < dstBmp->clipTop) continue;
             if (dstY + y2 >= dstBmp->clipBottom) break;
 
@@ -1064,8 +967,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
             int y1c = y1a >> 8;
             int y1d = y1b >> 8;
 
-            for (int x2 = 0; x2 < dstW; x2++, dest++)
-            {
+            for (int x2 = 0; x2 < dstW; x2++, dest++) {
                 if (dstX + x2 < dstBmp->clipLeft) continue;
                 if (dstX + x2 >= dstBmp->clipRight) break;
 
@@ -1078,11 +980,9 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
 
                 // Add up all input pixels contributing to this output pixel.
                 unsigned r = 0, g = 0, b = 0, a = 0;
-                for (int y = y1c; y <= y1d; y++)
-                {
+                for (int y = y1c; y <= y1d; y++) {
                     unsigned weightY = 256;
-                    if (y1c != y1d)
-                    {
+                    if (y1c != y1d) {
                         if (y == y1c)
                             weightY = 256 - (y1a & 0xFF);
                         else if (y == y1d)
@@ -1090,11 +990,9 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                     }
 
                     DfColour *src2 = &srcBmp->pixels[y * srcW + x1c];
-                    for (int x = x1c; x <= x1d; x++)
-                    {
+                    for (int x = x1c; x <= x1d; x++) {
                         unsigned weightX = 256;
-                        if (x1c != x1d)
-                        {
+                        if (x1c != x1d) {
                             if (x == x1c)
                                 weightX = 256 - (x1a & 0xFF);
                             else if (x == x1d)
