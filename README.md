@@ -1,7 +1,9 @@
 # deadfrog-lib
 A simple graphics, keyboard and mouse library with a C interface.
 
-Deadfrog Lib is a collection of simple portable functions to create a window, get keyboard and mouse input and provide various 2D drawing primitives. It was created due to the frustration I found in just getting a simple interactive program up and running on a PC. The PC should be as easy to program as my ZX Spectrum was in 1982.
+Deadfrog Lib is a collection of simple, portable functions to create a window, get keyboard and mouse input and provide various 2D drawing primitives. It was created due to the frustration I found in just getting a simple interactive program up and running on a PC. The PC should be as easy to program as my ZX Spectrum was in 1982.
+
+It is CPU based and makes no attempt to use the GPU.
 
 It currently supports Windows and Linux/X11.
 
@@ -9,7 +11,8 @@ It currently supports Windows and Linux/X11.
 
 * Window create/destroy.
 * 32-bit RGBA bitmap creation.
-* Fast software based drawing routines (pixels, lines, ellipses, polygons, text, blit, masked-blit etc).
+* Fast software based drawing routines (lines, curves, ellipses, polygons, text, bilinear filtered stretched blit etc).
+* Wait for vsync (or wait for desktop compositor to be ready for another frame).
 * Alpha blending support.
 * Anti-aliased polygon drawing.
 * Mouse and keyboard input.
@@ -17,20 +20,19 @@ It currently supports Windows and Linux/X11.
 
 ## Advantages
 
-* Simple API.
-* Simple source code.
-* Fast (for a simple, portable, software renderer).
+* Simple API. Simple source code.
 * Depends on no third-party libraries.
 * It's tiny. Less than 6000 lines of code.
-* Reliable results - unlike hardware accelerated drawing where the exact pixel output can change depending on the graphics card or even the driver version.
+* Reliable results. If the output looks correct on your machine, it will on other peoples', regardless of how buggy their GPU drivers are.
+* You can produce a single binary that will work on many different Linux distros (because it doesn't even depend on xlib or xcb).
 * Easy to debug. Unlike OpenGl/DirectX etc, you can step through all the code in the debugger to see why your rendering code isn't working.
 * Written in C++ with a C interface (to make it easy to use from other languages).
 * Permissive BSD licence.
 * Easy to port to other platforms.
 
-## Design Details
+## Disadvantages
 
-The library does not make use of any hardware acceleration on a graphics accelerator card. With modern CPU speeds, it is still possible to do 1920x1200 full-screen animation at 60 Hz. For simple operations like pixels and lines etc, the CPU only approach can be faster than a GPU accelerated approach because the overhead of communicating with the graphics card is larger than just doing the work on the CPU.
+The library does not make use of the GPU. All the rendering is done by the CPU into bitmaps held in main memory. With modern CPU speeds for many applications this is easily fast enough but obviously it is not as fast as a GPU. I'd use a GPU based library if I needed lots of alpha blending or any non-trivial 3D rendering.
 
 ## Simplifying Assumptions
 
