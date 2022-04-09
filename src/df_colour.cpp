@@ -5,8 +5,7 @@ DfColour g_colourBlack = { 0xff000000U };
 DfColour g_colourWhite = { 0xffffffffU };
 
 
-DfColour RgbaAddWithSaturate(DfColour a, DfColour b)
-{
+DfColour RgbaAddWithSaturate(DfColour a, DfColour b) {
     int x = a.r + b.r;
     int y = a.g + b.g;
     int z = a.b + b.b;

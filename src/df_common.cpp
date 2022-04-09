@@ -10,8 +10,7 @@
 #include <stdlib.h>
 
 
-void DebugOut(char const *fmt, ...)
-{
+void DebugOut(char const *fmt, ...) {
     char buf[512];
     va_list ap;
     va_start (ap, fmt);
@@ -20,43 +19,38 @@ void DebugOut(char const *fmt, ...)
 }
 
 
-void ReleaseAssert(bool condition, char const *fmt, ...)
-{
-	if (!condition)
-	{
-		char buf[1024];
-		va_list ap;
-		va_start (ap, fmt);
-		vsprintf(buf, fmt, ap);
+void ReleaseAssert(bool condition, char const *fmt, ...) {
+    if (!condition) {
+        char buf[1024];
+        va_list ap;
+        va_start (ap, fmt);
+        vsprintf(buf, fmt, ap);
         MessageDialog("Serious Error", buf, MsgDlgTypeOk);
 #if defined(_DEBUG) && defined(_MSC_VER)
-		_CrtDbgBreak();
+        _CrtDbgBreak();
 #else
-	    exit(-1);
+        exit(-1);
 #endif
-	}
+    }
 }
 
 
-void ReleaseWarn(bool condition, char const *fmt, ...)
-{
-	if (!condition)
-	{
-		char buf[512];
-		va_list ap;
-		va_start (ap, fmt);
-		vsprintf(buf, fmt, ap);
-		MessageDialog("Warning", buf, MsgDlgTypeOk);
-	#if defined(_DEBUG) && defined(_MSC_VER)
-		_CrtDbgBreak();
-	#endif
-	}
+void ReleaseWarn(bool condition, char const *fmt, ...) {
+    if (!condition) {
+        char buf[512];
+        va_list ap;
+        va_start (ap, fmt);
+        vsprintf(buf, fmt, ap);
+        MessageDialog("Warning", buf, MsgDlgTypeOk);
+#if defined(_DEBUG) && defined(_MSC_VER)
+        _CrtDbgBreak();
+#endif
+    }
 }
 
 
 #if (defined _MSC_VER && _MSC_VER < 1800)
-int c99_vsnprintf(char *str, size_t size, char const *fmt, va_list ap)
-{
+int c99_vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
     int count = -1;
 
     if (size != 0)
@@ -68,8 +62,7 @@ int c99_vsnprintf(char *str, size_t size, char const *fmt, va_list ap)
 }
 
 
-int snprintf(char *s, size_t n, char const *fmt, ...)
-{
+int snprintf(char *s, size_t n, char const *fmt, ...) {
     int count;
     va_list ap;
 

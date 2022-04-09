@@ -42,7 +42,7 @@ void ReleaseWarn(bool condition, char const *fmt, ...);
 
 
 #ifdef _MSC_VER
-    // Don't use msvcrt's vsprintf. Use the one in the core Windows system instead 
+    // Don't use msvcrt's vsprintf. Use the one in the core Windows system instead
     // to allow us to replace libc with a cut down one to reduce executable sizes.
     //
     // The problem is that wvsprintf() doesn't support %f and %g formatting.
@@ -59,8 +59,7 @@ static inline int RoundToInt(double r) {
 }
 
 
-static inline int ClampInt(int val, int min, int max)
-{
+static inline int ClampInt(int val, int min, int max) {
     if (val < min)
         return min;
     if (val > max)
@@ -69,8 +68,7 @@ static inline int ClampInt(int val, int min, int max)
 }
 
 
-static inline double ClampDouble(double val, double min, double max)
-{
+static inline double ClampDouble(double val, double min, double max) {
     if (val < min)
         return min;
     if (val > max)

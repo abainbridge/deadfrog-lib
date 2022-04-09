@@ -11,8 +11,7 @@ extern "C"
 
 
 
-typedef union
-{
+typedef union {
     unsigned c;
     struct { unsigned char b, g, r, a; };
 } DfColour;
@@ -24,28 +23,25 @@ DLL_API inline DfColour Colour(unsigned r, unsigned g, unsigned b, unsigned a=25
 DLL_API inline DfColour Colour(unsigned r, unsigned g, unsigned b, unsigned a)
 #endif
 {
-	DfColour c;
-	c.a = a;
-	c.b = b;
-	c.g = g;
-	c.r = r;
-	return c;
+    DfColour c;
+    c.a = a;
+    c.b = b;
+    c.g = g;
+    c.r = r;
+    return c;
 }
 
-DLL_API inline DfColour RgbaAdd(DfColour a, DfColour b)
-{
+DLL_API inline DfColour RgbaAdd(DfColour a, DfColour b) {
     return Colour(a.r + b.r, a.g + b.g, a.b + b.b, a.a + b.a);
 }
 
 
-DLL_API inline DfColour RgbaSubtract(DfColour a, DfColour b)
-{
+DLL_API inline DfColour RgbaSubtract(DfColour a, DfColour b) {
     return Colour(a.r - b.r, a.g - b.g, a.b - b.b, a.a - b.a);
 }
 
 
-DLL_API inline DfColour RgbaMultiply(DfColour col, float x)
-{
+DLL_API inline DfColour RgbaMultiply(DfColour col, float x) {
     return Colour(col.r * x, col.g * x, col.b * x, col.a * x);
 }
 
@@ -54,20 +50,17 @@ DLL_API DfColour RgbaAddWithSaturate(DfColour a, DfColour b);
 
 
 #if __cplusplus
-inline DfColour operator+(DfColour a, DfColour b)
-{
+inline DfColour operator+(DfColour a, DfColour b) {
     return RgbaAdd(a, b);
 }
 
 
-inline DfColour operator-(DfColour a, DfColour b)
-{
+inline DfColour operator-(DfColour a, DfColour b) {
     return RgbaSubtract(a, b);
 }
 
 
-inline DfColour operator*(DfColour col, float x)
-{
+inline DfColour operator*(DfColour col, float x) {
     return RgbaMultiply(col, x);
 }
 #endif

@@ -26,7 +26,7 @@ char *ClipboardReceiveData(int *numChars) {
     if (!g_clipboardData)
         return NULL;
 
-    // Get a pointer to the data associated with the handle returned from 
+    // Get a pointer to the data associated with the handle returned from
     // GetClipboardData.
     char *data = (char*)GlobalLock(g_clipboardData);
     *numChars = strlen(data) + 1;
@@ -41,7 +41,7 @@ void ClipboardReleaseReceivedData(char const *data) {
         GlobalUnlock(g_clipboardData);
     g_clipboardData = NULL;
 
-    // Close the Clipboard, which unlocks it so that other applications can 
+    // Close the Clipboard, which unlocks it so that other applications can
     // examine or modify its contents.
     CloseClipboard();
 }
@@ -56,30 +56,30 @@ int ClipboardSetData(char const *data, int sizeData) {
     if (!OpenClipboard(NULL))
         return 0;
 
-    // Empty the Clipboard. This also has the effect of allowing Windows to 
+    // Empty the Clipboard. This also has the effect of allowing Windows to
     // free the memory associated with any data that is in the Clipboard.
     EmptyClipboard();
 
     HGLOBAL clipboardHandle = GlobalAlloc(GMEM_DDESHARE, sizeData);
 
-    // Calling GlobalLock returns a pointer to the data associated with the 
+    // Calling GlobalLock returns a pointer to the data associated with the
     // handle returned from GlobalAlloc()
     char *windowsData = (char*)GlobalLock(clipboardHandle);
     if (!windowsData)
-		return 0;
+        return 0;
 
     // Copy the data from the local variable to the global memory.
     memcpy(windowsData, data, sizeData);
 
     // Unlock the memory - don't call GlobalFree because Windows will free the
-    // memory automatically when EmptyClipboard is next called. 
+    // memory automatically when EmptyClipboard is next called.
     GlobalUnlock(clipboardHandle);
 
-    // Set the Clipboard data by specifying that ANSI text is being used and 
+    // Set the Clipboard data by specifying that ANSI text is being used and
     // passing the handle to the global memory.
     SetClipboardData(CF_TEXT, clipboardHandle);
 
-    // Close the Clipboard which unlocks it so that other applications can 
+    // Close the Clipboard which unlocks it so that other applications can
     // examine or modify its contents.
     CloseClipboard();
 
