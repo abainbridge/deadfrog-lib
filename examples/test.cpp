@@ -172,7 +172,7 @@ void TestFillConvexPolygon(DfBitmap *bmp)
 
 
 #define END_TEST \
-    QuickBlit(win->bmp, 600, textY, backBmp); \
+    Blit(win->bmp, 600, textY, backBmp); \
     UpdateWin(win); \
     InputPoll(win); \
 if (win->windowClosed || win->input.keyDowns[KEY_ESC]) return; \

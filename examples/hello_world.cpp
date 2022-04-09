@@ -16,7 +16,7 @@ void HelloWorldMain()
     {
         BitmapClear(win->bmp, g_colourBlack);
         InputPoll(win);
-		
+
         x += 1;
         y += 2;
         if (x > win->bmp->width)

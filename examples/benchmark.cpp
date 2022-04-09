@@ -176,7 +176,7 @@ double CalcBillionBlitPixelsPerSec(DfBitmap *bmp)
     g_iterations = 1000 * 30;
     double startTime = GetRealTime();
     for (unsigned i = 0; i < g_iterations; i++)
-        QuickBlit(bmp, 0, 0, dog);
+        Blit(bmp, 0, 0, dog);
     double endTime = GetRealTime();
     g_duration = endTime - startTime;
     g_testFmtString = "Billion blit pixels per sec";
@@ -267,7 +267,7 @@ double CalcWindowUpdatesPerSecond(DfWindow *win)
 
 
 #define END_TEST \
-    QuickBlit(win->bmp, 600, textY, backBmp); \
+    Blit(win->bmp, 600, textY, backBmp); \
     UpdateWin(win); \
     InputPoll(win); \
     if (win->windowClosed || win->input.keyDowns[KEY_ESC]) return; \

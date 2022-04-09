@@ -16,8 +16,8 @@ extern "C"
 
 
 typedef struct _DfBitmap {
-	int width;
-	int height;
+    int width;
+    int height;
 
     // Clipping rectangle. Pixel is clipped if and only if:
     //    x < clipLeft || x >= clipRight || y < clipTop || y >= clipBottom
@@ -72,8 +72,7 @@ DLL_API void        EllipseFill     (DfBitmap *bmp, int x, int y, int rx, int ry
 DLL_API void        MaskedBlit      (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
 
 // Copies the source bitmap to the destination bitmap, including pixels whose source alpha values are 0
-// TODO rename this to just Blit().
-DLL_API void        QuickBlit       (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
+DLL_API void        Blit            (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
 
 // Blit while scaling the result down by the specified integer scale factor.
 // The exact integer scaling makes it higher quality and faster than
@@ -86,13 +85,12 @@ DLL_API void        ScaleUpBlit     (DfBitmap *destBmp, int x, int y, int scale,
 
 // Blit with arbitrary resizing. dstWidth and dstHeight specify how large the
 // output should be. Does box sampling downscale and bilinear upscale.
-DLL_API void 		StretchBlit     (DfBitmap *dst_bmp, int dstX, int dstY, int dstWidth, int dstHeight, DfBitmap *src_bmp);
+DLL_API void        StretchBlit     (DfBitmap *dst_bmp, int dstX, int dstY, int dstWidth, int dstHeight, DfBitmap *src_bmp);
 
 
 inline void PutPixUnclipped(DfBitmap *bmp, int x, int y, DfColour c)
 {
     DfColour *pixel = (bmp->pixels + y * bmp->width) + x;
-//    DfColour *pixel = bmp->lines[y] + x;
     if (c.a == 255)
         *pixel = c;
     else {

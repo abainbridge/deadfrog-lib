@@ -32,6 +32,8 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 
 #else
 
+// TODO - Make this dialog scale itself according to the screen DPI.
+
 #include "fonts/df_prop.h"
 #include "df_font.h"
 #include "df_window.h"

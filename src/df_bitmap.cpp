@@ -765,7 +765,7 @@ void MaskedBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp) {
 }
 
 
-void QuickBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp) {
+void Blit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp) {
     int w, h, sx, sy;
     BlitClip(destBmp, &dx, &dy, srcBmp, &w, &h, &sx, &sy);
 

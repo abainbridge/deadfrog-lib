@@ -105,7 +105,7 @@ void AaPolyTestMain()
         Chevron(bmp, xOffset, yOffset, zoom); // Use this version for interactive testing.
 #endif
         double thisDuration = (GetRealTime() - start) * 1000.0;
-        QuickBlit(win->bmp, 0, 0, bmp);
+        Blit(win->bmp, 0, 0, bmp);
         ScaleUpBlit(win->bmp, 100, 0, 6, bmp);
 
         xOffset -= win->input.keyDowns[KEY_LEFT];
