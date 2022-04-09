@@ -23,7 +23,7 @@
 // To debug what we send to the xserver:
 //    In one terminal, run:
 //        xtrace -D:1 -d:0 -k -w
-//    Then, in another terminal:  
+//    Then, in another terminal:
 //        Set the DISPLAY env var to ":1"
 //        Run CodeTrowel
 //
@@ -533,7 +533,7 @@ static void HandleEvent(DfWindow *win) {
     bool selectionNotifyReceived = false;
 
     platSpec->recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
-    
+
     switch (platSpec->recvBuf[0]) {
     case 2: // KeyPress event.
         {
@@ -546,8 +546,8 @@ static void HandleEvent(DfWindow *win) {
     //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
 
             if (ascii) {
-    			win->_private->m_newKeysTyped[win->_private->m_newNumKeysTyped] = ascii;
-    			win->_private->m_newNumKeysTyped++;
+                win->_private->m_newKeysTyped[win->_private->m_newNumKeysTyped] = ascii;
+                win->_private->m_newNumKeysTyped++;
             }
             break;
         }
@@ -566,7 +566,7 @@ static void HandleEvent(DfWindow *win) {
         switch (platSpec->recvBuf[1]) {
             case 1:
                 win->input.lmb = 1;
-    			win->_private->m_lmbPrivate = true;
+                win->_private->m_lmbPrivate = true;
                 break;
             case 2: win->input.mmb = 1; break;
             case 3: win->input.rmb = 1; break;
@@ -580,7 +580,7 @@ static void HandleEvent(DfWindow *win) {
         switch (platSpec->recvBuf[1]) {
             case 1:
                 win->input.lmb = 0;
-    			win->_private->m_lmbPrivate = false;
+                win->_private->m_lmbPrivate = false;
                 break;
             case 2: win->input.mmb = 0; break;
             case 3: win->input.rmb = 0; break;
@@ -601,7 +601,7 @@ static void HandleEvent(DfWindow *win) {
     case 9: // Focus in event.
         HandleFocusInEvent(win);
         break;
-        
+
     case 10: // Focus out event.
         HandleFocusOutEvent(win);
         break;
@@ -646,7 +646,7 @@ static void HandleEvent(DfWindow *win) {
         // We only ever get this when the Window Manager wants us to close.
         win->windowClosed = true;
         break;
-        
+
     default:
         printf("Got an unknown message type (%d).\n", platSpec->recvBuf[0]);
     }
@@ -721,11 +721,11 @@ static int GetAtomId(DfWindow *win, char const *atomName) {
 
     while (!GetReply(win, 32))
         ;
-        
+
     uint16_t *id = (uint16_t *)(platSpec->recvBuf + 8);
 
     ConsumeMessage(platSpec, 32);
-    
+
     return *id;
 }
 
@@ -819,7 +819,7 @@ static void ConnectToXserver(DfWindow *win) {
     platSpec->wmDeleteWindowId = GetAtomId(win, "WM_DELETE_WINDOW");
     platSpec->wmProtocolsId = GetAtomId(win, "WM_PROTOCOLS");
     printf("Atoms: clipboard=0x%x string=0x%x xsel=0x%x targets=0x%x wmDeleteWindow=0x%x "
-        "wmProtocols=0x%x\n", 
+        "wmProtocols=0x%x\n",
         platSpec->clipboardId, platSpec->stringId, platSpec->xselDataId, platSpec->targetsId,
         platSpec->wmDeleteWindowId, platSpec->wmProtocolsId);
 
@@ -880,7 +880,7 @@ static void MakeSocketNonBlocking(WindowPlatformSpecific *platSpec) {
 
 DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {
     DfWindow *win = new DfWindow;
-	memset(win, 0, sizeof(DfWindow));
+    memset(win, 0, sizeof(DfWindow));
     win->_private = new DfWindowPrivate;
     memset(win->_private, 0, sizeof(DfWindowPrivate));
     win->_private->platSpec = new WindowPlatformSpecific;
@@ -1080,7 +1080,7 @@ static void SendGetPropertyRequest(DfWindow *win) {
 }
 
 
-static void ReceiveClipboardData(DfWindow *win) {    
+static void ReceiveClipboardData(DfWindow *win) {
     SendGetPropertyRequest(win);
 //    printf("Getting GetProperty response\n");
 
@@ -1092,7 +1092,7 @@ static void ReceiveClipboardData(DfWindow *win) {
     uint32_t type = *((uint32_t *)(buf + 8));
     if (type == platSpec->stringId) {
         uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
-    
+
         uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
 //        printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
 
@@ -1108,7 +1108,7 @@ static void ReceiveClipboardData(DfWindow *win) {
             ssize_t stringLen = IntMin(platSpec->recvBufNumBytesAvailable, numBytesLeft);
             memcpy(nextWritePoint, (char const *)buf, stringLen);
             nextWritePoint += stringLen;
-            
+
             ConsumeMessage(platSpec, stringLen);
             numBytesLeft -= stringLen;
         }
@@ -1212,7 +1212,7 @@ static void SendSendEventSelectionNotify(WindowPlatformSpecific *platSpec, uint3
     packet[8] = property;
     packet[9] = 0;
     packet[10] = 0;
-    
+
     SendBuf(platSpec, packet, sizeof(packet));
 }
 

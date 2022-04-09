@@ -3,10 +3,8 @@
 #if 0
 #include <windows.h>
 
-int MessageDialog(char const *title, char const *message, MessageDialogType type)
-{
-    switch (type)
-    {
+int MessageDialog(char const *title, char const *message, MessageDialogType type) {
+    switch (type) {
         case MsgDlgTypeYesNo:       type = (MessageDialogType)MB_YESNO; break;
         case MsgDlgTypeYesNoCancel: type = (MessageDialogType)MB_YESNOCANCEL; break;
         case MsgDlgTypeOk:          type = (MessageDialogType)MB_OK; break;
@@ -14,10 +12,8 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     }
 
     int rv = -1;
-    if (type != -1)
-    {
-        switch (MessageBox(NULL, message, title, type))
-        {
+    if (type != -1) {
+        switch (MessageBox(NULL, message, title, type)) {
             case IDABORT: rv = MsgDlgRtnCode_Abort; break;
             case IDCANCEL: rv = MsgDlgRtnCode_Cancel; break;
             case IDNO: rv = MsgDlgRtnCode_No; break;
@@ -42,15 +38,13 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 #include <string.h>
 
 
-struct Button
-{
+struct Button {
     char const *label;
     int x, y, w, h;
 };
 
 
-static bool DoButton(DfWindow *win, DfFont *font, Button *button, bool isSelected)
-{
+static bool DoButton(DfWindow *win, DfFont *font, Button *button, bool isSelected) {
     DfColour light = { 0xffa0a0a0 };
     DfColour dark = { 0xff646464 };
     int x = button->x, y = button->y, w = button->w, h = button->h;
@@ -160,7 +154,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
         }
 
         RectFill(win->bmp, 0, buttonBarTop, winWidth, buttonBarHeight, buttonColour);
-        
+
         if (win->input.keyDowns[KEY_TAB])
             if (win->input.keys[KEY_SHIFT])
                 selectedButton = (selectedButton + numButtons - 1) % numButtons;

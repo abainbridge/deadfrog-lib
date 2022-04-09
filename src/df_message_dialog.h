@@ -10,17 +10,15 @@ extern "C"
 #endif
 
 
-enum MessageDialogType
-{
-	MsgDlgTypeYesNo,
-	MsgDlgTypeYesNoCancel,
-	MsgDlgTypeOk,
-	MsgDlgTypeOkCancel
+enum MessageDialogType {
+    MsgDlgTypeYesNo,
+    MsgDlgTypeYesNoCancel,
+    MsgDlgTypeOk,
+    MsgDlgTypeOkCancel
 };
 
 
-enum MessageDialogReturnCode
-{
+enum MessageDialogReturnCode {
     MsgDlgRtnCode_Fail = -1,
     MsgDlgRtnCode_Abort,
     MsgDlgRtnCode_Cancel,

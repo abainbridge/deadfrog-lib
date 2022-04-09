@@ -18,15 +18,15 @@ extern "C"
 
 
 typedef struct _DfBitmap DfBitmap;
-class Glyph;
+struct Glyph;
 
 
 typedef struct _DfFont
 {
-	Glyph       *glyphs[256];   // TODO remove the *, so the glyphs are contiguous in memory.
-	bool		fixedWidth;
-	int			maxCharWidth;
-	int			charHeight;	// in pixels
+    Glyph       *glyphs[256];   // TODO remove the *, so the glyphs are contiguous in memory.
+    bool        fixedWidth;
+    int         maxCharWidth;
+    int         charHeight; // in pixels
 } DfFont;
 
 
@@ -56,11 +56,11 @@ DLL_API int DrawTextSimple   (DfFont *, DfColour c, DfBitmap *, int x, int y, ch
 // Renders "text" up to the NULL terminator or until maxChars is reached - whichever comes first.
 DLL_API int DrawTextSimpleLen(DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, int maxChars);
 
-DLL_API int DrawTextLeft     (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like simple but with variable args
-DLL_API int DrawTextRight	 (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like above but with right justify
-DLL_API int DrawTextCentre	 (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);	// Like above but with centre justify
+DLL_API int DrawTextLeft     (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);   // Like simple but with variable args
+DLL_API int DrawTextRight    (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);   // Like above but with right justify
+DLL_API int DrawTextCentre   (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);   // Like above but with centre justify
 
-DLL_API int	GetTextWidth	 (DfFont *, char const *text, int len=999999);
+DLL_API int GetTextWidth     (DfFont *, char const *text, int len=999999);
 
 
 extern DfFont *g_defaultFont;

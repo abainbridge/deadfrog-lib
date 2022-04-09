@@ -15,10 +15,10 @@
 #include <math.h>
 
 
-static const int SUBXRES = 16;      // subpixel X resolution per pixel 
-static const int SUBYRES = 8;       // subpixel Y resolution per scanline 
+static const int SUBXRES = 16;      // subpixel X resolution per pixel
+static const int SUBYRES = 8;       // subpixel Y resolution per scanline
 
-#define MOD_Y_RES(y)   ((y) & 7)    // subpixel Y modulo 
+#define MOD_Y_RES(y)   ((y) & 7)    // subpixel Y modulo
 
 
 struct SubpixelRowExtents {
@@ -37,16 +37,15 @@ static int leftMin, rightMax;
 
 // Compute number of subpixels covered by polygon at current pixel.
 // x is left subpixel of pixel.
-static int ComputePixelCoverage(int x)
-{
+static int ComputePixelCoverage(int x) {
     static const int MAX_AREA = SUBXRES * SUBYRES;
     int area = 0;
     x *= SUBXRES;
     int xr = x + SUBXRES - 1;   // Right-most subpixel of pixel.
 
     for (int y = 0; y < SUBYRES; y++) {
-        // Calc covered area for current subpixel y 
-        int partialArea = IntMin(subpixelRowExtents[y].right, xr) - 
+        // Calc covered area for current subpixel y
+        int partialArea = IntMin(subpixelRowExtents[y].right, xr) -
             IntMax(subpixelRowExtents[y].left, x) + 1;
         if (partialArea > 0) {
             area += partialArea;
@@ -57,8 +56,7 @@ static int ComputePixelCoverage(int x)
 }
 
 
-static void RenderScanline(DfBitmap *bmp, int y, DfColour col)
-{
+static void RenderScanline(DfBitmap *bmp, int y, DfColour col) {
     DfColour tmp = col;
     int x;
     for (x = leftMin / SUBXRES; x <= (rightMax / SUBXRES); x++) {
@@ -181,16 +179,16 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
         }
 
         // Interpolate sub-pixel x endpoints at this y and update extremes.
-        
+
         SubpixelRowExtents *sre = &subpixelRowExtents[MOD_Y_RES(y)];
         sre->left = vertLeft->x + (((y - vertLeft->y) * leftSlope) >> 16);
-        leftMin = IntMin(leftMin, sre->left); 
+        leftMin = IntMin(leftMin, sre->left);
 
         sre->right = vertRight->x + (((y - vertRight->y) * rightSlope) >> 16);
         rightMax = IntMax(rightMax, sre->right);
 
         // Is this the last row of subpixels for this scanline?
-        if (MOD_Y_RES(y) == SUBYRES - 1) { 
+        if (MOD_Y_RES(y) == SUBYRES - 1) {
             RenderScanline(bmp, y / SUBYRES, col);
             leftMin = INT_MAX;
             rightMax = -1;
@@ -203,7 +201,7 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
     }
     RenderScanline(bmp, maxY / SUBYRES, col);
 
-    // Convert the verts back into the format the caller uses. 
+    // Convert the verts back into the format the caller uses.
     for (int i = 0; i < numVerts; i++) {
         verts[i].y *= SUBXRES / SUBYRES;
     }

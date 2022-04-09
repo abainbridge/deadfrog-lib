@@ -17,8 +17,7 @@ enum { MAX_POLY_VERTICES = 20 };
 
 
 // Describes a single point (used for a single vertex)
-typedef struct 
-{
+typedef struct {
     short x;
     short y;
 } PolyVert;
@@ -28,8 +27,7 @@ typedef struct
 // describe a polygon; each vertex is assumed to connect to the two
 // adjacent vertices, and the last vertex is assumed to connect to the
 // first)
-typedef struct 
-{
+typedef struct {
     int numPoints;
     PolyVert points[MAX_POLY_VERTICES];
 } PolyVertList;

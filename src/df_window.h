@@ -30,58 +30,56 @@ typedef void (FileDropCallback)(char const *path);
 typedef struct _DfWindowPrivate DfWindowPrivate;
 
 
-typedef struct
-{
-    bool		windowHasFocus;
+typedef struct {
+    bool        windowHasFocus;
     bool        eventSinceAdvance;  // True if we've seen any events since the last advance
 
-    bool		lmb;				// Mouse button states now. These can change in the
-	bool		mmb;				// middle of the frame.
-    bool		rmb;
+    bool        lmb;                // Mouse button states now. These can change in the
+    bool        mmb;                // middle of the frame.
+    bool        rmb;
 
-	bool		lmbDoubleClicked;
+    bool        lmbDoubleClicked;
 
-    bool		lmbClicked;			// Mouse went from up to down this frame
-	bool		mmbClicked;
-    bool		rmbClicked;
+    bool        lmbClicked;         // Mouse went from up to down this frame
+    bool        mmbClicked;
+    bool        rmbClicked;
 
-    bool		lmbUnClicked;		// Mouse went from down to up this frame
-	bool		mmbUnClicked;
-    bool		rmbUnClicked;
+    bool        lmbUnClicked;       // Mouse went from down to up this frame
+    bool        mmbUnClicked;
+    bool        rmbUnClicked;
 
-    int			mouseX;				// Mouse pos captured the when InputPoll(win) was called last.
-    int			mouseY;             // Coords are relative to the top left of win->bmp.
-    int			mouseZ;
+    int         mouseX;             // Mouse pos captured the when InputPoll(win) was called last.
+    int         mouseY;             // Coords are relative to the top left of win->bmp.
+    int         mouseZ;
 
-    int			mouseVelX;
-    int			mouseVelY;
-    int			mouseVelZ;
+    int         mouseVelX;
+    int         mouseVelY;
+    int         mouseVelZ;
 
     // These variables store the key presses that have occurred this frame
-	char		keysTyped[MAX_KEYS_TYPED_PER_FRAME];
-	int			numKeysTyped;
+    char        keysTyped[MAX_KEYS_TYPED_PER_FRAME];
+    int         numKeysTyped;
 
     int         numKeyDowns;
     int         numKeyUps;
-    signed char keys[KEY_MAX];		// Is the key currently pressed
-    signed char keyDowns[KEY_MAX];	// Was the key pressed this frame (includes key repeats)
-    signed char keyUps[KEY_MAX];	// Was the key released this frame
+    signed char keys[KEY_MAX];      // Is the key currently pressed
+    signed char keyDowns[KEY_MAX];  // Was the key pressed this frame (includes key repeats)
+    signed char keyUps[KEY_MAX];    // Was the key released this frame
 } DfInput;
 
 
-typedef struct _DfWindow
-{
+typedef struct _DfWindow {
     DfBitmap            *bmp;
 
     // Position of the window on the desktop. This is the top left of the
     // non-client rectangle. The main use is to allow your app to restore its
     // window to the same position is was at on the previous run. eg store
     // top,left in a config file before your app is closed, load them back in
-	// next time the app starts and pass them to CreateWinPos().
+    // next time the app starts and pass them to CreateWinPos().
     int                 left, top;
 
     bool                windowClosed;
-    unsigned int	    fps;
+    unsigned int        fps;
     double              advanceTime; // Time between last two calls of UpdateWin(win).
     RedrawCallback      *redrawCallback;
 
@@ -95,16 +93,14 @@ typedef struct _DfWindow
 } DfWindow;
 
 
-typedef enum
-{
+typedef enum {
     WT_FULLSCREEN = 0,
     WT_WINDOWED_RESIZEABLE = 1,
     WT_WINDOWED_FIXED = 2
 } WindowType;
 
 
-typedef enum
-{
+typedef enum {
     MCT_ARROW,
     MCT_IBEAM,
     MCT_RESIZE_WIDTH,
@@ -157,13 +153,12 @@ DLL_API void RegisterRedrawCallback(DfWindow *win, RedrawCallback *proc);
 
 
 DLL_API char const *GetKeyName(int i);
-DLL_API int	        GetKeyId(char const *name);
-DLL_API bool	    InputPoll(DfWindow *win);  // Returns true if any events occurred since last call
+DLL_API int         GetKeyId(char const *name);
+DLL_API bool        InputPoll(DfWindow *win);  // Returns true if any events occurred since last call
 
 
 // Defines for indexes into win->input.keys[], keyDowns[] and keyUps[].
-enum
-{
+enum {
     KEY_BACKSPACE = 8,
     KEY_TAB = 9,
     KEY_ENTER = 13,

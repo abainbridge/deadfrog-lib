@@ -13,8 +13,7 @@ extern "C"
 // Stores a Vertex at 16 times pixel resolution, so that subpixel positions can
 // be represented. For example, pixel coordinate (0.5, 1.5) is represented by 
 // (8, 24).
-typedef struct DfVertex 
-{
+typedef struct DfVertex {
     int x, y;
 } DfVertex;
 

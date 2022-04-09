@@ -16,26 +16,23 @@ static double g_timeShift = 0.0;
 static double g_tickInterval = -1.0;
 
 
-inline double GetLowLevelTime()
-{
+inline double GetLowLevelTime() {
     LARGE_INTEGER count;
     QueryPerformanceCounter(&count);
     return (double)count.QuadPart * g_tickInterval;
 }
 
 
-static void InitialiseHighResTime()
-{
+static void InitialiseHighResTime() {
     LARGE_INTEGER count;
     QueryPerformanceFrequency(&count);
     g_tickInterval = 1.0 / (double)count.QuadPart;
-	g_timeShift = GetLowLevelTime();
+    g_timeShift = GetLowLevelTime();
 }
 
 
-void SleepMillisec(int milliseconds)
-{
-	Sleep(milliseconds);
+void SleepMillisec(int milliseconds) {
+    Sleep(milliseconds);
 }
 
 
@@ -50,23 +47,20 @@ void SleepMillisec(int milliseconds)
 #include <unistd.h>
 
 
-static double GetLowLevelTime()
-{
+static double GetLowLevelTime() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return (double)((int64_t)tv.tv_sec * 1000000 + tv.tv_usec) / 1000000.;
 }
 
 
-static void InitialiseHighResTime()
-{
-	g_timeShift = GetLowLevelTime();
+static void InitialiseHighResTime() {
+    g_timeShift = GetLowLevelTime();
 }
 
 
-void SleepMillisec(int milliseconds)
-{
-	usleep(milliseconds * 1000);
+void SleepMillisec(int milliseconds) {
+    usleep(milliseconds * 1000);
 }
 
 
@@ -75,8 +69,7 @@ void SleepMillisec(int milliseconds)
 
 // Common code ******************************************************
 
-NOINLINE double GetRealTime()
-{
+NOINLINE double GetRealTime() {
     if (g_timeShift <= 0.0) {
         InitialiseHighResTime();
     }
