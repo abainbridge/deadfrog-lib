@@ -539,15 +539,15 @@ static void HandleEvent(DfWindow *win) {
         {
             unsigned char x11_keycode = platSpec->recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
-            win->_private->m_newKeyDowns[df_keycode] = 1;
+            win->_private->newKeyDowns[df_keycode] = 1;
             win->input.keys[df_keycode] = 1;
             int modifiers = platSpec->recvBuf[28];
             char ascii = dfKeycodeToAscii(df_keycode, modifiers);
     //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
 
             if (ascii) {
-                win->_private->m_newKeysTyped[win->_private->m_newNumKeysTyped] = ascii;
-                win->_private->m_newNumKeysTyped++;
+                win->_private->newKeysTyped[win->_private->newNumKeysTyped] = ascii;
+                win->_private->newNumKeysTyped++;
             }
             break;
         }
@@ -556,7 +556,7 @@ static void HandleEvent(DfWindow *win) {
         {
             unsigned char x11_keycode = platSpec->recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
-            win->_private->m_newKeyUps[df_keycode] = 1;
+            win->_private->newKeyUps[df_keycode] = 1;
             win->input.keys[df_keycode] = 0;
     //printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
             break;
@@ -566,7 +566,7 @@ static void HandleEvent(DfWindow *win) {
         switch (platSpec->recvBuf[1]) {
             case 1:
                 win->input.lmb = 1;
-                win->_private->m_lmbPrivate = true;
+                win->_private->lmbPrivate = true;
                 break;
             case 2: win->input.mmb = 1; break;
             case 3: win->input.rmb = 1; break;
@@ -580,7 +580,7 @@ static void HandleEvent(DfWindow *win) {
         switch (platSpec->recvBuf[1]) {
             case 1:
                 win->input.lmb = 0;
-                win->_private->m_lmbPrivate = false;
+                win->_private->lmbPrivate = false;
                 break;
             case 2: win->input.mmb = 0; break;
             case 3: win->input.rmb = 0; break;

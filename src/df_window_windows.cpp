@@ -108,16 +108,16 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
                 !win->input.keys[KEY_ALT] &&
                 wParam != KEY_ESC) {
                 ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_CHAR", wParam);
-                win->_private->m_newKeysTyped[win->_private->m_newNumKeysTyped] = wParam;
-                win->_private->m_newNumKeysTyped++;
+                win->_private->newKeysTyped[win->_private->newNumKeysTyped] = wParam;
+                win->_private->newNumKeysTyped++;
             }
             break;
 
         case WM_LBUTTONDOWN:
-            win->_private->m_lmbPrivate = true;
+            win->_private->lmbPrivate = true;
             break;
         case WM_LBUTTONUP:
-            win->_private->m_lmbPrivate = false;
+            win->_private->lmbPrivate = false;
             break;
         case WM_MBUTTONDOWN:
             win->input.mmb = true;
@@ -138,16 +138,16 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
            never sends us the button up event. I've chosen the second option and fix some of
            the brokenness by generating a fake up event one frame after the down event. */
         case WM_NCLBUTTONDOWN:
-            win->_private->m_lmbPrivate = true;
-            win->_private->m_lastClickWasNC = true;
+            win->_private->lmbPrivate = true;
+            win->_private->lastClickWasNC = true;
             return -1;
         case WM_NCMBUTTONDOWN:
             win->input.mmb = true;
-            win->_private->m_lastClickWasNC = true;
+            win->_private->lastClickWasNC = true;
             return -1;
         case WM_NCRBUTTONDOWN:
             win->input.rmb = true;
-            win->_private->m_lastClickWasNC = true;
+            win->_private->lastClickWasNC = true;
             return -1;
 
         case WM_MOUSEWHEEL:
@@ -166,14 +166,14 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
                 break;
 
             win->input.keys[wParam] = 0;
-            win->_private->m_newKeyUps[wParam] = 1;
+            win->_private->newKeyUps[wParam] = 1;
             break;
 
         case WM_SYSKEYDOWN:
         {
             ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
             win->input.keys[wParam] = 1;
-            win->_private->m_newKeyDowns[wParam] = 1;
+            win->_private->newKeyDowns[wParam] = 1;
             break;
         }
 
@@ -183,7 +183,7 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
             // Windows will generate a SYSKEYUP event for the release of F, and a
             // normal KEYUP event for the release of the ALT. Very strange.
             ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYUP", wParam);
-            win->_private->m_newKeyUps[wParam] = 1;
+            win->_private->newKeyUps[wParam] = 1;
             win->input.keys[wParam] = 0;
             break;
         }
@@ -200,15 +200,15 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
                 wParam = KEY_DEL;
 
             if (wParam == KEY_DEL) {
-                win->_private->m_newKeysTyped[win->input.numKeysTyped] = KEY_DEL;
-                win->_private->m_newNumKeysTyped++;
+                win->_private->newKeysTyped[win->input.numKeysTyped] = KEY_DEL;
+                win->_private->newNumKeysTyped++;
             }
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0) {
                 // Key event is the Control part of Alt_Gr, so throw it away. There
                 // will be an event for the alt part too.
                 break;
             }
-            win->_private->m_newKeyDowns[wParam] = 1;
+            win->_private->newKeyDowns[wParam] = 1;
             win->input.keys[wParam] = 1;
             break;
         }

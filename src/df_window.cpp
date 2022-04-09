@@ -16,24 +16,23 @@ struct WindowPlatformSpecific;
 
 
 struct _DfWindowPrivate {
-    // TODO: Consider removing the m_ prefixes.
-    bool        m_lmbPrivate;
-    bool        m_lmbOld;               // Mouse button states from last frame. Only
-    bool        m_mmbOld;               // used to computer the deltas.
-    bool        m_rmbOld;
+    bool        lmbPrivate;
+    bool        lmbOld;               // Mouse button states from last frame. Only
+    bool        mmbOld;               // used to computer the deltas.
+    bool        rmbOld;
 
-    bool        m_lastClickWasNC;       // True if mouse was outside the client area of the window when the button was last clicked
-    double      m_lastClickTime;        // Used in double click detection
-    int         m_lmbRepeatsSoFar;      // When lmb is held, this value is used by IsLmbRepeatSet to determine when to return true
+    bool        lastClickWasNC;       // True if mouse was outside the client area of the window when the button was last clicked
+    double      lastClickTime;        // Used in double click detection
+    int         lmbRepeatsSoFar;      // When lmb is held, this value is used by IsLmbRepeatSet to determine when to return true
 
-    int         m_mouseOldX;            // Same things but for position
-    int         m_mouseOldY;
-    int         m_mouseOldZ;
+    int         mouseOldX;            // Same things but for position
+    int         mouseOldY;
+    int         mouseOldZ;
 
-    signed char m_newKeyDowns[KEY_MAX];
-    signed char m_newKeyUps[KEY_MAX];
-    char        m_newKeysTyped[MAX_KEYS_TYPED_PER_FRAME];
-    int         m_newNumKeysTyped;
+    signed char newKeyDowns[KEY_MAX];
+    signed char newKeyUps[KEY_MAX];
+    char        newKeysTyped[MAX_KEYS_TYPED_PER_FRAME];
+    int         newNumKeysTyped;
 
     unsigned    framesThisSecond;
     double      endOfSecond;
@@ -52,8 +51,8 @@ static void InputPollInternal(DfWindow *win);
 
 static void HandleFocusInEvent(DfWindow *win) {
     win->input.windowHasFocus = true;
-    memset(win->_private->m_newKeyDowns, 0, KEY_MAX);
-    memset(win->_private->m_newKeyUps, 0, KEY_MAX);
+    memset(win->_private->newKeyDowns, 0, KEY_MAX);
+    memset(win->_private->newKeyUps, 0, KEY_MAX);
     memset(win->input.keys, 0, KEY_MAX);
 }
 
@@ -189,14 +188,14 @@ bool UntypeKey(DfWindow *win, char key) {
 
 static void InputPollInternal(DfWindow *win)
 {
-    memcpy(win->input.keyDowns, win->_private->m_newKeyDowns, KEY_MAX);
-    memset(win->_private->m_newKeyDowns, 0, KEY_MAX);
-    memcpy(win->input.keyUps, win->_private->m_newKeyUps, KEY_MAX);
-    memset(win->_private->m_newKeyUps, 0, KEY_MAX);
+    memcpy(win->input.keyDowns, win->_private->newKeyDowns, KEY_MAX);
+    memset(win->_private->newKeyDowns, 0, KEY_MAX);
+    memcpy(win->input.keyUps, win->_private->newKeyUps, KEY_MAX);
+    memset(win->_private->newKeyUps, 0, KEY_MAX);
 
-    win->input.numKeysTyped = win->_private->m_newNumKeysTyped;
-    memcpy(win->input.keysTyped, win->_private->m_newKeysTyped, win->_private->m_newNumKeysTyped);
-    win->_private->m_newNumKeysTyped = 0;
+    win->input.numKeysTyped = win->_private->newNumKeysTyped;
+    memcpy(win->input.keysTyped, win->_private->newKeysTyped, win->_private->newNumKeysTyped);
+    win->_private->newNumKeysTyped = 0;
 
     // Count the number of key ups and downs this frame
     win->input.numKeyDowns = 0;
@@ -206,44 +205,44 @@ static void InputPollInternal(DfWindow *win)
         if (win->input.keyDowns[i]) win->input.numKeyDowns++;
     }
 
-    win->input.lmb = win->_private->m_lmbPrivate;
-    win->input.lmbClicked = win->input.lmb == true && win->_private->m_lmbOld == false;
-    win->input.mmbClicked = win->input.mmb == true && win->_private->m_mmbOld == false;
-    win->input.rmbClicked = win->input.rmb == true && win->_private->m_rmbOld == false;
-    win->input.lmbUnClicked = win->input.lmb == false && win->_private->m_lmbOld == true;
-    win->input.mmbUnClicked = win->input.mmb == false && win->_private->m_mmbOld == true;
-    win->input.rmbUnClicked = win->input.rmb == false && win->_private->m_rmbOld == true;
-    win->_private->m_lmbOld = win->input.lmb;
-    win->_private->m_mmbOld = win->input.mmb;
-    win->_private->m_rmbOld = win->input.rmb;
+    win->input.lmb = win->_private->lmbPrivate;
+    win->input.lmbClicked = win->input.lmb == true && win->_private->lmbOld == false;
+    win->input.mmbClicked = win->input.mmb == true && win->_private->mmbOld == false;
+    win->input.rmbClicked = win->input.rmb == true && win->_private->rmbOld == false;
+    win->input.lmbUnClicked = win->input.lmb == false && win->_private->lmbOld == true;
+    win->input.mmbUnClicked = win->input.mmb == false && win->_private->mmbOld == true;
+    win->input.rmbUnClicked = win->input.rmb == false && win->_private->rmbOld == true;
+    win->_private->lmbOld = win->input.lmb;
+    win->_private->mmbOld = win->input.mmb;
+    win->_private->rmbOld = win->input.rmb;
 
     win->input.lmbDoubleClicked = false;
     if (win->input.lmbClicked) {
         double timeNow = GetRealTime();
-        double delta = timeNow - win->_private->m_lastClickTime;
+        double delta = timeNow - win->_private->lastClickTime;
         if (delta < 0.25) {
             win->input.lmbDoubleClicked = true;
             win->input.lmbClicked = false;
         }
-        win->_private->m_lastClickTime = timeNow;
-        win->_private->m_lmbRepeatsSoFar = 0;
+        win->_private->lastClickTime = timeNow;
+        win->_private->lmbRepeatsSoFar = 0;
     }
 
     // Generate fake mouse up event(s) to compensate for the fact that Windows won't send
     // them if the last mouse down event was in the client area.
-    if (win->_private->m_lastClickWasNC) {
-        win->_private->m_lastClickWasNC = false;
-        win->_private->m_lmbPrivate = false;
+    if (win->_private->lastClickWasNC) {
+        win->_private->lastClickWasNC = false;
+        win->_private->lmbPrivate = false;
         win->input.mmb = false;
         win->input.rmb = false;
     }
 
-    win->input.mouseVelX = win->input.mouseX - win->_private->m_mouseOldX;
-    win->input.mouseVelY = win->input.mouseY - win->_private->m_mouseOldY;
-    win->input.mouseVelZ = win->input.mouseZ - win->_private->m_mouseOldZ;
-    win->_private->m_mouseOldX = win->input.mouseX;
-    win->_private->m_mouseOldY = win->input.mouseY;
-    win->_private->m_mouseOldZ = win->input.mouseZ;
+    win->input.mouseVelX = win->input.mouseX - win->_private->mouseOldX;
+    win->input.mouseVelY = win->input.mouseY - win->_private->mouseOldY;
+    win->input.mouseVelZ = win->input.mouseZ - win->_private->mouseOldZ;
+    win->_private->mouseOldX = win->input.mouseX;
+    win->_private->mouseOldY = win->input.mouseY;
+    win->_private->mouseOldZ = win->input.mouseZ;
 }
 
 
