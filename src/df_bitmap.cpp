@@ -871,6 +871,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
         }
         // End of clipping.
 
+
         for (int y = 0; y < dstH; y++) {
             if (dstY + y < 0) continue;
 
@@ -881,7 +882,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
             DfColour *srcRow = &srcBmp->pixels[srcY * srcBmp->width];
 
             unsigned weightY2 = srcYAndWeight & 0xFF;
-            unsigned weightY = 256 - weightY2;
+            unsigned weightY = 255 - weightY2;
 
             for (int x = 0; x < srcXMax; x++) {
                 if (x < srcXMin) continue;
@@ -908,7 +909,7 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
                 int srcXAndWeight = ((x * widthRatio) >> 8) + srcXErr;
                 int srcX = srcXAndWeight >> 8;
                 unsigned weightX2 = srcXAndWeight & 0xFF;
-                unsigned weightX = 256 - weightX2;
+                unsigned weightX = 255 - weightX2;
 
                 // Pixel 0,0
                 DfColour *srcPixel = &dstRow[srcX];
