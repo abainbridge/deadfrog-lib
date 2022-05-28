@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <math.h>
 #include <memory.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 
@@ -835,6 +836,11 @@ void ScaleUpBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src) {
 }
 
 
+struct SrcXandWeights {
+    uint8_t weightX, weightX2;
+    uint16_t srcX;
+};
+
 void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBitmap *srcBmp) {
     if (srcBmp->width < dstW && srcBmp->height < dstH) {
         // *** Bilinear upscale ***
@@ -871,6 +877,22 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
         }
         // End of clipping.
 
+        // (Re)allocate LUT if needed.
+        static SrcXandWeights *lut = NULL;
+        static int lutSize = 0;
+        if (lutSize < dstW) {
+            delete [] lut;
+            lut = new SrcXandWeights [dstW];
+            lutSize = dstW;
+        }
+
+        // Populate LUT.
+        for (int x = 0; x < dstW; x++) {
+            int srcXAndWeight = ((x * widthRatio) >> 8) + srcXErr;
+            lut[x].srcX = srcXAndWeight >> 8;
+            lut[x].weightX2 = srcXAndWeight & 0xFF;
+            lut[x].weightX = 255 - lut[x].weightX2;
+        }
 
         for (int y = 0; y < dstH; y++) {
             if (dstY + y < 0) continue;
@@ -887,12 +909,10 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
             for (int x = 0; x < srcXMax; x++) {
                 if (x < srcXMin) continue;
 
-                unsigned rb = 0, g = 0;
-
                 // Pixel 0,0
                 DfColour *srcPixel = &srcRow[x];
-                rb += (srcPixel->c & 0xff00ff) * weightY;
-                g += srcPixel->g * weightY;
+                unsigned rb = (srcPixel->c & 0xff00ff) * weightY;
+                unsigned g = srcPixel->g * weightY;
 
                 // Pixel 1,0
                 srcPixel += srcBmp->width;
@@ -904,22 +924,17 @@ void StretchBlit(DfBitmap *dstBmp, int dstX, int dstY, int dstW, int dstH, DfBit
             }
 
             for (int x = dstW - 1; x; x--) {
-                unsigned rb = 0, g = 0;
-
-                int srcXAndWeight = ((x * widthRatio) >> 8) + srcXErr;
-                int srcX = srcXAndWeight >> 8;
-                unsigned weightX2 = srcXAndWeight & 0xFF;
-                unsigned weightX = 255 - weightX2;
+                SrcXandWeights *sw = lut + x;
 
                 // Pixel 0,0
-                DfColour *srcPixel = &dstRow[srcX];
-                rb += (srcPixel->c & 0xff00ff) * weightX;
-                g += srcPixel->g * weightX;
+                DfColour *srcPixel = &dstRow[sw->srcX];
+                unsigned rb = (srcPixel->c & 0xff00ff) * sw->weightX;
+                unsigned g = srcPixel->g * sw->weightX;
 
                 // Pixel 0,1
                 srcPixel++;
-                rb += (srcPixel->c & 0xff00ff) * weightX2;
-                g += srcPixel->g * weightX2;
+                rb += (srcPixel->c & 0xff00ff) * sw->weightX2;
+                g += srcPixel->g * sw->weightX2;
 
                 dstRow[x].c = rb >> 8;
                 dstRow[x].g = g >> 8;
