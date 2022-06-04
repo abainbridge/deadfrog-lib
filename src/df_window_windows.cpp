@@ -151,11 +151,8 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
             return -1;
 
         case WM_MOUSEWHEEL:
-        {
-            int move = (short)HIWORD(wParam) / 120;
-            win->input.mouseZ += move;
+            win->input.mouseZ += (short)HIWORD(wParam);
             break;
-        }
 
         case WM_SYSKEYUP:
             ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYUP", wParam);
