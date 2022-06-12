@@ -173,7 +173,25 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     DestroyWin(win);
     FontDelete(font);
 
-    return result;
+    switch (type) {
+    case MsgDlgTypeYesNo:
+    case MsgDlgTypeYesNoCancel:
+        switch (result) {
+        case 0: return MsgDlgRtnCode_Yes;
+        case 1: return MsgDlgRtnCode_No;
+        case 2: return MsgDlgRtnCode_Cancel;
+        }
+        break;
+    case MsgDlgTypeOk:
+    case MsgDlgTypeOkCancel: 
+        switch (result) {
+        case 0: return MsgDlgRtnCode_Ok;
+        case 1: return MsgDlgRtnCode_Cancel;
+        }
+        break;
+    }
+
+    return MsgDlgRtnCode_Abort;
 }
 
 #endif
