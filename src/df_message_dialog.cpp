@@ -9,7 +9,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
         case MsgDlgTypeYesNoCancel: type = (MessageDialogType)MB_YESNOCANCEL; break;
         case MsgDlgTypeOk:          type = (MessageDialogType)MB_OK; break;
         case MsgDlgTypeOkCancel:    type = (MessageDialogType)MB_OKCANCEL; break;
-    }
+    } 
 
     int rv = -1;
     if (type != -1) {
@@ -34,6 +34,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 #include "df_font.h"
 #include "df_window.h"
 
+#include <ctype.h> 
 #include <stdlib.h>
 #include <string.h>
 
@@ -65,14 +66,23 @@ static bool DoButton(DfWindow *win, DfFont *font, Button *button, bool isSelecte
     VLine(win->bmp, x+w-2, y + 2, h - 3, brColour);
 
     int textY = y + h / 2 - font->charHeight / 2;
-    DrawTextCentre(font, g_colourBlack, win->bmp, x + w/2, textY, button->label);
+    int textWidth = GetTextWidth(font, button->label);
+    int buttonCentreX = x + w / 2;
+    int labelX = buttonCentreX - textWidth / 2;
+    int accelKeyUnderlineY = textY + font->charHeight * 0.88;
+    int accelKeyUnderlineWidth = font->charHeight * 0.55;
+    DrawTextSimple(font, g_colourBlack, win->bmp, labelX, textY, button->label);
+    HLine(win->bmp, labelX, accelKeyUnderlineY, accelKeyUnderlineWidth, g_colourBlack);
 
     if (isSelected)
         RectOutline(win->bmp, button->x + 4, button->y + 4, button->w - 8, button->h - 8, light);
 
     if (win->input.lmbUnClicked && mouseOver)
         return true;
-    if (win->input.keyDowns[KEY_ENTER])
+    if (isSelected && win->input.keyDowns[KEY_ENTER])
+        return true;
+    if (win->input.numKeysTyped > 0 && 
+        win->input.keysTyped[0] == tolower(button->label[0]))
         return true;
 
     return false;
@@ -155,11 +165,14 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 
         RectFill(win->bmp, 0, buttonBarTop, winWidth, buttonBarHeight, buttonColour);
 
-        if (win->input.keyDowns[KEY_TAB])
-            if (win->input.keys[KEY_SHIFT])
-                selectedButton = (selectedButton + numButtons - 1) % numButtons;
-            else
-                selectedButton = (selectedButton + 1) % numButtons;
+        if (win->input.keyDowns[KEY_LEFT] ||
+            (win->input.keyDowns[KEY_TAB] && win->input.keys[KEY_SHIFT])) {
+            selectedButton = (selectedButton + numButtons - 1) % numButtons;
+        }
+        if (win->input.keyDowns[KEY_RIGHT] ||
+            (win->input.keyDowns[KEY_TAB] && !win->input.keys[KEY_SHIFT])) {
+            selectedButton = (selectedButton + 1) % numButtons;
+        }
 
         for (int i = 0; i < numButtons; i++) {
             bool clicked = DoButton(win, font, &buttons[i], i == selectedButton);
