@@ -5,16 +5,25 @@ DfColour g_colourBlack = { 0xff000000U };
 DfColour g_colourWhite = { 0xffffffffU };
 
 
-DfColour RgbaAddWithSaturate(DfColour a, DfColour b) {
-    int x = a.r + b.r;
-    int y = a.g + b.g;
-    int z = a.b + b.b;
-    int w = a.a + b.a;
+DfColour RgbaAddWithSaturate(DfColour _a, int r, int g, int b) {
+    int x = _a.r + r;
+    int y = _a.g + g;
+    int z = _a.b + b;
 
     x = ClampInt(x, 0, 255);
     y = ClampInt(y, 0, 255);
     z = ClampInt(z, 0, 255);
-    w = ClampInt(w, 0, 255);
 
-    return Colour(x, y, z, w);
+    return Colour(x, y, z);
+}
+
+
+DfColour RgbaBlendTowards(DfColour a, DfColour b, float fraction) {
+    float inverseFraction = 1.0f - fraction;
+    DfColour rv;
+    rv.r = (float)b.r * fraction + (float)a.r * inverseFraction;
+    rv.g = (float)b.g * fraction + (float)a.g * inverseFraction;
+    rv.b = (float)b.b * fraction + (float)a.b * inverseFraction;
+    rv.a = (float)b.a * fraction + (float)a.a * inverseFraction;
+    return rv;
 }

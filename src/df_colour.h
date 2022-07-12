@@ -31,6 +31,7 @@ DLL_API inline DfColour Colour(unsigned r, unsigned g, unsigned b, unsigned a)
     return c;
 }
 
+
 DLL_API inline DfColour RgbaAdd(DfColour a, DfColour b) {
     return Colour(a.r + b.r, a.g + b.g, a.b + b.b, a.a + b.a);
 }
@@ -46,7 +47,13 @@ DLL_API inline DfColour RgbaMultiply(DfColour col, float x) {
 }
 
 
-DLL_API DfColour RgbaAddWithSaturate(DfColour a, DfColour b);
+DLL_API inline unsigned char RgbaGetLuminance(DfColour c) {
+    return 0.3f * c.r + 0.59f * c.g + 0.11f * c.b;
+}
+
+
+DLL_API DfColour RgbaAddWithSaturate(DfColour a, int r, int g, int b);
+DLL_API DfColour RgbaBlendTowards(DfColour a, DfColour b, float fraction);
 
 
 #if __cplusplus
@@ -62,6 +69,11 @@ inline DfColour operator-(DfColour a, DfColour b) {
 
 inline DfColour operator*(DfColour col, float x) {
     return RgbaMultiply(col, x);
+}
+
+
+inline DfColour operator/(DfColour col, float x) {
+    return RgbaMultiply(col, 1/x);
 }
 #endif
 
