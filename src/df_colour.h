@@ -33,17 +33,17 @@ DLL_API inline DfColour Colour(unsigned r, unsigned g, unsigned b, unsigned a)
 
 
 DLL_API inline DfColour RgbaAdd(DfColour a, DfColour b) {
-    return Colour(a.r + b.r, a.g + b.g, a.b + b.b, a.a + b.a);
+    return Colour(a.r + b.r, a.g + b.g, a.b + b.b, 255);
 }
 
 
 DLL_API inline DfColour RgbaSubtract(DfColour a, DfColour b) {
-    return Colour(a.r - b.r, a.g - b.g, a.b - b.b, a.a - b.a);
+    return Colour(a.r - b.r, a.g - b.g, a.b - b.b, 255);
 }
 
 
 DLL_API inline DfColour RgbaMultiply(DfColour col, float x) {
-    return Colour(col.r * x, col.g * x, col.b * x, col.a);
+    return Colour(col.r * x, col.g * x, col.b * x, 255);
 }
 
 

@@ -24,6 +24,6 @@ DfColour RgbaBlendTowards(DfColour a, DfColour b, float fraction) {
     rv.r = (float)b.r * fraction + (float)a.r * inverseFraction;
     rv.g = (float)b.g * fraction + (float)a.g * inverseFraction;
     rv.b = (float)b.b * fraction + (float)a.b * inverseFraction;
-    rv.a = (float)b.a * fraction + (float)a.a * inverseFraction;
+    rv.a = 255;
     return rv;
 }
