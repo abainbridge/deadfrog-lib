@@ -43,7 +43,7 @@ DLL_API inline DfColour RgbaSubtract(DfColour a, DfColour b) {
 
 
 DLL_API inline DfColour RgbaMultiply(DfColour col, float x) {
-    return Colour(col.r * x, col.g * x, col.b * x, col.a * x);
+    return Colour(col.r * x, col.g * x, col.b * x, col.a);
 }
 
 
