@@ -151,8 +151,11 @@ char const *GetKeyName(int i) {
         case 223: return "~";
     }
 
-    // Unnamed keys just use the ASCII value, printed in decimal
-    sprintf(name, "unnamed%i", i);
+    // Unnamed keys just use the ASCII value, printed in hex.
+    memcpy(name, "unnamed", 7);
+    name[7] = (i >> 4) & 0xff;
+    name[8] = i & 0xff;
+    name[9] = '\0';
 
     return name;
 }
