@@ -231,7 +231,7 @@ int ListFontSizesInFile(char const *filename, int result[16]) {
     fread(&numFonts, 1, 1, f);
     if (numFonts > 15) numFonts = 15;
 
-    unsigned int fileOffsets[257];
+    int fileOffsets[257];
     if (fread(fileOffsets, 4, numFonts, f) != numFonts) goto error;
     if (fseek(f, 0, SEEK_END) != 0) goto error;
     fileOffsets[numFonts] = ftell(f);
@@ -263,7 +263,7 @@ DfFont *LoadFontFromFile(char const *filename, int pixHeight) {
 
     fread(&numFonts, 1, 1, f);
     
-    unsigned int fileOffsets[257];
+    int fileOffsets[257];
     if (fread(fileOffsets, 4, numFonts, f) != numFonts) goto error;
     if (fseek(f, 0, SEEK_END) != 0) goto error;
     fileOffsets[numFonts] = ftell(f);
@@ -278,7 +278,7 @@ DfFont *LoadFontFromFile(char const *filename, int pixHeight) {
             err = fseek(f, fileOffsets[i], SEEK_SET);
             if (err != 0) goto error;
 
-            int fontBinSize = fileOffsets[i + 1] - fileOffsets[i];
+            unsigned fontBinSize = fileOffsets[i + 1] - fileOffsets[i];
             char *fontBuf = new char[fontBinSize];
             if (fread(fontBuf, 1, fontBinSize, f) != fontBinSize) goto error;
             DfFont *fnt = LoadFontFromMemory((unsigned int *)fontBuf, fontBinSize);
