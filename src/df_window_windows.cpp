@@ -434,8 +434,10 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     win->_private->lastUpdateTime = now;
     win->_private->endOfSecond = now + 1.0;
 
-    HMODULE dwm = LoadLibrary("dwmapi.dll");
-    g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
+    if (!g_dwmFlush) {
+        HMODULE dwm = LoadLibrary("dwmapi.dll");
+        g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
+    }
 
     // Register as a drag-and-drop target.
     DragAcceptFiles(win->_private->platSpec->hWnd, true);
