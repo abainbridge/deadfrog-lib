@@ -312,6 +312,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                     DragQueryFile(drop, i, buf, MAX_PATH);
                     win->fileDropCallback(buf);
                 }
+
+                win->input.eventSinceAdvance = true;
             }
             break;
 
@@ -320,6 +322,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             WINDOWPOS *wp = (WINDOWPOS *)lParam;
             win->left = wp->x;
             win->top = wp->y;
+            win->input.eventSinceAdvance = true;
             goto _default; // Pretend we didn't handle this message.
         }
 
@@ -332,12 +335,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             if (win->redrawCallback) {
                 win->redrawCallback();
             }
+            win->input.eventSinceAdvance = true;
             break;
         }
 
         case WM_CLOSE:
             if (win)
                 win->windowClosed = true;
+            win->input.eventSinceAdvance = true;
             return 0;
 
         _default:
