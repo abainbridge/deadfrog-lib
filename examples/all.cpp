@@ -1,4 +1,5 @@
 void AaPolyTestMain();
+void AsteroidsMain();
 void BenchmarkMain();
 void ColourWhirlMain();
 void FluidMain();
@@ -22,6 +23,7 @@ int main()
 #endif
 {
 //     AaPolyTestMain();
+    AsteroidsMain();
 //     BenchmarkMain();
 //     ColourWhirlMain();
 //     FluidMain();
@@ -34,7 +36,7 @@ int main()
 //     Sierpinski3DMain();
 //     StretchBlitMain();
 //     TestMain();
-    TwoWindowsMain();
+//     TwoWindowsMain();
 
     return 0;
 }
