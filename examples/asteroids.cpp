@@ -36,8 +36,8 @@ struct Object {
 
 Object g_ship = {
     SHIP,
-    SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, // x, y
-    0.0, 0.0, // vel
+    { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 }, // x, y
+    { 0.0, 0.0 }, // vel
     1.5708, // angleRadians
     0.0 // age
 };
@@ -51,15 +51,15 @@ Object g_asteroids[4];
 // Misc functions
 // ****************************************************************************
 
-void WrapPosition(Object *obj) {
-    if (obj->pos.x < 0.0)
-        obj->pos.x += SCREEN_WIDTH;
-    else if (obj->pos.x > SCREEN_WIDTH)
-        obj->pos.x -= SCREEN_WIDTH;
-    if (obj->pos.y < 0.0)
-        obj->pos.y += SCREEN_HEIGHT;
-    else if (obj->pos.y > SCREEN_HEIGHT)
-        obj->pos.y -= SCREEN_HEIGHT;
+void WrapPosition(Vec2 *pos) {
+    if (pos->x < 0.0)
+        pos->x += SCREEN_WIDTH;
+    else if (pos->x > SCREEN_WIDTH)
+        pos->x -= SCREEN_WIDTH;
+    if (pos->y < 0.0)
+        pos->y += SCREEN_HEIGHT;
+    else if (pos->y > SCREEN_HEIGHT)
+        pos->y -= SCREEN_HEIGHT;
 }
 
 void RotateVerts(Vec2 *verts, int numVerts, double angleRadians) {
@@ -115,7 +115,7 @@ void AdvanceBullet(Object *obj, double advanceTime) {
 
     obj->pos.x += obj->vel.x * advanceTime;
     obj->pos.y += obj->vel.y * advanceTime;
-    WrapPosition(obj);
+    WrapPosition(&obj->pos);
 }
 
 void RenderBullet(DfBitmap *bmp, Object *obj) {
@@ -152,7 +152,7 @@ void AdvanceShip(DfWindow *win, Object *obj) {
     else
         obj->age = 0.0;
 
-    WrapPosition(obj);
+    WrapPosition(&obj->pos);
 }
 
 void RenderShip(DfBitmap *bmp, Object *obj) {
@@ -191,7 +191,7 @@ void RenderShip(DfBitmap *bmp, Object *obj) {
 void AdvanceAsteroid(Object *obj, double advanceTime) {
     obj->pos.x += obj->vel.x * advanceTime;
     obj->pos.y += obj->vel.y * advanceTime;
-    WrapPosition(obj);
+    WrapPosition(&obj->pos);
 }
 
 void RenderAsteroid(DfBitmap *bmp, Object *obj) {
