@@ -40,6 +40,7 @@ struct Bullet {
 struct Asteroid {
     Vec2 pos;
     Vec2 vel;
+    bool exists;
 };
 
 Ship g_ship;
@@ -108,10 +109,32 @@ void RenderLinePathExploding(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int num
     }
 }
 
+// Run a semi-infinite ray horizontally (increasing x) from the test point and
+// count how many edges it crosses. At each crossing, the ray switches between
+// inside and outside. This is called the Jordan curve theorem.
+bool PointInPolygon(Vec2 *verts, int numVerts, Vec2 point) {
+    bool c = false;
+    for (int i = 0, j = numVerts - 1; i < numVerts; j = i++) {
+        if ((verts[i].y > point.y) == (verts[j].y > point.y))
+            continue; // Edge doesn't intersect our ray at all.
+
+        double intersectionX = (verts[j].x - verts[i].x) * (point.y - verts[i].y) / (verts[j].y - verts[i].y) + verts[i].x;
+        if (point.x < intersectionX)
+            c = !c;
+    }
+    return c;
+}
+
 
 // ****************************************************************************
 // Bullet
 // ****************************************************************************
+
+void InitBullets() {
+    for (int i = 0; i < ARRAY_SIZE(g_bullets); i++) {
+        g_bullets[i].age = 9e9;
+    }
+}
 
 void FireBullet() {
     int i;
@@ -120,7 +143,7 @@ void FireBullet() {
 
     if (i == ARRAY_SIZE(g_bullets)) return;
 
-    double const BULLET_SPEED = 430.0;
+    double const BULLET_SPEED = 550.0;
     g_bullets[i].pos.x = g_ship.pos.x;
     g_bullets[i].pos.y = g_ship.pos.y;
     g_bullets[i].vel.x = g_ship.vel.x + sin(g_ship.angleRadians) * BULLET_SPEED;
@@ -235,6 +258,7 @@ void InitAsteroids() {
         g_asteroids[i].pos.y = rand() % SCREEN_HEIGHT;
         g_asteroids[i].vel.x = rand() % 100;
         g_asteroids[i].vel.y = rand() % 100;
+        g_asteroids[i].exists = true;
     }
 }
 
@@ -245,7 +269,9 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
 }
 
 void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
-    Vec2 verts[12];
+    if (!ast->exists) return;
+
+    Vec2 verts[9];
     srand((unsigned)ast);
     double angle = 0.0;
     double angleIncrement = M_PI * 2.0 / (ARRAY_SIZE(verts) - 1);
@@ -262,6 +288,18 @@ void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
 
     RotateVerts(verts, ARRAY_SIZE(verts), 0.0);
     RenderLinePath(bmp, ast->pos, verts, ARRAY_SIZE(verts));
+
+    for (int i = 0; i < ARRAY_SIZE(g_bullets); i++) {
+        if (g_bullets[i].age > BULLET_LIFE_SECONDS) 
+            return;
+        Vec2 tmp = g_bullets[i].pos;
+        tmp.x -= ast->pos.x;
+        tmp.y -= ast->pos.y;
+        if (PointInPolygon(verts, ARRAY_SIZE(verts), tmp)) {
+            ast->exists = false;
+            g_bullets[i].age = BULLET_LIFE_SECONDS + 1.0;
+        }
+    }
 }
 
 
@@ -290,6 +328,7 @@ void AsteroidsMain() {
 
     InitShip();
     InitAsteroids();
+    InitBullets();
 
     while (!win->windowClosed && !win->input.keys[KEY_ESC]) {
         BitmapClear(win->bmp, g_colourBlack);
