@@ -6,11 +6,12 @@
 #include <math.h>
 #include <stdlib.h>
 
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
 #define M_PI 3.1415926535
 double const BULLET_LIFE_SECONDS = 1.1;
 double const DEATH_ANIM_SECONDS = 3.0;
-
+enum { ASTEROID_NUM_VERTS = 13 };
 
 enum { SCREEN_WIDTH = 1024 };
 enum { SCREEN_HEIGHT = 768 };
@@ -19,6 +20,7 @@ enum GameState {
     PLAYING,
     PLAYER_DYING
 };
+
 
 struct Vec2 {
     double x, y;
@@ -38,10 +40,12 @@ struct Bullet {
 };
 
 struct Asteroid {
+    Vec2 vertsWorldSpace[ASTEROID_NUM_VERTS];
     Vec2 pos;
     Vec2 vel;
     bool exists;
 };
+
 
 Ship g_ship;
 Bullet g_bullets[4];
@@ -227,7 +231,7 @@ void RenderShip(DfBitmap *bmp) {
     };
 
     RotateVerts(shipverts, NUM_VERTS, g_ship.angleRadians);
-    
+
     if (g_gameState == PLAYER_DYING)
         RenderLinePathExploding(bmp, g_ship.pos, shipverts, NUM_VERTS, g_playerDeathAnimTime);
     else
@@ -271,23 +275,18 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
 void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
     if (!ast->exists) return;
 
-    Vec2 verts[9];
-    srand((unsigned)ast);
-    double angle = 0.0;
-    double angleIncrement = M_PI * 2.0 / (ARRAY_SIZE(verts) - 1);
-    double avgRadius = 30.0;
-    int radiusRandAmount = 20;
-    for (int i = 0; i < ARRAY_SIZE(verts) - 1; i++) {
-        double dist = avgRadius + rand() % radiusRandAmount;
-        verts[i].x = sin(angle) * dist;
-        verts[i].y = cos(angle) * dist;
-        angle += angleIncrement;
+    Vec2 verts[4][ASTEROID_NUM_VERTS] = {
+        { { 4, 0 }, { 6, 0 }, { 8, 3 }, { 8, 5 }, { 6, 8 }, { 4, 8 }, { 4, 5 }, { 2, 8 }, { 0, 5 }, { 2, 4 }, { 0, 3 }, { 3, 0 }, { 4, 0 } },
+        { { 5, 0 }, { 8, 2 }, { 8, 3 }, { 5, 4 }, { 8, 6 }, { 6, 8 }, { 5, 7 }, { 2, 8 }, { 0, 5 }, { 0, 2 }, { 3, 2 }, { 2, 0 }, { 5, 0 } },
+        { { 6, 0 }, { 8, 2 }, { 7, 4 }, { 8, 6 }, { 5, 8 }, { 2, 8 }, { 0, 6 }, { 0, 5 }, { 0, 3 }, { 0, 2 }, { 2, 0 }, { 4, 2 }, { 6, 0 } },
+        { { 6, 0 }, { 8, 2 }, { 6, 3 }, { 8, 5 }, { 6, 8 }, { 3, 7 }, { 2, 8 }, { 0, 6 }, { 1, 4 }, { 0, 2 }, { 2, 0 }, { 4, 1 }, { 6, 0 } },
+    };
+    
+    for (int i = 0; i < ASTEROID_NUM_VERTS; i++) {
+        ast->vertsWorldSpace[i].x = verts[3][i].x * 10.0;
+        ast->vertsWorldSpace[i].y = verts[3][i].y * 10.0;
     }
-    verts[ARRAY_SIZE(verts) - 1].x = verts[0].x;
-    verts[ARRAY_SIZE(verts) - 1].y = verts[0].y;
-
-    RotateVerts(verts, ARRAY_SIZE(verts), 0.0);
-    RenderLinePath(bmp, ast->pos, verts, ARRAY_SIZE(verts));
+    RenderLinePath(bmp, ast->pos, ast->vertsWorldSpace, ASTEROID_NUM_VERTS);
 
     for (int i = 0; i < ARRAY_SIZE(g_bullets); i++) {
         if (g_bullets[i].age > BULLET_LIFE_SECONDS) 
@@ -295,7 +294,7 @@ void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
         Vec2 tmp = g_bullets[i].pos;
         tmp.x -= ast->pos.x;
         tmp.y -= ast->pos.y;
-        if (PointInPolygon(verts, ARRAY_SIZE(verts), tmp)) {
+        if (PointInPolygon(ast->vertsWorldSpace, ASTEROID_NUM_VERTS, tmp)) {
             ast->exists = false;
             g_bullets[i].age = BULLET_LIFE_SECONDS + 1.0;
         }
