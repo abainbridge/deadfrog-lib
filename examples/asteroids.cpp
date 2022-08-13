@@ -43,22 +43,9 @@ Object g_bullets[4];
 Object g_asteroids[4];
 
 
-void FireBullet() {
-    int i;
-    for (i = 0; i < ARRAY_SIZE(g_bullets); i++)
-        if (g_bullets[i].type == UNDEFINED) break;
-    
-    if (i == ARRAY_SIZE(g_bullets)) return;
-
-    double const BULLET_SPEED = 430.0;
-    g_bullets[i].type = BULLET;
-    g_bullets[i].x = g_ship.x;
-    g_bullets[i].y = g_ship.y;
-    g_bullets[i].velX = g_ship.velX + sin(g_ship.angleRadians) * BULLET_SPEED;
-    g_bullets[i].velY = g_ship.velY - cos(g_ship.angleRadians) * BULLET_SPEED;
-    g_bullets[i].age = 0.0;
-}
-
+// ****************************************************************************
+// Misc functions
+// ****************************************************************************
 
 void WrapPosition(Object *obj) {
     if (obj->x < 0.0)
@@ -71,6 +58,72 @@ void WrapPosition(Object *obj) {
         obj->y -= SCREEN_HEIGHT;
 }
 
+void RotateVerts(double *vertsX, double *vertsY, int numVerts, double angleRadians) {
+    double _sin = sin(angleRadians);
+    double _cos = cos(angleRadians);
+    for (int i = 0; i < numVerts; i++) {
+        double tmp = vertsX[i] * _cos - vertsY[i] * _sin;
+        vertsY[i] = vertsX[i] * _sin + vertsY[i] * _cos;
+        vertsX[i] = tmp;
+    }
+}
+
+void RenderLinePath(DfBitmap *bmp, double xOffset, double yOffset,
+    double *vertsX, double *vertsY, int numVerts) {
+    double x = vertsX[0] + xOffset;
+    double y = vertsY[0] + yOffset;
+    for (int i = 1; i < numVerts; i++) {
+        double nextX = vertsX[i] + xOffset;
+        double nextY = vertsY[i] + yOffset;
+        DrawLine(bmp, x, y, nextX, nextY, g_colourWhite);
+        x = nextX;
+        y = nextY;
+    }
+}
+
+
+// ****************************************************************************
+// Bullet
+// ****************************************************************************
+
+void FireBullet() {
+    int i;
+    for (i = 0; i < ARRAY_SIZE(g_bullets); i++)
+    if (g_bullets[i].type == UNDEFINED) break;
+
+    if (i == ARRAY_SIZE(g_bullets)) return;
+
+    double const BULLET_SPEED = 430.0;
+    g_bullets[i].type = BULLET;
+    g_bullets[i].x = g_ship.x;
+    g_bullets[i].y = g_ship.y;
+    g_bullets[i].velX = g_ship.velX + sin(g_ship.angleRadians) * BULLET_SPEED;
+    g_bullets[i].velY = g_ship.velY - cos(g_ship.angleRadians) * BULLET_SPEED;
+    g_bullets[i].age = 0.0;
+}
+
+void AdvanceBullet(Object *obj, double advanceTime) {
+    obj->age += advanceTime;
+    double const BULLET_LIFE = 1.1;
+    if (obj->age > BULLET_LIFE) {
+        obj->type = UNDEFINED;
+        return;
+    }
+
+    obj->x += obj->velX * advanceTime;
+    obj->y += obj->velY * advanceTime;
+    WrapPosition(obj);
+}
+
+void RenderBullet(DfBitmap *bmp, Object *obj) {
+    if (obj->type != UNDEFINED)
+        PutPix(bmp, obj->x, obj->y, g_colourWhite);
+}
+
+
+// ****************************************************************************
+// Ship
+// ****************************************************************************
 
 void AdvanceShip(DfWindow *win, Object *obj) {
     if (win->input.keys[KEY_LEFT])
@@ -99,63 +152,10 @@ void AdvanceShip(DfWindow *win, Object *obj) {
     WrapPosition(obj);
 }
 
-
-void AdvanceBullet(Object *obj, double advanceTime) {
-    obj->age += advanceTime;
-    double const BULLET_LIFE = 1.1;
-    if (obj->age > BULLET_LIFE) {
-        obj->type = UNDEFINED;
-        return;
-    }
-
-    obj->x += obj->velX * advanceTime;
-    obj->y += obj->velY * advanceTime;
-    WrapPosition(obj);
-}
-
-
-void AdvanceAsteroid(Object *obj, double advanceTime) {
-    obj->x += obj->velX * advanceTime;
-    obj->y += obj->velY * advanceTime;
-    WrapPosition(obj);
-}
-
-
-void RenderBullet(DfBitmap *bmp, Object *obj) {
-    if (obj->type != UNDEFINED)
-        PutPix(bmp, obj->x, obj->y, g_colourWhite);
-}
-
-
-void RotateVerts(double *vertsX, double *vertsY, int numVerts, double angleRadians) {
-    double _sin = sin(angleRadians);
-    double _cos = cos(angleRadians);
-    for (int i = 0; i < numVerts; i++) {
-        double tmp = vertsX[i] * _cos - vertsY[i] * _sin;
-        vertsY[i] = vertsX[i] * _sin + vertsY[i] * _cos;
-        vertsX[i] = tmp;
-    }
-}
-
-
-void RenderLinePath(DfBitmap *bmp, double xOffset, double yOffset, 
-                    double *vertsX, double *vertsY, int numVerts) {
-    double x = vertsX[0] + xOffset;
-    double y = vertsY[0] + yOffset;
-    for (int i = 1; i < numVerts; i++) {
-        double nextX = vertsX[i] + xOffset;
-        double nextY = vertsY[i] + yOffset;
-        DrawLine(bmp, x, y, nextX, nextY, g_colourWhite);
-        x = nextX;
-        y = nextY;
-    }
-}
-
-
 void RenderShip(DfBitmap *bmp, Object *obj) {
     enum { NUM_VERTS = 6 };
-    double shipVertsX[NUM_VERTS] = {   0.0, 6.5, 3.5, -3.5, -6.5,   0.0 };
-    double shipVertsY[NUM_VERTS] = { -12.0, 9.0, 6.0,  6.0,  9.0, -12.0 };
+    double shipVertsX[NUM_VERTS] = { 0.0, 6.5, 3.5, -3.5, -6.5, 0.0 };
+    double shipVertsY[NUM_VERTS] = { -12.0, 9.0, 6.0, 6.0, 9.0, -12.0 };
 
     RotateVerts(shipVertsX, shipVertsY, NUM_VERTS, obj->angleRadians);
     RenderLinePath(bmp, obj->x, obj->y, shipVertsX, shipVertsY, NUM_VERTS);
@@ -171,6 +171,16 @@ void RenderShip(DfBitmap *bmp, Object *obj) {
     }
 }
 
+
+// ****************************************************************************
+// Asteroid
+// ****************************************************************************
+
+void AdvanceAsteroid(Object *obj, double advanceTime) {
+    obj->x += obj->velX * advanceTime;
+    obj->y += obj->velY * advanceTime;
+    WrapPosition(obj);
+}
 
 void RenderAsteroid(DfBitmap *bmp, Object *obj) {
     double vertsX[12];
@@ -193,6 +203,10 @@ void RenderAsteroid(DfBitmap *bmp, Object *obj) {
     RenderLinePath(bmp, obj->x, obj->y, vertsX, vertsY, ARRAY_SIZE(vertsX));
 }
 
+
+// ****************************************************************************
+// Main
+// ****************************************************************************
 
 void AsteroidsMain() {
     DfWindow *win = CreateWin(SCREEN_WIDTH, SCREEN_HEIGHT, WT_WINDOWED_RESIZEABLE, "Asteroids Example");
