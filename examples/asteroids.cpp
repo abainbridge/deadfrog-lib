@@ -21,6 +21,10 @@ enum ObjectType {
 };
 
 
+struct Vec2 {
+    double x, y;
+};
+
 struct Object {
     ObjectType type;
     double x, y;
@@ -58,23 +62,23 @@ void WrapPosition(Object *obj) {
         obj->y -= SCREEN_HEIGHT;
 }
 
-void RotateVerts(double *vertsX, double *vertsY, int numVerts, double angleRadians) {
+void RotateVerts(Vec2 *verts, int numVerts, double angleRadians) {
     double _sin = sin(angleRadians);
     double _cos = cos(angleRadians);
     for (int i = 0; i < numVerts; i++) {
-        double tmp = vertsX[i] * _cos - vertsY[i] * _sin;
-        vertsY[i] = vertsX[i] * _sin + vertsY[i] * _cos;
-        vertsX[i] = tmp;
+        double tmp = verts[i].x * _cos - verts[i].y * _sin;
+        verts[i].y = verts[i].x * _sin + verts[i].y * _cos;
+        verts[i].x = tmp;
     }
 }
 
 void RenderLinePath(DfBitmap *bmp, double xOffset, double yOffset,
-    double *vertsX, double *vertsY, int numVerts) {
-    double x = vertsX[0] + xOffset;
-    double y = vertsY[0] + yOffset;
+    Vec2 *verts, int numVerts) {
+    double x = verts[0].x + xOffset;
+    double y = verts[0].y + yOffset;
     for (int i = 1; i < numVerts; i++) {
-        double nextX = vertsX[i] + xOffset;
-        double nextY = vertsY[i] + yOffset;
+        double nextX = verts[i].x + xOffset;
+        double nextY = verts[i].y + yOffset;
         DrawLine(bmp, x, y, nextX, nextY, g_colourWhite);
         x = nextX;
         y = nextY;
@@ -154,20 +158,29 @@ void AdvanceShip(DfWindow *win, Object *obj) {
 
 void RenderShip(DfBitmap *bmp, Object *obj) {
     enum { NUM_VERTS = 6 };
-    double shipVertsX[NUM_VERTS] = { 0.0, 6.5, 3.5, -3.5, -6.5, 0.0 };
-    double shipVertsY[NUM_VERTS] = { -12.0, 9.0, 6.0, 6.0, 9.0, -12.0 };
+    Vec2 shipverts[NUM_VERTS] = { 
+        { 0.0, -12.0 },
+        { 6.5, 9.0 },
+        { 3.5, 6.0 },
+        { -3.5, 6.0 },
+        { -6.5, 9.0 },
+        { 0.0, -12.0 }
+    };
 
-    RotateVerts(shipVertsX, shipVertsY, NUM_VERTS, obj->angleRadians);
-    RenderLinePath(bmp, obj->x, obj->y, shipVertsX, shipVertsY, NUM_VERTS);
+    RotateVerts(shipverts, NUM_VERTS, obj->angleRadians);
+    RenderLinePath(bmp, obj->x, obj->y, shipverts, NUM_VERTS);
 
     // Render rocket thrust.
     int intAge = obj->age * 20.0;
     if (intAge & 1) {
-        double rocketVertsX[] = { 3.5, 0.0, -3.5 };
-        double rocketVertsY[] = { 8.0, 12.0, 8.0 };
+        Vec2 rocketverts[] = {
+            { 3.5, 8.0 },
+            { 0.0, 12.0 },
+            { -3.5, 8.0 }
+        };
 
-        RotateVerts(rocketVertsX, rocketVertsY, ARRAY_SIZE(rocketVertsX), obj->angleRadians);
-        RenderLinePath(bmp, obj->x, obj->y, rocketVertsX, rocketVertsY, ARRAY_SIZE(rocketVertsX));
+        RotateVerts(rocketverts, ARRAY_SIZE(rocketverts), obj->angleRadians);
+        RenderLinePath(bmp, obj->x, obj->y, rocketverts, ARRAY_SIZE(rocketverts));
     }
 }
 
@@ -183,24 +196,23 @@ void AdvanceAsteroid(Object *obj, double advanceTime) {
 }
 
 void RenderAsteroid(DfBitmap *bmp, Object *obj) {
-    double vertsX[12];
-    double vertsY[12];
+    Vec2 verts[12];
     srand((unsigned)obj);
     double angle = 0.0;
-    double angleIncrement = M_PI * 2.0 / (ARRAY_SIZE(vertsX) - 1);
+    double angleIncrement = M_PI * 2.0 / (ARRAY_SIZE(verts) - 1);
     double avgRadius = 30.0;
     int radiusRandAmount = 20;
-    for (int i = 0; i < ARRAY_SIZE(vertsX) - 1; i++) {
+    for (int i = 0; i < ARRAY_SIZE(verts) - 1; i++) {
         double dist = avgRadius + rand() % radiusRandAmount;
-        vertsX[i] = sin(angle) * dist;
-        vertsY[i] = cos(angle) * dist;
+        verts[i].x = sin(angle) * dist;
+        verts[i].y = cos(angle) * dist;
         angle += angleIncrement;
     }
-    vertsX[ARRAY_SIZE(vertsX) - 1] = vertsX[0];
-    vertsY[ARRAY_SIZE(vertsX) - 1] = vertsY[0];
+    verts[ARRAY_SIZE(verts) - 1].x = verts[0].x;
+    verts[ARRAY_SIZE(verts) - 1].y = verts[0].y;
 
-    RotateVerts(vertsX, vertsY, ARRAY_SIZE(vertsX), obj->angleRadians);
-    RenderLinePath(bmp, obj->x, obj->y, vertsX, vertsY, ARRAY_SIZE(vertsX));
+    RotateVerts(verts, ARRAY_SIZE(verts), obj->angleRadians);
+    RenderLinePath(bmp, obj->x, obj->y, verts, ARRAY_SIZE(verts));
 }
 
 
