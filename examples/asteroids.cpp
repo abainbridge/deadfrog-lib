@@ -27,8 +27,8 @@ struct Vec2 {
 
 struct Object {
     ObjectType type;
-    double x, y;
-    double velX, velY;
+    Vec2 pos;
+    Vec2 vel;
     double angleRadians;
     double age;
 };
@@ -52,14 +52,14 @@ Object g_asteroids[4];
 // ****************************************************************************
 
 void WrapPosition(Object *obj) {
-    if (obj->x < 0.0)
-        obj->x += SCREEN_WIDTH;
-    else if (obj->x > SCREEN_WIDTH)
-        obj->x -= SCREEN_WIDTH;
-    if (obj->y < 0.0)
-        obj->y += SCREEN_HEIGHT;
-    else if (obj->y > SCREEN_HEIGHT)
-        obj->y -= SCREEN_HEIGHT;
+    if (obj->pos.x < 0.0)
+        obj->pos.x += SCREEN_WIDTH;
+    else if (obj->pos.x > SCREEN_WIDTH)
+        obj->pos.x -= SCREEN_WIDTH;
+    if (obj->pos.y < 0.0)
+        obj->pos.y += SCREEN_HEIGHT;
+    else if (obj->pos.y > SCREEN_HEIGHT)
+        obj->pos.y -= SCREEN_HEIGHT;
 }
 
 void RotateVerts(Vec2 *verts, int numVerts, double angleRadians) {
@@ -72,13 +72,12 @@ void RotateVerts(Vec2 *verts, int numVerts, double angleRadians) {
     }
 }
 
-void RenderLinePath(DfBitmap *bmp, double xOffset, double yOffset,
-    Vec2 *verts, int numVerts) {
-    double x = verts[0].x + xOffset;
-    double y = verts[0].y + yOffset;
+void RenderLinePath(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts) {
+    double x = verts[0].x + posOffset.x;
+    double y = verts[0].y + posOffset.y;
     for (int i = 1; i < numVerts; i++) {
-        double nextX = verts[i].x + xOffset;
-        double nextY = verts[i].y + yOffset;
+        double nextX = verts[i].x + posOffset.x;
+        double nextY = verts[i].y + posOffset.y;
         DrawLine(bmp, x, y, nextX, nextY, g_colourWhite);
         x = nextX;
         y = nextY;
@@ -99,10 +98,10 @@ void FireBullet() {
 
     double const BULLET_SPEED = 430.0;
     g_bullets[i].type = BULLET;
-    g_bullets[i].x = g_ship.x;
-    g_bullets[i].y = g_ship.y;
-    g_bullets[i].velX = g_ship.velX + sin(g_ship.angleRadians) * BULLET_SPEED;
-    g_bullets[i].velY = g_ship.velY - cos(g_ship.angleRadians) * BULLET_SPEED;
+    g_bullets[i].pos.x = g_ship.pos.x;
+    g_bullets[i].pos.y = g_ship.pos.y;
+    g_bullets[i].vel.x = g_ship.vel.x + sin(g_ship.angleRadians) * BULLET_SPEED;
+    g_bullets[i].vel.y = g_ship.vel.y - cos(g_ship.angleRadians) * BULLET_SPEED;
     g_bullets[i].age = 0.0;
 }
 
@@ -114,14 +113,14 @@ void AdvanceBullet(Object *obj, double advanceTime) {
         return;
     }
 
-    obj->x += obj->velX * advanceTime;
-    obj->y += obj->velY * advanceTime;
+    obj->pos.x += obj->vel.x * advanceTime;
+    obj->pos.y += obj->vel.y * advanceTime;
     WrapPosition(obj);
 }
 
 void RenderBullet(DfBitmap *bmp, Object *obj) {
     if (obj->type != UNDEFINED)
-        PutPix(bmp, obj->x, obj->y, g_colourWhite);
+        PutPix(bmp, obj->pos.x, obj->pos.y, g_colourWhite);
 }
 
 
@@ -136,17 +135,17 @@ void AdvanceShip(DfWindow *win, Object *obj) {
         obj->angleRadians += 6.3 * win->advanceTime;
     if (win->input.keys[KEY_UP]) {
         double const thrustForce = 5.5;
-        obj->velX += sin(obj->angleRadians) * thrustForce;
-        obj->velY -= cos(obj->angleRadians) * thrustForce;
+        obj->vel.x += sin(obj->angleRadians) * thrustForce;
+        obj->vel.y -= cos(obj->angleRadians) * thrustForce;
     }
     if (win->input.keyDowns[KEY_SPACE])
         FireBullet();
 
     double const frictionCoef = 0.21;
-    obj->velX -= obj->velX * win->advanceTime * frictionCoef;
-    obj->velY -= obj->velY * win->advanceTime * frictionCoef;
-    obj->x += obj->velX * win->advanceTime;
-    obj->y += obj->velY * win->advanceTime;
+    obj->vel.x -= obj->vel.x * win->advanceTime * frictionCoef;
+    obj->vel.y -= obj->vel.y * win->advanceTime * frictionCoef;
+    obj->pos.x += obj->vel.x * win->advanceTime;
+    obj->pos.y += obj->vel.y * win->advanceTime;
 
     if (win->input.keys[KEY_UP])
         obj->age += win->advanceTime;
@@ -168,7 +167,7 @@ void RenderShip(DfBitmap *bmp, Object *obj) {
     };
 
     RotateVerts(shipverts, NUM_VERTS, obj->angleRadians);
-    RenderLinePath(bmp, obj->x, obj->y, shipverts, NUM_VERTS);
+    RenderLinePath(bmp, obj->pos, shipverts, NUM_VERTS);
 
     // Render rocket thrust.
     int intAge = obj->age * 20.0;
@@ -180,7 +179,7 @@ void RenderShip(DfBitmap *bmp, Object *obj) {
         };
 
         RotateVerts(rocketverts, ARRAY_SIZE(rocketverts), obj->angleRadians);
-        RenderLinePath(bmp, obj->x, obj->y, rocketverts, ARRAY_SIZE(rocketverts));
+        RenderLinePath(bmp, obj->pos, rocketverts, ARRAY_SIZE(rocketverts));
     }
 }
 
@@ -190,8 +189,8 @@ void RenderShip(DfBitmap *bmp, Object *obj) {
 // ****************************************************************************
 
 void AdvanceAsteroid(Object *obj, double advanceTime) {
-    obj->x += obj->velX * advanceTime;
-    obj->y += obj->velY * advanceTime;
+    obj->pos.x += obj->vel.x * advanceTime;
+    obj->pos.y += obj->vel.y * advanceTime;
     WrapPosition(obj);
 }
 
@@ -212,7 +211,7 @@ void RenderAsteroid(DfBitmap *bmp, Object *obj) {
     verts[ARRAY_SIZE(verts) - 1].y = verts[0].y;
 
     RotateVerts(verts, ARRAY_SIZE(verts), obj->angleRadians);
-    RenderLinePath(bmp, obj->x, obj->y, verts, ARRAY_SIZE(verts));
+    RenderLinePath(bmp, obj->pos, verts, ARRAY_SIZE(verts));
 }
 
 
@@ -226,10 +225,10 @@ void AsteroidsMain() {
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
     for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++) {
         g_asteroids[i].type = BIG_ASTEROID;
-        g_asteroids[i].x = rand() % SCREEN_WIDTH;
-        g_asteroids[i].y = rand() % SCREEN_HEIGHT;
-        g_asteroids[i].velX = rand() % 100;
-        g_asteroids[i].velY = rand() % 100;
+        g_asteroids[i].pos.x = rand() % SCREEN_WIDTH;
+        g_asteroids[i].pos.y = rand() % SCREEN_HEIGHT;
+        g_asteroids[i].vel.x = rand() % 100;
+        g_asteroids[i].vel.y = rand() % 100;
         g_asteroids[i].angleRadians = 0.0;
     }
 
