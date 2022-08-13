@@ -79,13 +79,13 @@ void RotateVerts(Vec2 *verts, int numVerts, double angleRadians) {
     }
 }
 
-void RenderLinePath(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts) {
+void RenderLinePath(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts, DfColour col) {
     double x = verts[0].x + posOffset.x;
     double y = verts[0].y + posOffset.y;
     for (int i = 1; i < numVerts; i++) {
         double nextX = verts[i].x + posOffset.x;
         double nextY = verts[i].y + posOffset.y;
-        DrawLine(bmp, x, y, nextX, nextY, g_colourWhite);
+        DrawLine(bmp, x, y, nextX, nextY, col);
         x = nextX;
         y = nextY;
     }
@@ -191,7 +191,7 @@ void AdvanceShip(DfWindow *win) {
         if (win->input.keys[KEY_RIGHT])
             g_ship.angleRadians += 6.3 * win->advanceTime;
         if (win->input.keys[KEY_UP]) {
-            double const thrustForce = 5.5;
+            double const thrustForce = 4.0;
             g_ship.vel.x += sin(g_ship.angleRadians) * thrustForce;
             g_ship.vel.y -= cos(g_ship.angleRadians) * thrustForce;
         }
@@ -210,7 +210,7 @@ void AdvanceShip(DfWindow *win) {
         g_playerDeathAnimTime += win->advanceTime;
     }
 
-    double const frictionCoef = 0.21;
+    double const frictionCoef = 0.27;
     g_ship.vel.x -= g_ship.vel.x * win->advanceTime * frictionCoef;
     g_ship.vel.y -= g_ship.vel.y * win->advanceTime * frictionCoef;
     g_ship.pos.x += g_ship.vel.x * win->advanceTime;
@@ -222,12 +222,12 @@ void AdvanceShip(DfWindow *win) {
 void RenderShip(DfBitmap *bmp) {
     enum { NUM_VERTS = 6 };
     Vec2 shipverts[NUM_VERTS] = { 
-        { 0.0, -12.0 },
-        { 6.5, 9.0 },
-        { 3.5, 6.0 },
-        { -3.5, 6.0 },
-        { -6.5, 9.0 },
-        { 0.0, -12.0 }
+        { 0.0, -14.0 },
+        { 7.5, 10.5 },
+        { 4.5, 7.0 },
+        { -4.5, 7.0 },
+        { -7.5, 10.5 },
+        { 0.0, -14.0 }
     };
 
     RotateVerts(shipverts, NUM_VERTS, g_ship.angleRadians);
@@ -235,19 +235,19 @@ void RenderShip(DfBitmap *bmp) {
     if (g_gameState == PLAYER_DYING)
         RenderLinePathExploding(bmp, g_ship.pos, shipverts, NUM_VERTS, g_playerDeathAnimTime);
     else
-        RenderLinePath(bmp, g_ship.pos, shipverts, NUM_VERTS);
+        RenderLinePath(bmp, g_ship.pos, shipverts, NUM_VERTS, g_colourWhite);
 
     // Render rocket thrust.
     int intAge = g_ship.thrustSeconds * 20.0;
     if (intAge & 1) {
         Vec2 rocketverts[] = {
             { 3.5, 8.0 },
-            { 0.0, 12.0 },
+            { 0.0, 14.0 },
             { -3.5, 8.0 }
         };
 
         RotateVerts(rocketverts, ARRAY_SIZE(rocketverts), g_ship.angleRadians);
-        RenderLinePath(bmp, g_ship.pos, rocketverts, ARRAY_SIZE(rocketverts));
+        RenderLinePath(bmp, g_ship.pos, rocketverts, ARRAY_SIZE(rocketverts), g_colourWhite);
     }
 }
 
@@ -283,10 +283,12 @@ void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
     };
     
     for (int i = 0; i < ASTEROID_NUM_VERTS; i++) {
-        ast->vertsWorldSpace[i].x = verts[3][i].x * 10.0;
-        ast->vertsWorldSpace[i].y = verts[3][i].y * 10.0;
+        ast->vertsWorldSpace[i].x = verts[3][i].x * 9.0;
+        ast->vertsWorldSpace[i].y = verts[3][i].y * 9.0;
     }
-    RenderLinePath(bmp, ast->pos, ast->vertsWorldSpace, ASTEROID_NUM_VERTS);
+
+    DfColour grey = { 0xff888888 };
+    RenderLinePath(bmp, ast->pos, ast->vertsWorldSpace, ASTEROID_NUM_VERTS, grey);
 
     for (int i = 0; i < ARRAY_SIZE(g_bullets); i++) {
         if (g_bullets[i].age > BULLET_LIFE_SECONDS) 
