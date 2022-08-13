@@ -8,11 +8,17 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
 #define M_PI 3.1415926535
-double const BULLET_LIFE = 1.1;
+double const BULLET_LIFE_SECONDS = 1.1;
+double const DEATH_ANIM_SECONDS = 3.0;
 
 
 enum { SCREEN_WIDTH = 1024 };
 enum { SCREEN_HEIGHT = 768 };
+
+enum GameState {
+    PLAYING,
+    PLAYER_DYING
+};
 
 struct Vec2 {
     double x, y;
@@ -39,6 +45,8 @@ struct Asteroid {
 Ship g_ship;
 Bullet g_bullets[4];
 Asteroid g_asteroids[4];
+GameState g_gameState = PLAYING;
+double g_playerDeathAnimTime;
 
 
 // ****************************************************************************
@@ -78,6 +86,28 @@ void RenderLinePath(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts) {
     }
 }
 
+void RenderLinePathExploding(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts, double age) {
+    double fractionComplete = age / DEATH_ANIM_SECONDS;
+    if (fractionComplete > 1.0) return;
+    double explosionFactor = age * 20.0;
+    double x = verts[0].x;
+    double y = verts[0].y;
+    double skipLut[] = { 0.8, 0.35, 0.5, 0.4, 0.25, 0.3, 0.6, 0.9 };
+    for (int i = 1; i < numVerts; i++) {
+        double nextX = verts[i].x;
+        double nextY = verts[i].y;
+        if (fractionComplete < skipLut[i]) {
+            double midX = (nextX + x) * 0.5;
+            double midY = (nextY + y) * 0.5;
+            double moveX = explosionFactor * midX + posOffset.x;
+            double moveY = explosionFactor * midY + posOffset.y;
+            DrawLine(bmp, x + moveX, y + moveY, nextX + moveX, nextY + moveY, g_colourWhite);
+        }
+        x = nextX;
+        y = nextY;
+    }
+}
+
 
 // ****************************************************************************
 // Bullet
@@ -86,7 +116,7 @@ void RenderLinePath(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts) {
 void FireBullet() {
     int i;
     for (i = 0; i < ARRAY_SIZE(g_bullets); i++)
-    if (g_bullets[i].age > BULLET_LIFE) break;
+    if (g_bullets[i].age > BULLET_LIFE_SECONDS) break;
 
     if (i == ARRAY_SIZE(g_bullets)) return;
 
@@ -100,7 +130,7 @@ void FireBullet() {
 
 void AdvanceBullet(Bullet *bul, double advanceTime) {
     bul->age += advanceTime;
-    if (bul->age > BULLET_LIFE) {
+    if (bul->age > BULLET_LIFE_SECONDS) {
         return;
     }
 
@@ -110,7 +140,7 @@ void AdvanceBullet(Bullet *bul, double advanceTime) {
 }
 
 void RenderBullet(DfBitmap *bmp, Bullet *bul) {
-    if (bul->age < BULLET_LIFE)
+    if (bul->age < BULLET_LIFE_SECONDS)
         PutPix(bmp, bul->pos.x, bul->pos.y, g_colourWhite);
 }
 
@@ -128,28 +158,36 @@ void InitShip() {
 }
 
 void AdvanceShip(DfWindow *win) {
-    if (win->input.keys[KEY_LEFT])
-        g_ship.angleRadians -= 6.3 * win->advanceTime;
-    if (win->input.keys[KEY_RIGHT])
-        g_ship.angleRadians += 6.3 * win->advanceTime;
-    if (win->input.keys[KEY_UP]) {
-        double const thrustForce = 5.5;
-        g_ship.vel.x += sin(g_ship.angleRadians) * thrustForce;
-        g_ship.vel.y -= cos(g_ship.angleRadians) * thrustForce;
+    if (g_gameState == PLAYING) {
+        if (win->input.keys[KEY_LEFT])
+            g_ship.angleRadians -= 6.3 * win->advanceTime;
+        if (win->input.keys[KEY_RIGHT])
+            g_ship.angleRadians += 6.3 * win->advanceTime;
+        if (win->input.keys[KEY_UP]) {
+            double const thrustForce = 5.5;
+            g_ship.vel.x += sin(g_ship.angleRadians) * thrustForce;
+            g_ship.vel.y -= cos(g_ship.angleRadians) * thrustForce;
+        }
+        if (win->input.keyDowns[KEY_SPACE])
+            FireBullet();
+        if (win->input.keyDowns[KEY_D]) {
+            g_gameState = PLAYER_DYING;
+            g_playerDeathAnimTime = 0.0;
+        }
+        if (win->input.keys[KEY_UP])
+            g_ship.thrustSeconds += win->advanceTime;
+        else
+            g_ship.thrustSeconds = 0.0;
     }
-    if (win->input.keyDowns[KEY_SPACE])
-        FireBullet();
+    else {
+        g_playerDeathAnimTime += win->advanceTime;
+    }
 
     double const frictionCoef = 0.21;
     g_ship.vel.x -= g_ship.vel.x * win->advanceTime * frictionCoef;
     g_ship.vel.y -= g_ship.vel.y * win->advanceTime * frictionCoef;
     g_ship.pos.x += g_ship.vel.x * win->advanceTime;
     g_ship.pos.y += g_ship.vel.y * win->advanceTime;
-
-    if (win->input.keys[KEY_UP])
-        g_ship.thrustSeconds += win->advanceTime;
-    else
-        g_ship.thrustSeconds = 0.0;
 
     WrapPosition(&g_ship.pos);
 }
@@ -166,7 +204,11 @@ void RenderShip(DfBitmap *bmp) {
     };
 
     RotateVerts(shipverts, NUM_VERTS, g_ship.angleRadians);
-    RenderLinePath(bmp, g_ship.pos, shipverts, NUM_VERTS);
+    
+    if (g_gameState == PLAYER_DYING)
+        RenderLinePathExploding(bmp, g_ship.pos, shipverts, NUM_VERTS, g_playerDeathAnimTime);
+    else
+        RenderLinePath(bmp, g_ship.pos, shipverts, NUM_VERTS);
 
     // Render rocket thrust.
     int intAge = g_ship.thrustSeconds * 20.0;
@@ -186,6 +228,15 @@ void RenderShip(DfBitmap *bmp) {
 // ****************************************************************************
 // Asteroid
 // ****************************************************************************
+
+void InitAsteroids() {
+    for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++) {
+        g_asteroids[i].pos.x = rand() % SCREEN_WIDTH;
+        g_asteroids[i].pos.y = rand() % SCREEN_HEIGHT;
+        g_asteroids[i].vel.x = rand() % 100;
+        g_asteroids[i].vel.y = rand() % 100;
+    }
+}
 
 void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
     ast->pos.x += ast->vel.x * advanceTime;
@@ -215,6 +266,20 @@ void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
 
 
 // ****************************************************************************
+// Game State
+// ****************************************************************************
+
+void AdvanceGameState() {
+    if (g_gameState == PLAYER_DYING) {
+        if (g_playerDeathAnimTime > DEATH_ANIM_SECONDS) {
+            InitShip();
+            g_gameState = PLAYING;
+        }
+    }
+}
+
+
+// ****************************************************************************
 // Main
 // ****************************************************************************
 
@@ -224,17 +289,13 @@ void AsteroidsMain() {
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
     InitShip();
-    for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++) {
-        g_asteroids[i].pos.x = rand() % SCREEN_WIDTH;
-        g_asteroids[i].pos.y = rand() % SCREEN_HEIGHT;
-        g_asteroids[i].vel.x = rand() % 100;
-        g_asteroids[i].vel.y = rand() % 100;
-    }
+    InitAsteroids();
 
     while (!win->windowClosed && !win->input.keys[KEY_ESC]) {
         BitmapClear(win->bmp, g_colourBlack);
         InputPoll(win);
 
+        AdvanceGameState();
         AdvanceShip(win);
         for (int i = 0; i < ARRAY_SIZE(g_bullets); i++)
             AdvanceBullet(&g_bullets[i], win->advanceTime);
