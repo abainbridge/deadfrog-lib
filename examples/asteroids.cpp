@@ -236,6 +236,21 @@ void AdvanceShip(double advanceTime) {
 
     memcpy(g_ship.vertsWorldSpace, shipverts, sizeof(shipverts));
     RotateAndTranslateVerts(g_ship.vertsWorldSpace, SHIP_NUM_VERTS, g_ship.angleRadians, g_ship.pos);
+
+    if (g_gameState == PLAYING) {
+        // Hit check against asteroids.
+        for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++) {
+            Asteroid *ast = &g_asteroids[i];
+            if (!ast->exists) continue;
+
+            for (int j = 0; j < SHIP_NUM_VERTS; j++) {
+                if (PointInPolygon(ast->vertsWorldSpace, ASTEROID_NUM_VERTS, g_ship.vertsWorldSpace[j])) {
+                    g_gameState = PLAYER_DYING;
+                    g_playerDeathAnimTime = 0.0;
+                }
+            }
+        }
+    }
 }
 
 void RenderShip(DfBitmap *bmp) {
@@ -292,6 +307,7 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
         ast->vertsWorldSpace[i].y = (verts[3][i].y - 4.5) * 9.0 + ast->pos.y;
     }
 
+    // Hit check against bullets.
     for (int i = 0; i < ARRAY_SIZE(g_bullets); i++) {
         if (g_bullets[i].age > BULLET_LIFE_SECONDS)
             continue;
