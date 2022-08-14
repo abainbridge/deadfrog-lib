@@ -288,13 +288,13 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
     };
 
     for (int i = 0; i < ASTEROID_NUM_VERTS; i++) {
-        ast->vertsWorldSpace[i].x = verts[3][i].x * 9.0 + ast->pos.x;
-        ast->vertsWorldSpace[i].y = verts[3][i].y * 9.0 + ast->pos.y;
+        ast->vertsWorldSpace[i].x = (verts[3][i].x - 4.5) * 9.0 + ast->pos.x;
+        ast->vertsWorldSpace[i].y = (verts[3][i].y - 4.5) * 9.0 + ast->pos.y;
     }
 
     for (int i = 0; i < ARRAY_SIZE(g_bullets); i++) {
         if (g_bullets[i].age > BULLET_LIFE_SECONDS)
-            return;
+            continue;
         if (PointInPolygon(ast->vertsWorldSpace, ASTEROID_NUM_VERTS, g_bullets[i].pos)) {
             ast->exists = false;
             g_bullets[i].age = BULLET_LIFE_SECONDS + 1.0;
