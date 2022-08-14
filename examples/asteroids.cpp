@@ -99,12 +99,12 @@ void RenderLinePathExploding(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int num
     double fractionComplete = age / DEATH_ANIM_SECONDS;
     if (fractionComplete > 1.0) return;
     double explosionFactor = age * 5.0;
-    double x = verts[0].x;
-    double y = verts[0].y;
+    double x = verts[0].x - posOffset.x;
+    double y = verts[0].y - posOffset.y;
     double skipLut[] = { 0.8, 0.35, 0.5, 0.4, 0.25, 0.3, 0.6, 0.9 };
     for (int i = 1; i < numVerts; i++) {
-        double nextX = verts[i].x;
-        double nextY = verts[i].y;
+        double nextX = verts[i].x - posOffset.x;
+        double nextY = verts[i].y - posOffset.y;
         if (fractionComplete < skipLut[i]) {
             double midX = (nextX + x) * 0.5;
             double midY = (nextY + y) * 0.5;
@@ -188,7 +188,7 @@ void InitShip() {
     g_ship.thrustSeconds = 0.0;
 }
 
-void AdvanceShip(DfWindow *win) {
+void AdvancePlayerInput(DfWindow *win) {
     if (g_gameState == PLAYING) {
         double const rotationRate = 4.5;
         if (win->input.keys[KEY_LEFT])
@@ -214,12 +214,14 @@ void AdvanceShip(DfWindow *win) {
     else {
         g_playerDeathAnimTime += win->advanceTime;
     }
+}
 
+void AdvanceShip(double advanceTime) {
     double const frictionCoef = 0.27;
-    g_ship.vel.x -= g_ship.vel.x * win->advanceTime * frictionCoef;
-    g_ship.vel.y -= g_ship.vel.y * win->advanceTime * frictionCoef;
-    g_ship.pos.x += g_ship.vel.x * win->advanceTime;
-    g_ship.pos.y += g_ship.vel.y * win->advanceTime;
+    g_ship.vel.x -= g_ship.vel.x * advanceTime * frictionCoef;
+    g_ship.vel.y -= g_ship.vel.y * advanceTime * frictionCoef;
+    g_ship.pos.x += g_ship.vel.x * advanceTime;
+    g_ship.pos.y += g_ship.vel.y * advanceTime;
 
     WrapPosition(&g_ship.pos);
 
@@ -272,6 +274,8 @@ void InitAsteroids() {
 }
 
 void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
+    if (!ast->exists) return;
+
     ast->pos.x += ast->vel.x * advanceTime;
     ast->pos.y += ast->vel.y * advanceTime;
     WrapPosition(&ast->pos);
@@ -337,12 +341,17 @@ void AsteroidsMain() {
         BitmapClear(win->bmp, g_colourBlack);
         InputPoll(win);
 
+        AdvancePlayerInput(win);
         AdvanceGameState();
-        AdvanceShip(win);
-        for (int i = 0; i < ARRAY_SIZE(g_bullets); i++)
-            AdvanceBullet(&g_bullets[i], win->advanceTime);
-        for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++)
-            AdvanceAsteroid(&g_asteroids[i], win->advanceTime);
+
+        double advanceTime = win->advanceTime / 10.0;
+        for (int i = 0; i < 10; i++) {
+            AdvanceShip(advanceTime);
+            for (int i = 0; i < ARRAY_SIZE(g_bullets); i++)
+                AdvanceBullet(&g_bullets[i], advanceTime);
+            for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++)
+                AdvanceAsteroid(&g_asteroids[i], advanceTime);
+        }
 
         RenderShip(win->bmp);
         for (int i = 0; i < ARRAY_SIZE(g_bullets); i++)
