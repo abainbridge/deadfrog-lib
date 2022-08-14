@@ -52,14 +52,14 @@ struct Bullet {
 struct Asteroid {
     Vec2 pos;
     Vec2 vel;
-    bool exists;
+    double size; // Negative if not active. 
     Vec2 vertsWorldSpace[ASTEROID_NUM_VERTS];
 };
 
 
 Ship g_ship;
 Bullet g_bullets[4];
-Asteroid g_asteroids[4];
+Asteroid g_asteroids[24];
 Particle g_particles[NUM_PARTICLES];
 GameState g_gameState = PLAYING;
 double g_playerDeathAnimTime;
@@ -285,7 +285,7 @@ void AdvanceShip(double advanceTime) {
         // Hit check against asteroids.
         for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++) {
             Asteroid *ast = &g_asteroids[i];
-            if (!ast->exists) continue;
+            if (ast->size < 0.0) continue;
 
             for (int j = 0; j < SHIP_NUM_VERTS; j++) {
                 if (PointInPolygon(ast->vertsWorldSpace, ASTEROID_NUM_VERTS, g_ship.vertsWorldSpace[j])) {
@@ -323,17 +323,37 @@ void RenderShip(DfBitmap *bmp) {
 // ****************************************************************************
 
 void InitAsteroids() {
-    for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++) {
+    for (int i = 0; i < 4; i++) {
         g_asteroids[i].pos.x = rand() % SCREEN_WIDTH;
         g_asteroids[i].pos.y = rand() % SCREEN_HEIGHT;
         g_asteroids[i].vel.x = rand() % 100;
         g_asteroids[i].vel.y = rand() % 100;
-        g_asteroids[i].exists = true;
+        g_asteroids[i].size = 9.0;
+    }
+
+    for (int i = 4; i < ARRAY_SIZE(g_asteroids); i++) {
+        g_asteroids[i].size = -1.0;
+    }
+}
+
+void HandleAstroidHit(Asteroid *ast) {
+    if (ast->size > 8.0) {
+        ast->vel.x = rand() % 150;
+        ast->vel.y = rand() % 150;
+        ast->size = 5.0;
+    }
+    else if (ast->size > 4.0) {
+        ast->vel.x = rand() % 200;
+        ast->vel.y = rand() % 200;
+        ast->size = 3.0;
+    }
+    else {
+        ast->size = -1.0;
     }
 }
 
 void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
-    if (!ast->exists) return;
+    if (ast->size < 0.0) return;
 
     ast->pos.x += ast->vel.x * advanceTime;
     ast->pos.y += ast->vel.y * advanceTime;
@@ -347,8 +367,8 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
     };
 
     for (int i = 0; i < ASTEROID_NUM_VERTS; i++) {
-        ast->vertsWorldSpace[i].x = (verts[3][i].x - 4.5) * 9.0 + ast->pos.x;
-        ast->vertsWorldSpace[i].y = (verts[3][i].y - 4.5) * 9.0 + ast->pos.y;
+        ast->vertsWorldSpace[i].x = (verts[3][i].x - 4.5) * ast->size + ast->pos.x;
+        ast->vertsWorldSpace[i].y = (verts[3][i].y - 4.5) * ast->size + ast->pos.y;
     }
 
     // Hit check against bullets.
@@ -356,15 +376,15 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
         if (g_bullets[i].age > BULLET_LIFE_SECONDS)
             continue;
         if (PointInPolygon(ast->vertsWorldSpace, ASTEROID_NUM_VERTS, g_bullets[i].pos)) {
-            ast->exists = false;
-            CreateExplosionParticles(ast->pos, ast->vel, 35);
+            CreateExplosionParticles(ast->pos, ast->vel, ast->size * 3.9);
+            HandleAstroidHit(ast);
             g_bullets[i].age = BULLET_LIFE_SECONDS + 1.0;
         }
     }
 }
 
 void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
-    if (!ast->exists) return;
+    if (ast->size < 0.0) return;
 
     DfColour grey = { 0xff999999 };
     RenderLinePath(bmp, ast->vertsWorldSpace, ASTEROID_NUM_VERTS, grey);
