@@ -94,7 +94,7 @@ void RenderLinePath(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts, Df
 void RenderLinePathExploding(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts, double age) {
     double fractionComplete = age / DEATH_ANIM_SECONDS;
     if (fractionComplete > 1.0) return;
-    double explosionFactor = age * 20.0;
+    double explosionFactor = age * 5.0;
     double x = verts[0].x;
     double y = verts[0].y;
     double skipLut[] = { 0.8, 0.35, 0.5, 0.4, 0.25, 0.3, 0.6, 0.9 };
@@ -186,10 +186,11 @@ void InitShip() {
 
 void AdvanceShip(DfWindow *win) {
     if (g_gameState == PLAYING) {
+        double const rotationRate = 4.5;
         if (win->input.keys[KEY_LEFT])
-            g_ship.angleRadians -= 6.3 * win->advanceTime;
+            g_ship.angleRadians -= rotationRate * win->advanceTime;
         if (win->input.keys[KEY_RIGHT])
-            g_ship.angleRadians += 6.3 * win->advanceTime;
+            g_ship.angleRadians += rotationRate * win->advanceTime;
         if (win->input.keys[KEY_UP]) {
             double const thrustForce = 4.0;
             g_ship.vel.x += sin(g_ship.angleRadians) * thrustForce;
@@ -287,7 +288,7 @@ void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
         ast->vertsWorldSpace[i].y = verts[3][i].y * 9.0;
     }
 
-    DfColour grey = { 0xff888888 };
+    DfColour grey = { 0xff999999 };
     RenderLinePath(bmp, ast->pos, ast->vertsWorldSpace, ASTEROID_NUM_VERTS, grey);
 
     for (int i = 0; i < ARRAY_SIZE(g_bullets); i++) {
