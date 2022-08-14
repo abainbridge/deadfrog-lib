@@ -14,6 +14,7 @@ double const BULLET_LIFE_SECONDS = 1.1;
 double const DEATH_ANIM_SECONDS = 3.0;
 enum { SHIP_NUM_VERTS = 6 };
 enum { ASTEROID_NUM_VERTS = 13 };
+enum { NUM_PARTICLES = 20 };
 
 enum { SCREEN_WIDTH = 1024 };
 enum { SCREEN_HEIGHT = 768 };
@@ -26,6 +27,12 @@ enum GameState {
 
 struct Vec2 {
     double x, y;
+};
+
+struct Particle {
+    Vec2 pos;
+    Vec2 vel;
+    double age;
 };
 
 struct Ship {
@@ -53,6 +60,7 @@ struct Asteroid {
 Ship g_ship;
 Bullet g_bullets[4];
 Asteroid g_asteroids[4];
+Particle g_particles[NUM_PARTICLES];
 GameState g_gameState = PLAYING;
 double g_playerDeathAnimTime;
 
@@ -131,6 +139,42 @@ bool PointInPolygon(Vec2 *verts, int numVerts, Vec2 point) {
             c = !c;
     }
     return c;
+}
+
+
+// ****************************************************************************
+// Particle Effects
+// ****************************************************************************
+
+void CreateExplosionParticles(Vec2 pos, Vec2 vel, int initialSize) {
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        Particle *p = &g_particles[i];
+        int offsetX = rand() % initialSize - initialSize/2;
+        int offsetY = rand() % initialSize - initialSize/2;
+        p->pos.x = pos.x + offsetX;
+        p->pos.y = pos.y + offsetY;
+        p->vel.x = vel.x + offsetX * 2;
+        p->vel.y = vel.y + offsetY * 2;
+        p->age = (rand() % 100) / 100.0;
+    }
+}
+
+void AdvanceParticles(double advanceTime) {
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        Particle *p = &g_particles[i];
+        p->pos.x += p->vel.x * advanceTime;
+        p->pos.y += p->vel.y * advanceTime;
+        p->age += advanceTime;
+    }
+}
+
+void RenderParticles(DfBitmap *bmp) {
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        Particle *p = &g_particles[i];
+        if (p->age < 1.2) {
+            PutPix(bmp, p->pos.x, p->pos.y, g_colourWhite);
+        }
+    }
 }
 
 
@@ -313,6 +357,7 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
             continue;
         if (PointInPolygon(ast->vertsWorldSpace, ASTEROID_NUM_VERTS, g_bullets[i].pos)) {
             ast->exists = false;
+            CreateExplosionParticles(ast->pos, ast->vel, 35);
             g_bullets[i].age = BULLET_LIFE_SECONDS + 1.0;
         }
     }
@@ -359,7 +404,10 @@ void AsteroidsMain() {
 
         AdvancePlayerInput(win);
         AdvanceGameState();
+        AdvanceParticles(win->advanceTime);
 
+        // Run the important physics at 10x the frame rate to improve accuracy
+        // of collision detection.
         double advanceTime = win->advanceTime / 10.0;
         for (int i = 0; i < 10; i++) {
             AdvanceShip(advanceTime);
@@ -374,6 +422,7 @@ void AsteroidsMain() {
             RenderBullet(win->bmp, &g_bullets[i]);
         for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++)
             RenderAsteroid(win->bmp, &g_asteroids[i]);
+        RenderParticles(win->bmp);
 
         // Draw frames per second counter
         DrawTextRight(g_defaultFont, g_colourWhite, win->bmp, win->bmp->width - 5, 0, "FPS:%i", win->fps);
