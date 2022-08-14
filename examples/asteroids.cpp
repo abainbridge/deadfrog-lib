@@ -5,12 +5,14 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
 #define M_PI 3.1415926535
 double const BULLET_LIFE_SECONDS = 1.1;
 double const DEATH_ANIM_SECONDS = 3.0;
+enum { SHIP_NUM_VERTS = 6 };
 enum { ASTEROID_NUM_VERTS = 13 };
 
 enum { SCREEN_WIDTH = 1024 };
@@ -31,6 +33,7 @@ struct Ship {
     Vec2 vel;
     double angleRadians;
     double thrustSeconds;
+    Vec2 vertsWorldSpace[SHIP_NUM_VERTS];
 };
 
 struct Bullet {
@@ -40,10 +43,10 @@ struct Bullet {
 };
 
 struct Asteroid {
-    Vec2 vertsWorldSpace[ASTEROID_NUM_VERTS];
     Vec2 pos;
     Vec2 vel;
     bool exists;
+    Vec2 vertsWorldSpace[ASTEROID_NUM_VERTS];
 };
 
 
@@ -69,22 +72,23 @@ void WrapPosition(Vec2 *pos) {
         pos->y -= SCREEN_HEIGHT;
 }
 
-void RotateVerts(Vec2 *verts, int numVerts, double angleRadians) {
+void RotateAndTranslateVerts(Vec2 *verts, int numVerts, double angleRadians, Vec2 translation) {
     double _sin = sin(angleRadians);
     double _cos = cos(angleRadians);
     for (int i = 0; i < numVerts; i++) {
         double tmp = verts[i].x * _cos - verts[i].y * _sin;
         verts[i].y = verts[i].x * _sin + verts[i].y * _cos;
-        verts[i].x = tmp;
+        verts[i].x = tmp + translation.x;
+        verts[i].y += translation.y;
     }
 }
 
-void RenderLinePath(DfBitmap *bmp, Vec2 posOffset, Vec2 *verts, int numVerts, DfColour col) {
-    double x = verts[0].x + posOffset.x;
-    double y = verts[0].y + posOffset.y;
+void RenderLinePath(DfBitmap *bmp, Vec2 *verts, int numVerts, DfColour col) {
+    double x = verts[0].x;
+    double y = verts[0].y;
     for (int i = 1; i < numVerts; i++) {
-        double nextX = verts[i].x + posOffset.x;
-        double nextY = verts[i].y + posOffset.y;
+        double nextX = verts[i].x;
+        double nextY = verts[i].y;
         DrawLine(bmp, x, y, nextX, nextY, col);
         x = nextX;
         y = nextY;
@@ -218,11 +222,8 @@ void AdvanceShip(DfWindow *win) {
     g_ship.pos.y += g_ship.vel.y * win->advanceTime;
 
     WrapPosition(&g_ship.pos);
-}
 
-void RenderShip(DfBitmap *bmp) {
-    enum { NUM_VERTS = 6 };
-    Vec2 shipverts[NUM_VERTS] = { 
+    static Vec2 const shipverts[SHIP_NUM_VERTS] = {
         { 0.0, -14.0 },
         { 7.5, 10.5 },
         { 4.5, 7.0 },
@@ -231,12 +232,15 @@ void RenderShip(DfBitmap *bmp) {
         { 0.0, -14.0 }
     };
 
-    RotateVerts(shipverts, NUM_VERTS, g_ship.angleRadians);
+    memcpy(g_ship.vertsWorldSpace, shipverts, sizeof(shipverts));
+    RotateAndTranslateVerts(g_ship.vertsWorldSpace, SHIP_NUM_VERTS, g_ship.angleRadians, g_ship.pos);
+}
 
+void RenderShip(DfBitmap *bmp) {
     if (g_gameState == PLAYER_DYING)
-        RenderLinePathExploding(bmp, g_ship.pos, shipverts, NUM_VERTS, g_playerDeathAnimTime);
+        RenderLinePathExploding(bmp, g_ship.pos, g_ship.vertsWorldSpace, SHIP_NUM_VERTS, g_playerDeathAnimTime);
     else
-        RenderLinePath(bmp, g_ship.pos, shipverts, NUM_VERTS, g_colourWhite);
+        RenderLinePath(bmp, g_ship.vertsWorldSpace, SHIP_NUM_VERTS, g_colourWhite);
 
     // Render rocket thrust.
     int intAge = g_ship.thrustSeconds * 20.0;
@@ -247,8 +251,8 @@ void RenderShip(DfBitmap *bmp) {
             { -3.5, 8.0 }
         };
 
-        RotateVerts(rocketverts, ARRAY_SIZE(rocketverts), g_ship.angleRadians);
-        RenderLinePath(bmp, g_ship.pos, rocketverts, ARRAY_SIZE(rocketverts), g_colourWhite);
+        RotateAndTranslateVerts(rocketverts, ARRAY_SIZE(rocketverts), g_ship.angleRadians, g_ship.pos);
+        RenderLinePath(bmp, rocketverts, ARRAY_SIZE(rocketverts), g_colourWhite);
     }
 }
 
@@ -271,37 +275,34 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
     ast->pos.x += ast->vel.x * advanceTime;
     ast->pos.y += ast->vel.y * advanceTime;
     WrapPosition(&ast->pos);
-}
 
-void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
-    if (!ast->exists) return;
-
-    Vec2 verts[4][ASTEROID_NUM_VERTS] = {
+    static Vec2 const verts[4][ASTEROID_NUM_VERTS] = {
         { { 4, 0 }, { 6, 0 }, { 8, 3 }, { 8, 5 }, { 6, 8 }, { 4, 8 }, { 4, 5 }, { 2, 8 }, { 0, 5 }, { 2, 4 }, { 0, 3 }, { 3, 0 }, { 4, 0 } },
         { { 5, 0 }, { 8, 2 }, { 8, 3 }, { 5, 4 }, { 8, 6 }, { 6, 8 }, { 5, 7 }, { 2, 8 }, { 0, 5 }, { 0, 2 }, { 3, 2 }, { 2, 0 }, { 5, 0 } },
         { { 6, 0 }, { 8, 2 }, { 7, 4 }, { 8, 6 }, { 5, 8 }, { 2, 8 }, { 0, 6 }, { 0, 5 }, { 0, 3 }, { 0, 2 }, { 2, 0 }, { 4, 2 }, { 6, 0 } },
         { { 6, 0 }, { 8, 2 }, { 6, 3 }, { 8, 5 }, { 6, 8 }, { 3, 7 }, { 2, 8 }, { 0, 6 }, { 1, 4 }, { 0, 2 }, { 2, 0 }, { 4, 1 }, { 6, 0 } },
     };
-    
+
     for (int i = 0; i < ASTEROID_NUM_VERTS; i++) {
-        ast->vertsWorldSpace[i].x = verts[3][i].x * 9.0;
-        ast->vertsWorldSpace[i].y = verts[3][i].y * 9.0;
+        ast->vertsWorldSpace[i].x = verts[3][i].x * 9.0 + ast->pos.x;
+        ast->vertsWorldSpace[i].y = verts[3][i].y * 9.0 + ast->pos.y;
     }
 
-    DfColour grey = { 0xff999999 };
-    RenderLinePath(bmp, ast->pos, ast->vertsWorldSpace, ASTEROID_NUM_VERTS, grey);
-
     for (int i = 0; i < ARRAY_SIZE(g_bullets); i++) {
-        if (g_bullets[i].age > BULLET_LIFE_SECONDS) 
+        if (g_bullets[i].age > BULLET_LIFE_SECONDS)
             return;
-        Vec2 tmp = g_bullets[i].pos;
-        tmp.x -= ast->pos.x;
-        tmp.y -= ast->pos.y;
-        if (PointInPolygon(ast->vertsWorldSpace, ASTEROID_NUM_VERTS, tmp)) {
+        if (PointInPolygon(ast->vertsWorldSpace, ASTEROID_NUM_VERTS, g_bullets[i].pos)) {
             ast->exists = false;
             g_bullets[i].age = BULLET_LIFE_SECONDS + 1.0;
         }
     }
+}
+
+void RenderAsteroid(DfBitmap *bmp, Asteroid *ast) {
+    if (!ast->exists) return;
+
+    DfColour grey = { 0xff999999 };
+    RenderLinePath(bmp, ast->vertsWorldSpace, ASTEROID_NUM_VERTS, grey);
 }
 
 
