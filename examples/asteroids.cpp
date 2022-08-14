@@ -53,6 +53,7 @@ struct Asteroid {
     Vec2 pos;
     Vec2 vel;
     double size; // Negative if not active. 
+    int shape; // Which of the 4 asteroid shapes to use.
     Vec2 vertsWorldSpace[ASTEROID_NUM_VERTS];
 };
 
@@ -329,27 +330,41 @@ void InitAsteroids() {
         g_asteroids[i].vel.x = rand() % 100;
         g_asteroids[i].vel.y = rand() % 100;
         g_asteroids[i].size = 9.0;
+        g_asteroids[i].shape = i & 3;
     }
 
     for (int i = 4; i < ARRAY_SIZE(g_asteroids); i++) {
         g_asteroids[i].size = -1.0;
+        g_asteroids[i].shape = i & 3;
     }
 }
 
+Asteroid *GetUnusedAsteroid() {
+    for (int i = 0; i < ARRAY_SIZE(g_asteroids); i++) {
+        if (g_asteroids[i].size < 0.0) return &g_asteroids[i];
+    }
+
+    ReleaseAssert(0, "Ran out of asteroids");
+    return &g_asteroids[0];
+}
+
 void HandleAstroidHit(Asteroid *ast) {
-    if (ast->size > 8.0) {
-        ast->vel.x = rand() % 150;
-        ast->vel.y = rand() % 150;
-        ast->size = 5.0;
-    }
-    else if (ast->size > 4.0) {
-        ast->vel.x = rand() % 200;
-        ast->vel.y = rand() % 200;
-        ast->size = 3.0;
-    }
-    else {
+    if (ast->size < 4.0) {
         ast->size = -1.0;
+        return;
     }
+
+    ast->size *= 0.5;
+    Asteroid *newAst = GetUnusedAsteroid();
+    newAst->pos.x = ast->pos.x;
+    newAst->pos.y = ast->pos.y;
+    newAst->size = ast->size;
+    Vec2 newVel = { ast->vel.x * 1.5, ast->vel.y * 1.5 };
+    Vec2 velDelta = { rand() % 50, rand() % 50 };
+    ast->vel.x += velDelta.x;
+    ast->vel.y += velDelta.y;
+    newAst->vel.x = newVel.x - velDelta.x;
+    newAst->vel.y = newVel.y - velDelta.y;
 }
 
 void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
@@ -366,9 +381,10 @@ void AdvanceAsteroid(Asteroid *ast, double advanceTime) {
         { { 6, 0 }, { 8, 2 }, { 6, 3 }, { 8, 5 }, { 6, 8 }, { 3, 7 }, { 2, 8 }, { 0, 6 }, { 1, 4 }, { 0, 2 }, { 2, 0 }, { 4, 1 }, { 6, 0 } },
     };
 
+    int shape = ast->shape;
     for (int i = 0; i < ASTEROID_NUM_VERTS; i++) {
-        ast->vertsWorldSpace[i].x = (verts[3][i].x - 4.5) * ast->size + ast->pos.x;
-        ast->vertsWorldSpace[i].y = (verts[3][i].y - 4.5) * ast->size + ast->pos.y;
+        ast->vertsWorldSpace[i].x = (verts[shape][i].x - 4.5) * ast->size + ast->pos.x;
+        ast->vertsWorldSpace[i].y = (verts[shape][i].y - 4.5) * ast->size + ast->pos.y;
     }
 
     // Hit check against bullets.
@@ -410,7 +426,7 @@ void AdvanceGameState() {
 // ****************************************************************************
 
 void AsteroidsMain() {
-    DfWindow *win = CreateWin(SCREEN_WIDTH, SCREEN_HEIGHT, WT_WINDOWED_RESIZEABLE, "Asteroids Example");
+    DfWindow *win = CreateWin(SCREEN_WIDTH, SCREEN_HEIGHT, WT_WINDOWED_FIXED, "Asteroids Example");
 
     g_defaultFont = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
 
