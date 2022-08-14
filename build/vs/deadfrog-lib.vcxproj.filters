@@ -12,6 +12,12 @@
     <ClCompile Include="..\..\src\df_time.cpp" />
     <ClCompile Include="..\..\src\df_window.cpp" />
     <ClCompile Include="..\..\src\df_clipboard.cpp" />
+    <ClCompile Include="..\..\src\fonts\df_prop.cpp">
+      <Filter>fonts</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fonts\df_mono.cpp">
+      <Filter>fonts</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\df_bitmap.h" />

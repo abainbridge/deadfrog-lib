@@ -53,21 +53,21 @@ static int GetPixel(char *tmpBitmap, int bmpWidth, int x, int y) {
 
 struct MemBuf {
     unsigned char *data;
-    int len;
+    int dataNumBytes;
     int currentPos;
     int currentByte;
     int hiNibbleNext;
 
-    MemBuf(unsigned *_data, int _len) {
+    MemBuf(unsigned *_data, int _dataNumBytes) {
         data = (unsigned char *)_data;
-        len = _len;
+        dataNumBytes = _dataNumBytes;
         currentPos = 0;
         currentByte = 0;
         hiNibbleNext = 0;
     }
 
     int ReadByte() {
-        if (currentPos >= len) return 0;
+        if (currentPos >= dataNumBytes) return 0;
         currentByte = data[currentPos];
         currentPos++;
         return currentByte;
@@ -90,8 +90,8 @@ struct MemBuf {
 // Public Functions
 // ****************************************************************************
 
-DfFont *LoadFontFromMemory(void *_buf, int bufLen) {
-    MemBuf buf((unsigned int *)_buf, bufLen);
+DfFont *LoadFontFromMemory(void const *_buf, int bufLen) {
+    MemBuf buf((unsigned *)_buf, bufLen);
     DfFont *fnt = new DfFont;
     memset(fnt, 0, sizeof(DfFont));
 
@@ -114,7 +114,7 @@ DfFont *LoadFontFromMemory(void *_buf, int bufLen) {
     {
         int runVal = 1;
         int tmpBitmapOffset = 0;
-        while (buf.currentPos < buf.len) {
+        while (buf.currentPos < buf.dataNumBytes) {
             int runLeft = buf.ReadNibble();
 
             if (runLeft == 0) { // 0 is the escape token.

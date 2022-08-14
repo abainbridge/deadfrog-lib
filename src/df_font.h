@@ -29,6 +29,15 @@ typedef struct _DfFont
     int         charHeight; // in pixels
 } DfFont;
 
+typedef struct _DfFontSource 
+{
+    unsigned char const numSizes;
+    unsigned char const *pixelWidths; // Max width if not fixed width.
+    unsigned char const *pixelHeights;
+    unsigned const **dataBlobs;
+    unsigned const *dataBlobsSizes; // Number of bytes in each data blob.
+} DfFontSource;
+
 
 // Finds the pixel heights of all the fonts in the file and writes them into
 // the results array. If file contains more than 16 fonts, only the first 16
@@ -43,8 +52,8 @@ int ListFontSizesInFile(char const *filename, int result[16]);
 DLL_API DfFont *LoadFontFromFile(char const *filename, int pixHeight);
 
 // Loads a font from a block of data already in memory. Typically this will be
-// a font in C code format that has been #include'd.
-DLL_API DfFont *LoadFontFromMemory(void *buf, int numBytes);
+// a font in C code format that was #include'd.
+DLL_API DfFont *LoadFontFromMemory(void const *buf, int numBytes);
 
 DLL_API void FontDelete(DfFont *font);
 

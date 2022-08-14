@@ -30,6 +30,8 @@
     <ClCompile Include="..\..\src\df_polygon_aa.cpp" />
     <ClCompile Include="..\..\src\df_time.cpp" />
     <ClCompile Include="..\..\src\df_window.cpp" />
+    <ClCompile Include="..\..\src\fonts\df_mono.cpp" />
+    <ClCompile Include="..\..\src\fonts\df_prop.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\df_bitmap.h" />
