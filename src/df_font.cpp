@@ -375,6 +375,7 @@ int DrawTextLeft(DfFont *fnt, DfColour c, DfBitmap *bmp, int x, int y, char cons
     va_list ap;
     va_start(ap, text);
     vsprintf(buf, text, ap);
+    va_end(ap);
     return DrawTextSimple(fnt, c, bmp, x, y, buf);
 }
 
@@ -384,6 +385,7 @@ int DrawTextRight(DfFont *fnt, DfColour c, DfBitmap *bmp, int x, int y, char con
     va_list ap;
     va_start(ap, text);
     vsprintf(buf, text, ap);
+    va_end(ap);
 
     int width = GetTextWidth(fnt, buf);
     return DrawTextSimple(fnt, c, bmp, x - width, y, buf);
@@ -395,6 +397,7 @@ int DrawTextCentre(DfFont *fnt, DfColour c, DfBitmap *bmp, int x, int y, char co
     va_list ap;
     va_start(ap, text);
     vsprintf(buf, text, ap);
+    va_end(ap);
 
     int width = GetTextWidth(fnt, buf);
     return DrawTextSimple(fnt, c, bmp, x - width/2, y, buf);
