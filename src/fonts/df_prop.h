@@ -3,10 +3,10 @@
 #include "../df_font.h"
 
 extern DfFontSource df_prop;
-extern unsigned const df_prop_6x10[498];
-extern unsigned const df_prop_7x13[550];
+extern unsigned const df_prop_6x10[497];
+extern unsigned const df_prop_7x13[549];
 extern unsigned const df_prop_8x15[572];
-extern unsigned const df_prop_9x17[651];
-extern unsigned const df_prop_11x20[940];
-extern unsigned const df_prop_14x26[1308];
+extern unsigned const df_prop_9x17[650];
+extern unsigned const df_prop_11x20[941];
+extern unsigned const df_prop_14x26[1311];
 extern unsigned const df_prop_16x30[1442];
