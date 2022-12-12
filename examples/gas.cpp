@@ -55,12 +55,6 @@ static float DotProduct(float ax, float ay, float bx, float by)
 }
 
 
-static inline bool isPositive(float x)
-{
-    return x > 0.0f;
-}
-
-
 static void Advance(DfWindow *win)
 {
     static double prevTime = GetRealTime();
