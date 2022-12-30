@@ -489,17 +489,17 @@ static void FatalRead(WindowPlatformSpecific *platSpec, void *buf, size_t count)
 }
 
 
-static void HandleErrorMessage(WindowPlatformSpecific *platSpec) {
-    // See https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#Encoding::Errors
-    printf("Error message from X11 server - ");
-    switch (platSpec->recvBuf[1]) {
-        case 2: printf("Bad value. %x %x", platSpec->recvBuf[2], platSpec->recvBuf[3]); break;
-        case 9: printf("Bad drawable\n"); break;
-        case 16: printf("Bad length\n"); break;
-        default: printf("Unknown error code %i\n", platSpec->recvBuf[1]);
-    }
-    exit(-1);
-}
+// static void HandleErrorMessage(WindowPlatformSpecific *platSpec) {
+//     // See https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#Encoding::Errors
+//     printf("Error message from X11 server - ");
+//     switch (platSpec->recvBuf[1]) {
+//         case 2: printf("Bad value. %x %x", platSpec->recvBuf[2], platSpec->recvBuf[3]); break;
+//         case 9: printf("Bad drawable\n"); break;
+//         case 16: printf("Bad length\n"); break;
+//         default: printf("Unknown error code %i\n", platSpec->recvBuf[1]);
+//     }
+//     exit(-1);
+// }
 
 
 static bool IsEventPending(WindowPlatformSpecific *platSpec) {
