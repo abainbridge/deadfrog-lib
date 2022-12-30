@@ -117,7 +117,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     DfColour buttonColour = { 0xffe0e0e0 };
 
     Button buttons[3];
-    int numButtons;
+    int numButtons = 1;
     switch (type) {
     case MsgDlgTypeYesNo: numButtons = 2; buttons[0].label = "Yes"; buttons[1].label = "No"; break;
     case MsgDlgTypeYesNoCancel: numButtons = 3; buttons[0].label = "Yes"; buttons[1].label = "No"; buttons[2].label = "Cancel"; break;
