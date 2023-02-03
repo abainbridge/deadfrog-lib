@@ -9,7 +9,9 @@
 
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
-#define M_PI 3.1415926535
+#ifndef M_PI
+# define M_PI 3.1415926535
+#endif
 double const BULLET_LIFE_SECONDS = 1.1;
 double const DEATH_ANIM_SECONDS = 3.0;
 enum { SHIP_NUM_VERTS = 6 };

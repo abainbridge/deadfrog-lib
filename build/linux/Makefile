@@ -1,10 +1,13 @@
 src_dir=../../src
 obj_dir=obj
+fonts_obj_dir=obj/fonts
 inc_dirs=
 
 cxxflags=-MMD -g -march=native -Wno-unused-result -fno-strict-aliasing
 
 c_files_raw=\
+ fonts/df_mono.cpp \
+ fonts/df_prop.cpp \
  df_bitmap.cpp \
  df_bmp.cpp \
  df_clipboard.cpp \
@@ -20,7 +23,7 @@ o_files=$(patsubst $(src_dir)/%.cpp,$(obj_dir)/%.o,$(c_files))
 d_files=$(patsubst %.o,%.d,$(o_files))
 
 
-libdeadfrog.a: $(obj_dir) $(o_files)
+libdeadfrog.a: $(obj_dir) $(fonts_obj_dir) $(o_files)
 	ar cr $@ $(o_files)
 
 # This magic line makes g++ pay attention to the dependency files
@@ -32,5 +35,8 @@ $(obj_dir)/%.o: $(src_dir)/%.cpp Makefile
 $(obj_dir):
 	mkdir -p $(obj_dir)
 
+$(fonts_obj_dir):
+	mkdir -p $(fonts_obj_dir)
+
 clean:
-	rm -f $(o_files) $(d_files)
+	rm -f $(obj_dir) $(o_files) $(d_files)

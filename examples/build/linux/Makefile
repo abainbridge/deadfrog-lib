@@ -6,6 +6,7 @@ cxxflags=-MMD -g -march=native -Wno-unused-result -fno-strict-aliasing
 
 c_files_raw=\
 	all.cpp \
+	asteroids.cpp \
 	colour_whirl.cpp \
 	fractal_fern.cpp \
 	gas.cpp \
@@ -20,8 +21,8 @@ c_files=$(addprefix $(src_dir)/,$(c_files_raw))
 o_files=$(patsubst $(src_dir)/%.cpp,$(obj_dir)/%.o,$(c_files))
 d_files=$(patsubst %.o,%.d,$(o_files))
 
-all: $(o_files)
-	g++ $(cxxflags) $(inc_dirs) $^ -o $@ -L ../../../build/linux -l deadfrog
+all: $(obj_dir) $(o_files)
+	g++ $(cxxflags) $(inc_dirs) $(o_files) -o $@ -L ../../../build/linux -l deadfrog
 
 # This magic line makes g++ pay attention to the dependency files
 -include $(d_files)
