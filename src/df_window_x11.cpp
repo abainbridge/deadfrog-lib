@@ -884,6 +884,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed,
     win->_private = new DfWindowPrivate;
     memset(win->_private, 0, sizeof(DfWindowPrivate));
     win->_private->platSpec = new WindowPlatformSpecific;
+    memset(win->_private->platSpec, 0, sizeof(WindowPlatformSpecific));
     win->_private->platSpec->socketFd = -1;
 
     win->bmp = BitmapCreate(width, height);
@@ -972,6 +973,7 @@ static void CreateFakeWindowIfNeeded() {
     g_fakeWindow._private = new DfWindowPrivate;
     memset(g_fakeWindow._private, 0, sizeof(DfWindowPrivate));
     g_fakeWindow._private->platSpec = new WindowPlatformSpecific;
+    memset(g_fakeWindow._private->platSpec, 0, sizeof(WindowPlatformSpecific));
     g_fakeWindow._private->platSpec->socketFd = -1;
     ConnectToXserver(&g_fakeWindow);
 
