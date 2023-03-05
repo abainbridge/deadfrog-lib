@@ -759,16 +759,20 @@ static void ConnectToXserver(DfWindow *win) {
     }
 
     // Read Xauthority.
-    char const *homeDir = getenv("HOME");
-    size_t homeDirLen = strlen(homeDir);
-    char const *xauth_appender = "/.Xauthority";
-    size_t xauth_appender_len = sizeof(xauth_appender);
-    if (homeDirLen + xauth_appender_len + 1 > PATH_MAX) {
-        FATAL_ERROR("HOME too long");
+    char xauthFilenameBuf[PATH_MAX];
+    char const *xauthFilename = getenv("XAUTHORITY");
+    if (!xauthFilename) {
+        char const *homeDir = getenv("HOME");
+        size_t homeDirLen = strlen(homeDir);
+        char const *xauth_appender = "/.Xauthority";
+        size_t xauth_appender_len = sizeof(xauth_appender);
+        if (homeDirLen + xauth_appender_len + 1 > PATH_MAX) {
+            FATAL_ERROR("HOME too long");
+        }
+        memcpy(xauthFilenameBuf, homeDir, homeDirLen);
+        strcpy(xauthFilenameBuf + homeDirLen, xauth_appender);
+        xauthFilename = xauthFilenameBuf;
     }
-    char xauthFilename[PATH_MAX];
-    memcpy(xauthFilename, homeDir, homeDirLen);
-    strcpy(xauthFilename + homeDirLen, xauth_appender);
     FILE *xauthFile = fopen(xauthFilename, "rb");
     if (!xauthFile) {
         FATAL_ERROR("Couldn't open '%s'.", xauthFilename);
