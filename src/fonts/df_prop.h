@@ -9,4 +9,4 @@ extern unsigned const df_prop_8x15[572];
 extern unsigned const df_prop_9x17[650];
 extern unsigned const df_prop_11x20[942];
 extern unsigned const df_prop_14x26[1309];
-extern unsigned const df_prop_16x30[1441];
+extern unsigned const df_prop_16x30[1442];
