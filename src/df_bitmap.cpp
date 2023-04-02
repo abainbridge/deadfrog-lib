@@ -3,7 +3,7 @@
 #include "df_colour.h"
 #include "df_common.h"
 
-#include <algorithm>
+//#include <algorithm>
 #include <math.h>
 #include <memory.h>
 #include <stdint.h>
@@ -813,13 +813,12 @@ void ScaleDownBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src) {
 
 
 void ScaleUpBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src) {
-    int maxSx = IntMin(src->width, dest->width / scale);
-    int maxSy = IntMin(src->height, dest->height / scale);
+    int maxSx = IntMin(src->width, (dest->width + x) / scale);
+    int maxSy = IntMin(src->height, (dest->height + y) / scale);
 
     for (int sy = 0; sy < maxSy; sy++) {
-        DfColour *srcPixel = GetLine(src, sy);
-
         for (int j = 0; j < scale; j++) {
+            DfColour *srcPixel = GetLine(src, sy);
             int destY = y + sy * scale + j;
             DfColour *destPixel = GetLine(dest, destY) + x;
 

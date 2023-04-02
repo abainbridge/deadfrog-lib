@@ -80,7 +80,8 @@ DLL_API void        Blit            (DfBitmap *destBmp, int x, int y, DfBitmap *
 DLL_API void        ScaleDownBlit   (DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp);
 
 // Blit while scaling the result up by the specified integer scale factor. It
-// does fast but ugly nearest neighbour scaling.
+// does fast but ugly nearest neighbour scaling. x,y are the position in
+// destBmp where you want to blit to.
 DLL_API void        ScaleUpBlit     (DfBitmap *destBmp, int x, int y, int scale, DfBitmap *srcBmp);
 
 // Blit with arbitrary resizing. dstWidth and dstHeight specify how large the
