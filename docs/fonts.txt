@@ -1,103 +1,99 @@
-Deadfrog lib has its own font file format (defined below). Fonts can be loaded
-from a file or can be embedded directly into the executable. The problems with
-relying on system fonts are:
-
-* Your application needs to be tested with known fonts, but there aren't any
-  fonts that are guaranteed to be pre-installed on all platforms. Even if you
-  only target a single platform, there's still approximately no fonts that are
-  guaranteed to be there. So, you have to install a font with your application,
-  which is particularly annoying if you don't otherwise need an installer.
-
-* When someone installs your application, they don't want your UI fonts
-  appearing in their word processor / drawing package etc.
+Deadfrog lib has its own bitmap font file format. The file extension is .dfbf.
+A single file can contain multiple sizes of the same font.
 
 
-The problems with the existing font formats are:
+Comparison with Microsoft .FON files
+------------------------------------
 
-* The resulting fonts are unnecessarily large.
+1. The Deadfrog font file will be about 1/3rd the size of the same font stored
+in a .FON file.
 
-* The formats are complex and make the run-time loader complex (ie slow and
-  large).
+2. The parser (to load in the font file) is simpler (200 vs 300 lines of C).
 
 
-The problem with vector fonts are:
+Comparison with all the other bitmap font formats
+-------------------------------------------------
 
-* They are complex - hard to implement a small parser.
+They're all produce even larger files and require even more complex parsers.
+
+
+# Why use bitmap fonts when everyone else uses vector fonts?
+
+* Vector fonts are complex - hard to implement a small parser.
 
 * They are large.
 
-* For small sizes, you need to specify the font at the pixel level anyway,
-otherwise it'll be a blurry mess if anti-aliased, or an ugly mess if not.
-(Windows' ClearType mostly avoid the blurry/ugly mess problem by doing a great
-job of "hinting" their fonts and doing a great job of subpixel anti-aliasing.
-The problems there is that you'll never be able to author your own fonts that
-are as well hinted, you can't redistribute theirs to guarantee them being
-available, and rendering anti-aliased text is slow anyway because it requires
-read-modify-write on each pixel instead of just write).
+* They are hard to author.
 
-So, Deadfrog Lib implements its own bitmap font file format that is easy to
-parse, doesn't contain stupid information like the DPI of the font (how can a
-collection of pixels have a DPI? The screen is what defines the DPI. My 13
-pixel tall font will be smaller on a high DPI screen than a low DPI one. Any
-attempt to keep it the same size is doomed). Compared to the ancient Windows
-bitmap font file that you might still find today, the Deadfrog format is about
-3x smaller. Most of the saving comes from Run Length Encoding. There's still
-room for further improvement with simple LZW or Huffman coding, but that's
-starting to get silly.
+* For small pixel sizes, you need to specify the font at the pixel level
+anyway, otherwise it'll be a blurry mess if anti-aliased, or an ugly mess if
+not. (Windows' ClearType mostly avoid the blurry/ugly mess problem by doing a
+great job of "hinting" their fonts and doing a great job of subpixel
+anti-aliasing. The problems there is that you'll never be able to author your
+own fonts that are as well hinted, you can't redistribute theirs to guarantee
+them being available, and rendering anti-aliased text is slow anyway because it
+requires read-modify-write on each pixel instead of just write).
 
-So, now you're fully on board with the rational decision process, here's the
-font format spec:
 
+File format definition
+----------------------
 
 Bytes 0:3 are the id string "dfbf".
 
-Byte 4 is the format version.
+Byte 4 is the format version. The only known version is currently version 0.
+Version 0 only supports monochrome bitmap fonts. All font files define 224
+glyphs, covering extended ASCII codes from 32 to 255.
 
-
-= Version 0 =
-
-Only supports monochrome bitmap fonts. All font files define 224 glyphs,
-covering extended ASCII codes from 32 to 255.
-
-== Container ==
-
-Byte 5 is the number of fonts in the file, called num_fonts.
+Byte 5 is the number of fonts (ie sizes) in the file, called num_fonts.
 
 Byte 6 to 6 + num_fonts * 4 are offsets to the start of each font.
 
-
 == Font ==
 
-Byte 6 is the width of the widest glyph, in pixels. If the font is fixed
+Within the block of data for each font.
+
+Byte 0 is the width of the widest glyph, in pixels. If the font is fixed
 width, then all the glyphs are this width.
 
-Byte 7 is the height of the font, in pixels. This is the vertical spacing of
+Byte 1 is the height of the font, in pixels. This is the vertical spacing of
 adjacent rows of text.
 
-Byte 8 contains some flags.
-    mask 1 - indicates if the font is fixed width or variable width. 0=fixed,
-             1=variable.
-    
+Byte 2 contains flags.
+    bit 1 indicates if the font is fixed width or variable width. 0=fixed,
+    1=variable.
 
-If variable width, the next 224 bytes are the widths of each glyph.
+If the font is variable width, the next 224 bytes are the widths of each glyph.
 
-The remaining bytes represent an RLE encoded bitmap.
+The remaining bytes are an RLE encoded bitmap. Some details about the bitmap:
+ * The bitmap has 16 glyphs per row and 14 rows (16 * 14 = 224).
+ * The first row defines glyphs for ASCII values 32 to 47. The next from 48 to
+   63, and so on.
+ * The horizontal spacing of the glyphs on the bitmap is the same for fixed and
+   variable width fonts. For example, if the widest glyph is 7 pixels wide, the
+   first glyph of the row starts in column 0, the second in column 7.
+ * The vertical spacing of the glyphs is the only sensible one. The pitch is
+   the font height.
+ * There is no padding at the end of the rows of pixels (unlike, say, in a MS
+   .FON file).
 
-* The bitmap has 16 glyphs per row and 14 rows (16 * 14 = 224).
+Decoding the RLE'd bitmap works roughly like this:
+ 1. Start with the "pen" colour being black.
+ 2. Start with the "pen" at the top left of the bitmap (x=0, y=0).
+ 3. Read the run length from the input stream.
+ 4. Draw that many pixels in the current pen colour moving right horizontally.
+ 5. Toggle the pen colour (eg from black to white).
+ 6. If there's any input left, goto step 3.
 
-* The first row defines glyphs for ASCII values 32 to 47. The next from 48 to
-  63, and so on.
+Note 1: When the pen reaches the right hand edge of the bitmap, do x = 0; y++;
+That is allowed to happen in the middle of a run.
 
-* The horizontal spacing of the glyphs on the bitmap is the same for fixed and
-  variable width fonts. For example, if the widest glyph is 7 pixels wide, the
-  first glyph of the row starts in column 0, the second in column 7.
+Note 2: Run lengths larger than 15 require the use of an escape code. The
+value of the escape code is 0. If the decoder receives an escape code, it
+must then read the next 8 bits as the run length. This allows run lengths
+up to 255 to be represented. If more than that is needed, runs of 255 must be
+combined seperated by runs of 0. Runs of 0 are encoded using the escape code.
 
-* The vertical spacing of the glyphs is the only sensible one. The pitch is the
-  font height.
-
-* There is no padding.
-
-* Each byte 
-
-* The RLE encoding is in row-major order. A single "run" can cross row
-boundaries. For example, This leads to a more efficient encoding.
+Once un-RLE'ing is done, the resulting bitmap needs further processing. In
+order to make the Run Length Encoding more efficient, a simple filter was
+applied to the bitmap before it was encoded (by whatever made the font file).
+The filter is simply to XOR each row of pixels with the previous row.
