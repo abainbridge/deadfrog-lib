@@ -1,0 +1,11 @@
+/build/linux/obj
+/build/linux/libdeadfrog.a
+/build/vs/Debug
+/build/vs/x64/Release
+/examples/build/linux/all
+/examples/build/linux/obj
+/examples/build/vs/Debug
+/examples/build/vs/x64/Release
+/build/vs/deadfrog-lib.sdf
+/examples/build/vs/examples.sdf
+/examples/build/vs/examples.v12.suo
