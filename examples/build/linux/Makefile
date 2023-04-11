@@ -2,7 +2,8 @@ src_dir=../..
 obj_dir=obj
 inc_dirs=-I ../../../src
 
-cxxflags=-MMD -g -march=native -Wno-unused-result -fno-strict-aliasing
+cxxflags=-MMD -g -O2 -march=native -Wno-unused-result -fno-strict-aliasing -fdata-sections \
+	-ffunction-sections -wshadow
 
 c_files_raw=\
 	all.cpp \

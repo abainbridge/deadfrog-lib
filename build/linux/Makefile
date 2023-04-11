@@ -3,7 +3,9 @@ obj_dir=obj
 fonts_obj_dir=obj/fonts
 inc_dirs=
 
-cxxflags=-MMD -g -march=native -Wno-unused-result -fno-strict-aliasing
+cxxflags=-MMD -g -O2 -march=native -Wno-unused-result -fno-strict-aliasing -fdata-sections \
+	-ffunction-sections -wshadow
+
 
 c_files_raw=\
  fonts/df_mono.cpp \
@@ -39,4 +41,4 @@ $(fonts_obj_dir):
 	mkdir -p $(fonts_obj_dir)
 
 clean:
-	rm -f $(obj_dir) $(o_files) $(d_files)
+	rm -rf $(obj_dir) $(o_files) $(d_files)
