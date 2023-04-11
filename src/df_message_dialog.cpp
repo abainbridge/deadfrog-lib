@@ -28,8 +28,6 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 
 #else
 
-// TODO - Make this dialog scale itself according to the screen DPI.
-
 #include "fonts/df_prop.h"
 #include "df_font.h"
 #include "df_window.h"
@@ -91,6 +89,14 @@ static bool DoButton(DfWindow *win, DfFont *font, Button *button, bool isSelecte
 
 int MessageDialog(char const *title, char const *message, MessageDialogType type) {
     DfFont *font = LoadFontFromMemory(df_prop_8x15, sizeof(df_prop_8x15));
+    int rv = MessageDialogEx(title, message, type, font, -1, -1);
+    FontDelete(font);
+    return rv;
+}
+
+
+int MessageDialogEx(char const *title, char const *message, MessageDialogType type,
+    DfFont *font, int posX, int posY) {
 
     int numLines = 0;
     int longestLinePixels = 0;
@@ -143,7 +149,11 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
         }
     }
 
-    DfWindow *win = CreateWin(winWidth, winHeight, WT_WINDOWED_FIXED, title);
+    DfWindow *win;
+    if (posX == -1 && posY == -1)
+        win = CreateWin(winWidth, winHeight, WT_WINDOWED_FIXED, title);
+    else
+        win = CreateWinPos(posX, posY, winWidth, winHeight, WT_WINDOWED_FIXED, title);
 
     int selectedButton = 0;
     int result = -1;
@@ -184,7 +194,6 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
     }
 
     DestroyWin(win);
-    FontDelete(font);
 
     switch (type) {
     case MsgDlgTypeYesNo:
