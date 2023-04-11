@@ -315,8 +315,8 @@ static int DrawTextSimpleClipped(DfFont *fnt, DfColour col, DfBitmap *bmp, int _
             int y3 = y + rleBuf->startY;
             if (y3 >= bmp->clipTop && y3 < bmp->clipBottom) {
                 DfColour *thisRow = startRow + rleBuf->startY * width;
-                for (unsigned i = 0; i < rleBuf->runLen; i++) {
-                    int x3 = x + rleBuf->startX + i;
+                for (unsigned k = 0; k < rleBuf->runLen; k++) {
+                    int x3 = x + rleBuf->startX + k;
                     if (x3 >= bmp->clipLeft && x3 < bmp->clipRight)
                         thisRow[x3] = col;
                 }
@@ -353,8 +353,8 @@ int DrawTextSimpleLen(DfFont *fnt, DfColour col, DfBitmap *bmp, int _x, int y,
         EncodedRun *rleBuf = glyph.m_pixelRuns;
         for (int i = 0; i < glyph.m_numRuns; i++) {
             DfColour *startPixel = startRow + rleBuf->startY * width + rleBuf->startX + x;
-            for (unsigned i = 0; i < rleBuf->runLen; i++)
-                startPixel[i] = col;
+            for (unsigned k = 0; k < rleBuf->runLen; k++)
+                startPixel[k] = col;
             rleBuf++;
         }
 

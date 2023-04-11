@@ -4,7 +4,7 @@ fonts_obj_dir=obj/fonts
 inc_dirs=
 
 cxxflags=-MMD -g -O2 -march=native -Wno-unused-result -fno-strict-aliasing -fdata-sections \
-	-ffunction-sections -wshadow
+	-ffunction-sections -Wshadow
 
 
 c_files_raw=\

@@ -447,7 +447,7 @@ void AsteroidsMain() {
         // Run the important physics at 10x the frame rate to improve accuracy
         // of collision detection.
         double advanceTime = win->advanceTime / 10.0;
-        for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 10; j++) {
             AdvanceShip(advanceTime);
             for (int i = 0; i < ARRAY_SIZE(g_bullets); i++)
                 AdvanceBullet(&g_bullets[i], advanceTime);
