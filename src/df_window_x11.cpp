@@ -1231,6 +1231,7 @@ void X11InternalClipboardSetData(char const *data, int numChars) {
     platSpec->clipboardTxData = new char[numChars + 3]; // +3 to allow for maximum amount of padding needed when buffer is sent to xServer.
     platSpec->clipboardTxDataNumChars = numChars;
     memcpy(platSpec->clipboardTxData, data, numChars);
+    memset(platSpec->clipboardTxData + numChars, 0, 3); // Prevent Valgrind complaining about uninitialized memory.
 
 //    puts("Sending SetSelectionOwner request");
     uint32_t packet[4];
