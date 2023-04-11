@@ -7,7 +7,7 @@
 
 void DebugOut(char const *fmt, ...) {
     va_list ap;
-    va_start (ap, fmt);
+    va_start(ap, fmt);
     vprintf(fmt, ap);
 }
 
@@ -15,8 +15,10 @@ void DebugOut(char const *fmt, ...) {
 void ReleaseAssert(bool condition, char const *fmt, ...) {
     if (!condition) {
         va_list ap;
-        va_start (ap, fmt);
+        va_start(ap, fmt);
         vprintf(fmt, ap);
+        putchar('\n');
+        asm("int3");
         exit(-1);
     }
 }
@@ -25,7 +27,8 @@ void ReleaseAssert(bool condition, char const *fmt, ...) {
 void ReleaseWarn(bool condition, char const *fmt, ...) {
     if (!condition) {
         va_list ap;
-        va_start (ap, fmt);
+        va_start(ap, fmt);
         vprintf(fmt, ap);
+        putchar('\n');
     }
 }
