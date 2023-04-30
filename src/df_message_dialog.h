@@ -35,9 +35,9 @@ enum MessageDialogReturnCode {
 int MessageDialog(char const *title, char const *message, MessageDialogType type);
 
 // Like the MessageDialog() but allows you to specify the font and where to 
-// position the dialog on the desktop.
+// position the centre of the dialog on the desktop.
 int MessageDialogEx(char const *title, char const *message, MessageDialogType type,
-    DfFont *font, int posX, int posY);
+    DfFont *font, int centreX, int centreY);
 
 
 #ifdef __cplusplus

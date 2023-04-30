@@ -96,8 +96,7 @@ int MessageDialog(char const *title, char const *message, MessageDialogType type
 
 
 int MessageDialogEx(char const *title, char const *message, MessageDialogType type,
-    DfFont *font, int posX, int posY) {
-
+        DfFont *font, int centreX, int centreY) {
     int numLines = 0;
     int longestLinePixels = 0;
     {
@@ -150,10 +149,14 @@ int MessageDialogEx(char const *title, char const *message, MessageDialogType ty
     }
 
     DfWindow *win;
-    if (posX == -1 && posY == -1)
+    if (centreX == -1 && centreY == -1) {
         win = CreateWin(winWidth, winHeight, WT_WINDOWED_FIXED, title);
-    else
+    }
+    else {
+        int posX = centreX - winWidth / 2;
+        int posY = centreY - winHeight / 2;
         win = CreateWinPos(posX, posY, winWidth, winHeight, WT_WINDOWED_FIXED, title);
+    }
 
     int selectedButton = 0;
     int result = -1;
