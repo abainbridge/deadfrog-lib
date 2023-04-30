@@ -764,9 +764,9 @@ static void ConnectToXserver(DfWindow *win) {
     if (!xauthFilename) {
         char const *homeDir = getenv("HOME");
         size_t homeDirLen = strlen(homeDir);
-        char const *xauth_appender = "/.Xauthority";
+        char const xauth_appender[] = "/.Xauthority";
         size_t xauth_appender_len = sizeof(xauth_appender);
-        if (homeDirLen + xauth_appender_len + 1 > PATH_MAX) {
+        if (homeDirLen + xauth_appender_len > PATH_MAX) {
             FATAL_ERROR("HOME too long");
         }
         memcpy(xauthFilenameBuf, homeDir, homeDirLen);
