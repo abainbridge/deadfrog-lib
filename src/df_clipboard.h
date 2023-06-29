@@ -20,7 +20,7 @@ DLL_API char *ClipboardReceiveData(int *numChars);
 
 DLL_API void ClipboardReleaseReceivedData(char const *data);
 
-// Returns 0 on failure, 1 on success.
+// data does not need to be null terminated. Returns 0 on failure, 1 on success.
 DLL_API int ClipboardSetData(char const *data, int numChars);
 
 

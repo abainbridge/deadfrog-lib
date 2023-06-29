@@ -60,7 +60,7 @@ int ClipboardSetData(char const *data, int sizeData) {
     // free the memory associated with any data that is in the Clipboard.
     EmptyClipboard();
 
-    HGLOBAL clipboardHandle = GlobalAlloc(GMEM_DDESHARE, sizeData);
+    HGLOBAL clipboardHandle = GlobalAlloc(GMEM_DDESHARE, sizeData + 1);
 
     // Calling GlobalLock returns a pointer to the data associated with the
     // handle returned from GlobalAlloc()
@@ -70,6 +70,7 @@ int ClipboardSetData(char const *data, int sizeData) {
 
     // Copy the data from the local variable to the global memory.
     memcpy(windowsData, data, sizeData);
+    windowsData[sizeData] = '\0';
 
     // Unlock the memory - don't call GlobalFree because Windows will free the
     // memory automatically when EmptyClipboard is next called.
