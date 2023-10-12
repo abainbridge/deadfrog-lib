@@ -201,6 +201,7 @@
     <ClCompile Include="..\..\sierpinski_3d.cpp" />
     <ClCompile Include="..\..\stretch_blit.cpp" />
     <ClCompile Include="..\..\test.cpp" />
+    <ClCompile Include="..\..\test_c.c" />
     <ClCompile Include="..\..\two_windows.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

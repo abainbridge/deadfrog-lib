@@ -103,7 +103,7 @@ int MessageDialogEx(char const *title, char const *message, MessageDialogType ty
         char const *lineStart = message;
         for (char const *c = message;; c++) {
             if (*c == '\n' || *c == '\0') {
-                int lineLen = GetTextWidth(font, lineStart, c - lineStart);
+                int lineLen = GetTextWidthNumChars(font, lineStart, c - lineStart);
                 if (lineLen > longestLinePixels) longestLinePixels = lineLen;
                 lineStart = c + 1;
                 numLines++;

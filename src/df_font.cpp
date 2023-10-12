@@ -28,7 +28,7 @@ typedef struct {
 } EncodedRun;
 
 
-struct Glyph {
+typedef struct _Glyph {
     unsigned m_width;
     int m_numRuns;
     EncodedRun *m_pixelRuns;
@@ -36,7 +36,7 @@ struct Glyph {
     Glyph(int w) {
         m_width = w;
     }
-};
+} Glyph;
 
 
 // ****************************************************************************
@@ -404,14 +404,19 @@ int DrawTextCentre(DfFont *fnt, DfColour c, DfBitmap *bmp, int x, int y, char co
 }
 
 
-int GetTextWidth(DfFont *fnt, char const *text, int len) {
-    len = IntMin((int)strlen(text), len);
+int GetTextWidth(DfFont *fnt, char const *text) {
+    return GetTextWidthNumChars(fnt, text, INT_MAX);
+}
+
+
+int GetTextWidthNumChars(DfFont *fnt, char const *text, int numChars) {
+    numChars = IntMin((int)strlen(text), numChars);
     if (fnt->fixedWidth) {
-        return len * fnt->maxCharWidth;
+        return numChars * fnt->maxCharWidth;
     }
     else {
         int width = 0;
-        for (int i = 0; i < len; i++)
+        for (int i = 0; i < numChars; i++)
             width += fnt->glyphs[text[i] & 0xff]->m_width;
 
         return width;

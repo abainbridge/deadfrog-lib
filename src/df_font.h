@@ -18,7 +18,7 @@ extern "C"
 
 
 typedef struct _DfBitmap DfBitmap;
-struct Glyph;
+typedef struct _Glyph Glyph;
 
 
 typedef struct _DfFont
@@ -69,7 +69,10 @@ DLL_API int DrawTextLeft     (DfFont *, DfColour c, DfBitmap *, int x, int y, ch
 DLL_API int DrawTextRight    (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);   // Like above but with right justify
 DLL_API int DrawTextCentre   (DfFont *, DfColour c, DfBitmap *, int x, int y, char const *text, ...);   // Like above but with centre justify
 
-DLL_API int GetTextWidth     (DfFont *, char const *text, int len=999999);
+// Gets the width in pixels of a string in the specified font. Both functions
+// assume the string is NULL terminated. The 
+DLL_API int GetTextWidth(DfFont *, char const *text);
+DLL_API int GetTextWidthNumChars(DfFont *, char const *text, int numChars);
 
 
 extern DfFont *g_defaultFont;

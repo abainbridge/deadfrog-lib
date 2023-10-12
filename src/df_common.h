@@ -38,6 +38,9 @@ void ReleaseWarn(bool condition, char const *fmt, ...);
     #define strcasecmp stricmp
     #define strncasecmp strnicmp
     #define __func__ __FUNCTION__
+    #ifndef __cplusplus
+        #define inline __inline
+    #endif
 #endif
 
 

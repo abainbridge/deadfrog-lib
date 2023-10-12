@@ -16,5 +16,6 @@
     <ClCompile Include="..\..\stretch_blit.cpp" />
     <ClCompile Include="..\..\two_windows.cpp" />
     <ClCompile Include="..\..\asteroids.cpp" />
+    <ClCompile Include="..\..\test_c.c" />
   </ItemGroup>
 </Project>
