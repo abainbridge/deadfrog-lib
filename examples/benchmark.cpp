@@ -212,10 +212,10 @@ double CalcBillionPolyFillPixelsPerSec(DfBitmap *bmp)
     {
         static PolyVertList ScreenRectangle = { 4, {{340,10},{380,10},{380,200},{340,200}} };
         static PolyVertList Hexagon = { 6, {{190,250},{100,210},{10,250},{10,350},{100,390},{190,350}} };
-        static PolyVertList Triangle1 = { 3, {{30,0},{15,20},{0,0}} };
-        static PolyVertList Triangle2 = { 3, {{30,20},{15,0},{0,20}} };
+        static PolyVertList Triangle1 = { 3, {{0,0},{15,20},{30,0}} };
+        static PolyVertList Triangle2 = { 3, {{45,20},{30,0},{15,20}} };
         static PolyVertList Triangle3 = { 3, {{0,20},{20,10},{0,0}} };
-        static PolyVertList Triangle4 = { 3, {{20,20},{20,0},{0,10}} };
+        static PolyVertList Triangle4 = { 3, {{20,30},{20,10},{0,20}} };
 
         FillConvexPolygon(bmp, &ScreenRectangle, g_colourWhite, 0, 1);
 
@@ -223,7 +223,7 @@ double CalcBillionPolyFillPixelsPerSec(DfBitmap *bmp)
         for (int j = 0; j <= 80; j += 20) {
             for (int i = 0; i < 290; i += 30) {
                 FillConvexPolygon(bmp, &Triangle1, g_colourWhite, i, j);
-                FillConvexPolygon(bmp, &Triangle2, g_colourWhite, i + 15, j);
+                FillConvexPolygon(bmp, &Triangle2, g_colourWhite, i, j);
             }
         }
 
@@ -236,7 +236,7 @@ double CalcBillionPolyFillPixelsPerSec(DfBitmap *bmp)
             // Do a row of pointing-left triangles halfway between one row
             // of pointing-right triangles and the next, to fit between.
             for (int i = 0; i < 290; i += 20) {
-                FillConvexPolygon(bmp, &Triangle4, g_colourWhite, i, j + 10);
+                FillConvexPolygon(bmp, &Triangle4, g_colourWhite, i, j);
             }
         }
 
