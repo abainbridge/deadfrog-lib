@@ -1,6 +1,8 @@
 // This module implements a bitmap data structure and some simple drawing primitives.
 // The bitmap lives entirely in main memory, rather than on the graphics card
 // and all the drawing is done by the CPU. It's still reasonably quick though.
+//
+// The Y axis points down the screen. ie y=0 is at the top.
 
 #pragma once
 
