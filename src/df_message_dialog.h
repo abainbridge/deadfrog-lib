@@ -13,15 +13,15 @@ extern "C"
 typedef struct _DfFont DfFont;
 
 
-enum MessageDialogType {
+typedef enum {
     MsgDlgTypeYesNo,
     MsgDlgTypeYesNoCancel,
     MsgDlgTypeOk,
     MsgDlgTypeOkCancel
-};
+} MessageDialogType;
 
 
-enum MessageDialogReturnCode {
+typedef enum {
     MsgDlgRtnCode_Fail = -1,
     MsgDlgRtnCode_Abort,
     MsgDlgRtnCode_Cancel,
@@ -29,7 +29,7 @@ enum MessageDialogReturnCode {
     MsgDlgRtnCode_Ok,
     MsgDlgRtnCode_Retry,
     MsgDlgRtnCode_Yes
-};
+} MessageDialogReturnCode;
 
 
 int MessageDialog(char const *title, char const *message, MessageDialogType type);
