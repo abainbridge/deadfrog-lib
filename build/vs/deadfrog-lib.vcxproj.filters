@@ -18,6 +18,7 @@
     <ClCompile Include="..\..\src\fonts\df_mono.cpp">
       <Filter>fonts</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\df_gui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\df_bitmap.h" />
@@ -37,6 +38,7 @@
       <Filter>fonts</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\df_clipboard.h" />
+    <ClInclude Include="..\..\src\df_gui.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="fonts">

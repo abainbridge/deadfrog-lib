@@ -4,6 +4,7 @@
 #include "df_colour.h"
 #include "df_common.h"
 #include "df_font.h"
+#include "df_gui.h"
 #include "df_message_dialog.h"
 #include "df_polygon.h"
 #include "df_polygon_aa.h"

@@ -25,6 +25,7 @@
     <ClCompile Include="..\..\src\df_colour.cpp" />
     <ClCompile Include="..\..\src\df_common.cpp" />
     <ClCompile Include="..\..\src\df_font.cpp" />
+    <ClCompile Include="..\..\src\df_gui.cpp" />
     <ClCompile Include="..\..\src\df_message_dialog.cpp" />
     <ClCompile Include="..\..\src\df_polygon.cpp" />
     <ClCompile Include="..\..\src\df_polygon_aa.cpp" />
@@ -40,6 +41,7 @@
     <ClInclude Include="..\..\src\df_colour.h" />
     <ClInclude Include="..\..\src\df_common.h" />
     <ClInclude Include="..\..\src\df_font.h" />
+    <ClInclude Include="..\..\src\df_gui.h" />
     <ClInclude Include="..\..\src\df_message_dialog.h" />
     <ClInclude Include="..\..\src\df_polygon.h" />
     <ClInclude Include="..\..\src\df_polygon_aa.h" />
