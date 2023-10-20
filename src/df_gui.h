@@ -21,7 +21,10 @@ extern int g_dragStartY;
 // ****************************************************************************
 
 int DfMouseInRect(DfWindow *win, int x, int y, int w, int h);
+
+// Updates draw scale and g_defaultFont, records start of drag events.
 void DfGuiDoFrame(DfWindow *win);
+
 
 // The specified w and h is the external size of the box.
 //
@@ -93,12 +96,12 @@ int DfListViewDo(DfWindow *win, DfListView *lv, int x, int y, int w, int h);
 // Text View
 // ****************************************************************************
 
-enum { TEXT_VIEW_MAX_CHARS = 95000 };
+enum { DF_TEXT_VIEW_MAX_CHARS = 95000 };
 
 typedef struct {
-    DfVScrollbar v_scrollbar;
-    char text[TEXT_VIEW_MAX_CHARS];
-    char wrappedText[TEXT_VIEW_MAX_CHARS];
+    DfVScrollbar vScrollbar;
+    char text[DF_TEXT_VIEW_MAX_CHARS];
+    char wrappedText[DF_TEXT_VIEW_MAX_CHARS];
     
     // If start and end coords are the same, then there is no selection block.
     int selectionStartX;
@@ -111,7 +114,7 @@ typedef struct {
 void DfTextViewEmpty(DfTextView *tv);
 void DfTextViewAddText(DfTextView *tv, char const *text);
 void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h);
-char const *DfTextViewGetSelectedText(DfTextView *tv, int *num_chars);
+char const *DfTextViewGetSelectedText(DfTextView *tv, int *numChars);
 
 
 // ****************************************************************************

@@ -320,7 +320,7 @@ void DfTextViewEmpty(DfTextView *tv) {
 void DfTextViewAddText(DfTextView *tv, char const *text) {
     int currentLen = strlen(tv->text);
     int additionalLen = strlen(text);
-    int space = TEXT_VIEW_MAX_CHARS - currentLen - 1;
+    int space = DF_TEXT_VIEW_MAX_CHARS - currentLen - 1;
     int amtToCopy = IntMin(space, additionalLen);
     memcpy(tv->text + currentLen, text, amtToCopy);
     tv->text[currentLen + amtToCopy] = '\0';
@@ -448,16 +448,16 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
 
     int total_pixel_height = TextViewWrapText(tv, w - scrollbar_w);
 
-    tv->v_scrollbar.coveredRange = scrollbar_h;
-    tv->v_scrollbar.maximum = total_pixel_height;
-    if (tv->v_scrollbar.maximum < scrollbar_h)
-        tv->v_scrollbar.maximum = scrollbar_h;
-    DfVScrollbarDo(win, &tv->v_scrollbar, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h, mouseInRect);
+    tv->vScrollbar.coveredRange = scrollbar_h;
+    tv->vScrollbar.maximum = total_pixel_height;
+    if (tv->vScrollbar.maximum < scrollbar_h)
+        tv->vScrollbar.maximum = scrollbar_h;
+    DfVScrollbarDo(win, &tv->vScrollbar, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h, mouseInRect);
 
     int sel_start_x, sel_start_y, sel_end_x, sel_end_y;
     GetSelectionCoords(tv, &sel_start_x, &sel_start_y, &sel_end_x, &sel_end_y);
 
-    y -= tv->v_scrollbar.currentVal;
+    y -= tv->vScrollbar.currentVal;
     for (int line_num = 0; ; line_num++) {
         // Update selection block if mouse click on current line.
         if (mouseInRect) {
@@ -504,7 +504,7 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
 }
 
 
-char const *DfTextViewGetSelectedText(DfTextView *tv, int *num_chars) {
+char const *DfTextViewGetSelectedText(DfTextView *tv, int *numChars) {
     int selStartX, selStartY, selEndX, selEndY;
     if (GetSelectionCoords(tv, &selStartX, &selStartY, &selEndX, &selEndY) == 0)
         return NULL;
@@ -529,7 +529,7 @@ char const *DfTextViewGetSelectedText(DfTextView *tv, int *num_chars) {
         lineNum++;
     }
 
-    *num_chars = line - startOfBlock + selEndX + 1;
+    *numChars = line - startOfBlock + selEndX + 1;
 
     return startOfBlock;
 }
