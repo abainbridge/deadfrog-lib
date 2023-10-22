@@ -8,6 +8,7 @@
 #include "df_window.h"
 
 // Standard headers.
+#include <ctype.h>
 #include <math.h>
 #include <string.h>
 
@@ -17,8 +18,8 @@ DfColour g_frameColour = { 0xff454545 };
 DfColour g_buttonShadowColour = { 0xff2e2e2e };
 DfColour g_buttonColour = { 0xff5a5a5a };
 DfColour g_buttonHighlightColour = { 0xff6f6f6f };
-DfColour g_normalTextColour = Colour(210, 210, 210, 255);
-DfColour g_selectionColour = Colour(18, 71, 235);
+DfColour g_normalTextColour = Colour(210, 210, 210, 255); // TODO change to g_textColour.
+DfColour g_selectionColour = Colour(48, 81, 250);
 
 double g_drawScale = 1.0;
 int g_dragStartX;
@@ -549,4 +550,586 @@ int DfButtonDo(DfWindow *win, DfButton *b, int x, int y, int w, int h) {
     DrawTextCentre(g_defaultFont, g_normalTextColour, win->bmp, 
         x + w / 2, y + h / 5, b->label);
     return MouseInRect && win->input.lmbClicked;
+}
+
+
+
+// ****************************************************************************
+// Menu Bar and Keyboard Shortcuts
+// ****************************************************************************
+
+enum {
+    MENU_BAR_LEFT_SPACE = 3,
+    MENU_BAR_TOP_SPACE = 3,
+    MENU_BAR_BOTTOM_SPACE = 3,
+    MENU_ITEM_X_SPACE = 9,
+    MENU_ITEM_Y_SPACE = 5
+};
+
+
+struct MenuItem {
+    char *m_shortcutDisplayString;
+    DfKeyboardShortcut m_shortcut;
+
+    // All the public pointers are owned by the creator, eg the caller of Menu::AddItem().
+    char const *m_label;
+    int         m_hotKeyIndex;  // Index into m_label, indicating which character is the keyboard hot-key for that item
+    int         m_top;
+
+    bool IsSeparator() { return !m_label; }
+};
+
+
+struct Menu {
+    char const *m_name;
+    MenuItem *m_items[10];
+    int m_numItems;
+    int m_left;
+    int m_top; // Top of menu items, not title.
+    int m_titleWidth; // Width of the clickable area. Includes space around text.
+    int m_longestShortcutLen;   // Length (in pixels) of the longest shortcut display string on this menu
+    int m_highlightedItem;
+
+    Menu(char const *name) {
+        m_name = name;
+        m_numItems = 0;
+        m_highlightedItem = -1;
+        m_longestShortcutLen = 0;
+    }
+
+    void AddItem(char const *label, DfKeyboardShortcut shortcut) {
+        if (m_numItems >= 10) return;
+
+        MenuItem *item = new MenuItem;
+        item->m_shortcut = shortcut;
+        item->m_label = label;
+        item->m_hotKeyIndex = 0;
+
+        if (shortcut.key) {
+            char buf[64] = "";
+            if (shortcut.ctrl) strcat(buf, "Ctrl+");
+            if (shortcut.shift) strcat(buf, "Shift+");
+            if (shortcut.alt) strcat(buf, "Alt+");
+            strcat(buf, GetKeyName(shortcut.key));
+            item->m_shortcutDisplayString = strdup(buf);
+        }
+        else {
+            item->m_shortcutDisplayString = NULL;
+        }
+
+        m_items[m_numItems] = item;
+        m_numItems++;
+    }
+
+    DfGuiAction Advance(DfWindow *win) {
+        // If key up/down, set new highlighted item
+        if (g_window->input.keyDowns[KEY_DOWN] || g_window->input.keyDowns[KEY_UP]) {
+            int direction = 0;
+            if (g_window->input.keyDowns[KEY_DOWN]) direction = 1;
+            if (g_window->input.keyDowns[KEY_UP]) direction = -1;
+            if (direction) {
+                do {
+                    m_highlightedItem += direction;
+                    m_highlightedItem += m_numItems;
+                    m_highlightedItem %= m_numItems;
+                } while (m_items[m_highlightedItem]->IsSeparator());
+            }
+        }
+
+        bool const mouseMoved = g_window->input.mouseVelX != 0 || g_window->input.mouseVelY != 0;
+
+        // Update highlighted menu item based on mouse position
+        if (mouseMoved)
+            m_highlightedItem = GetItemUnderMouse(win);
+
+        // If a hot key has been pressed, execute corresponding menu item
+        for (int i = 0; i < win->input.numKeysTyped; i++) {
+            MenuItem *item = FindMenuItemByHotkey(win->input.keysTyped[i]);
+            if (item) {
+                return { NULL, item->m_label, item->m_shortcut };
+            }
+        }
+
+        // If item clicked on or return pressed, execute highlighted menu item
+        if (m_highlightedItem != -1 &&
+               (g_window->input.keyDowns[KEY_ENTER] || g_window->input.lmbUnClicked)) {
+            MenuItem *item = m_items[m_highlightedItem];
+            return { NULL, item->m_label, item->m_shortcut };
+        }
+
+        return { 0 };
+    }
+    void Render(DfWindow *win) {
+        // Calculate how tall and wide the menu needs to be
+        int height = GetHeight();
+        int width = GetWidth();
+        int x = m_left;
+        int y = m_top + 1 * g_drawScale;
+
+        // Draw the menu background
+        int scale = RoundToInt(g_drawScale);
+        DfDrawSunkenBox(win->bmp, x, y, width, height); // TODO - Shouldn't be sunken.
+        RectFill(win->bmp, x + scale, y + scale, width - scale * 2, height - scale * 2, g_buttonColour);
+
+        int ySize = GetItemHeight();
+
+        // Highlight the selected item
+        if (m_highlightedItem >= 0)
+            RectFill(win->bmp, x + 2, m_items[m_highlightedItem]->m_top, width - 3, ySize, g_buttonHighlightColour);
+
+        // Draw each menu item
+        for (int i = 0; i < m_numItems; ++i) {
+            MenuItem *item = m_items[i];
+
+            if (item->IsSeparator()) {
+                RectFill(win->bmp, x + 7, item->m_top + 4 - scale, // TODO - Apply scaling.
+                    width - 10, scale, g_buttonShadowColour);
+                RectFill(win->bmp, x + 7, item->m_top + 4,
+                    width - 10, scale, g_buttonHighlightColour);
+            }
+            else {
+                // Item label text
+                int textY = item->m_top + MENU_ITEM_Y_SPACE * g_drawScale;
+                DrawTextSimple(g_defaultFont, g_normalTextColour, win->bmp,
+                    x + 10, textY, item->m_label);
+
+                if (item->m_hotKeyIndex >= 0) {
+                    int offset = GetTextWidthNumChars(g_defaultFont, item->m_label, item->m_hotKeyIndex);
+                    int len = GetTextWidthNumChars(g_defaultFont, item->m_label + item->m_hotKeyIndex, 1);
+
+                    // Underline hot key
+                    int underscoreOffset = RoundToInt(g_defaultFont->charHeight * 0.88f);
+                    int underscoreThickness = RoundToInt(g_drawScale * 1.2f);
+                    RectFill(g_window->bmp, x + 10 + offset, textY + underscoreOffset,
+                        len, underscoreThickness, g_normalTextColour);
+                }
+
+                // Shortcut
+                if (item->m_shortcutDisplayString) {
+                    DrawTextRight(g_defaultFont, g_normalTextColour, win->bmp,
+                        x + width - 7, textY, item->m_shortcutDisplayString);
+                }
+            }
+        }
+    }
+
+    static int GetItemHeight() {
+        return g_defaultFont->charHeight + MENU_ITEM_Y_SPACE * 2 * g_drawScale;
+    }
+    int GetWidth() {
+        int longest = 0;
+        for (int i = 0; i < m_numItems; i++) {
+            MenuItem *item = m_items[i];
+            int width = GetTextWidth(g_defaultFont, item->m_label);
+            if (width > longest) longest = width;
+        }
+
+        return longest + 30 * g_drawScale + m_longestShortcutLen;
+    }
+    int GetHeight() {
+        MenuItem *item = m_items[m_numItems - 1];
+        int rv = item->m_top - m_top + GetItemHeight();
+        return rv;
+    }
+
+    bool IsMouseOverTitle(DfWindow *win, int menuBarHeight) {
+        return !!DfMouseInRect(win, m_left, 0, m_titleWidth, menuBarHeight);
+    }
+    bool IsMouseOver(DfWindow *win) {
+        int width = GetWidth();
+        int height = GetHeight();
+        if (DfMouseInRect(win, m_left, m_top, width, height))
+            return true;
+        return false;
+    }
+    int GetItemUnderMouse(DfWindow *win) {
+        if (!IsMouseOver(win)) return -1;
+
+        int ySize = GetItemHeight();
+        for (int i = 0; i < m_numItems; i++) {
+            MenuItem *item = m_items[i];
+            if (item->IsSeparator()) continue;
+        
+            int y1 = item->m_top;
+            int y2 = y1 + ySize;
+            if (win->input.mouseY >= y1 && win->input.mouseY < y2) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    void CalculateScreenPostions(int left, int top) {
+        m_left = left;
+        m_top = top;
+        m_titleWidth = GetTextWidth(g_defaultFont, m_name) + MENU_ITEM_X_SPACE * 2 * g_drawScale;
+        int itemTop = m_top + MENU_BAR_BOTTOM_SPACE * g_drawScale;
+        int itemHeight = GetItemHeight();
+
+        for (int i = 0; i < m_numItems; i++) {
+            MenuItem *item = m_items[i];
+
+            item->m_top = itemTop;
+            if (item->IsSeparator())
+                itemTop += itemHeight / 2;
+            else
+                itemTop += itemHeight;
+
+            if (item->m_shortcutDisplayString) {
+                int len = GetTextWidth(g_defaultFont, item->m_shortcutDisplayString);
+                if (len > m_longestShortcutLen) {
+                    m_longestShortcutLen = len;
+                }
+            }
+        }
+
+        // Adjust our y position to try to prevent us drawing off the bottom of
+        // the screen. Mostly this is useful for context menus.
+// TODO
+//         int maxY = g_guiManager->m_height - m_height;
+//         maxY = IntMax(0, maxY);
+//         if (y > maxY) {
+//             m_top = maxY;
+//             CalculateScreenPostions();
+//         }
+    }
+
+    MenuItem *FindMenuItemByHotkey(char c) {
+        c = tolower(c);
+        for (int i = 0; i < m_numItems; i++) {
+            MenuItem *item = m_items[i];
+            if (item->m_hotKeyIndex >= 0) {
+                char hotkey = tolower(item->m_label[item->m_hotKeyIndex]);
+                if (hotkey == c) {
+                    return item;
+                }
+            }
+        }
+
+        return NULL;
+    }
+};
+
+
+static void DrawTextWithAcceleratorKey(DfBitmap *bmp, int x, int y, char const *text, int accelKeyIdx, DfColour col) {
+    DrawTextSimple(g_defaultFont, col, bmp, x, y, text);
+
+    if (accelKeyIdx != -1) {
+        int startX = GetTextWidthNumChars(g_defaultFont, text, accelKeyIdx);
+        int endX = GetTextWidthNumChars(g_defaultFont, text, accelKeyIdx + 1);
+        int yOffset = RoundToInt(g_defaultFont->charHeight * 0.88f);
+        int height = RoundToInt(g_drawScale);
+        RectFill(g_window->bmp, x + startX, y + yOffset, endX - startX, height, col);
+    }
+}
+
+
+struct MenuBar {
+    enum { MAX_MENUS = 10 };
+    Menu *m_menus[MAX_MENUS];
+    int m_numMenus;
+    int m_height;
+    Menu *m_highlightedMenu;     // NULL if no menu is highlighted
+    bool m_displayed;            // True if the highlighted menu is displayed
+    bool m_capturingInput;
+    Menu *m_contextMenu;         // Null if there is no current context menu
+
+    // Used to make alt up only focus menu bar if no input events have occurred
+    // since alt down. Eg alt+drag. 
+    // 0=alt down not seen since last alt up. This is the initial state.
+    // 1=alt down seen, alt up NOT seen.
+    // 2=alt down seen, other key/mouse events seen, alt up still NOT seen.
+    int m_altState;
+
+    MenuBar() {
+        memset(this, 0, sizeof(MenuBar));
+    }
+
+    void CalculateScreenPositions() {
+        m_height = (MENU_BAR_TOP_SPACE + MENU_ITEM_Y_SPACE * 2) * g_drawScale + g_defaultFont->charHeight;
+        int x = MENU_BAR_LEFT_SPACE * g_drawScale;
+        int y = m_height - 2 * g_drawScale;
+        for (int i = 0; i < m_numMenus; i++) {
+            Menu *menu = m_menus[i];
+            menu->CalculateScreenPostions(x, y);
+            x += menu->m_titleWidth;
+        }
+    }
+    int GetHighlightedMenuIdx() {
+        for (int i = 0; i < m_numMenus; i++) {
+            if (m_menus[i] == m_highlightedMenu)
+                return i;
+        }
+
+        return -1;
+    }
+    Menu *GetMenuTitleUnderMouseCursor(DfWindow *win) {
+        for (int i = 0; i < m_numMenus; i++) {
+            Menu *menu = m_menus[i];
+            if (menu->IsMouseOverTitle(win, m_height)) {
+                return menu;
+            }
+        }
+
+        return NULL;
+    }
+    void AdvanceNoHighlight(DfWindow *win) {
+        if (!win->input.windowHasFocus)
+            return;
+
+        if (win->input.keyUps[KEY_ALT]) {
+            if (m_altState == 1) {
+                m_capturingInput = true;
+                m_highlightedMenu = m_menus[0];
+                return;
+            }
+        }
+
+        // Is mouse cursor over any of the menu titles?
+        Menu *newHighlightedMenu = GetMenuTitleUnderMouseCursor(win);
+        if (newHighlightedMenu) {
+            // g_app->DisableIdling(); TODO
+            m_highlightedMenu = newHighlightedMenu;
+        }
+    }
+    void AdvanceWithHighlight(DfWindow *win) {
+        bool mouseMoved = win->input.mouseVelX != 0 || win->input.mouseVelY != 0;
+
+        Menu *menu = GetMenuTitleUnderMouseCursor(win);
+        if (menu && menu != m_highlightedMenu) {
+            // g_app->DisableIdling(); TODO
+        }
+
+        // Is keyboard active
+        if (m_capturingInput) {
+            // Have cursor left/right been pressed?
+            int menuIndex = GetHighlightedMenuIdx();
+            if (win->input.keyDowns[KEY_LEFT]) menuIndex--;
+            if (win->input.keyDowns[KEY_RIGHT]) menuIndex++;
+            menuIndex += m_numMenus;
+            menuIndex %= m_numMenus;
+            if (m_menus[menuIndex] != m_highlightedMenu) {
+                m_highlightedMenu = m_menus[menuIndex];
+                m_highlightedMenu->m_highlightedItem = 0;
+            }
+
+            if (menu && mouseMoved) {
+                m_highlightedMenu = menu;
+            }
+        }
+        else if (!m_displayed) {
+            m_highlightedMenu = menu;
+        }
+
+        // Do we want to want to lose key captured or displayed state?
+        bool mouseOverDisplayedMenu = false;
+        if (m_displayed) mouseOverDisplayedMenu = m_highlightedMenu->IsMouseOver(win);
+        if ((m_capturingInput && win->input.keyUps[KEY_ALT] && m_altState == 1) ||
+                (win->input.lmbClicked && menu == NULL && !mouseOverDisplayedMenu) ||
+                (win->input.lmbClicked && m_displayed && menu == m_highlightedMenu)) {
+            ClearAllState();
+            return;
+        }
+
+        if (win->input.keyUps[KEY_ALT] && m_altState == 1 && !m_capturingInput) {
+            m_capturingInput = true;
+            m_highlightedMenu = m_menus[0];
+        }
+    }
+    void AdvanceHighlightNoDisplay(DfWindow *win) {
+        if (win->input.lmbClicked) {
+            Menu *menu = GetMenuTitleUnderMouseCursor(win);
+            if (menu) {
+                m_displayed = true;
+                menu->m_highlightedItem = -1;
+                m_capturingInput = true;
+            }
+        }
+
+        // Select a menu to display if a key has been pressed
+        if (m_capturingInput) {
+            for (int i = 0; i < win->input.numKeysTyped; i++) {
+                Menu *menu = FindMenuByHotKey(win->input.keysTyped[i]);
+                if (menu) {
+                    m_highlightedMenu = menu;
+                    m_displayed = true;
+                    menu->m_highlightedItem = 0;
+                    return;
+                }
+            }
+
+            // Have cursor up/down or return been pressed?
+            if (win->input.keyDowns[KEY_UP] || win->input.keyDowns[KEY_DOWN] || win->input.keyDowns[KEY_ENTER]) {
+                m_displayed = true;
+            }
+        }
+    }
+    void ClearAllState() {
+        m_highlightedMenu = NULL;
+        m_displayed = false;
+        m_capturingInput = false;
+        m_contextMenu = NULL;
+    }
+
+    Menu *AddMenu(char const *title) {
+        if (m_numMenus >= MAX_MENUS) return NULL;
+        m_menus[m_numMenus] = new Menu(title);
+        m_numMenus++;
+        return m_menus[m_numMenus - 1];
+    }
+    void ShowContextMenu(Menu *contextMenu) {
+        m_contextMenu = contextMenu;
+        m_contextMenu->m_highlightedItem = 0;
+        m_capturingInput = true;
+    }
+    DfGuiAction CheckKeyboardShortcuts(DfWindow *win) {
+        for (int i = 0; i < m_numMenus; i++) {
+            Menu *menu = m_menus[i];
+            for (int j = 0; j < menu->m_numItems; j++) {
+                MenuItem *item = menu->m_items[j];
+                if (win->input.keyDowns[item->m_shortcut.key] &&
+                    win->input.keys[KEY_CONTROL] == item->m_shortcut.ctrl &&
+                    win->input.keys[KEY_SHIFT] == item->m_shortcut.shift &&
+                    win->input.keys[KEY_ALT] == item->m_shortcut.alt) {
+                    DfGuiAction event = { 0 };
+                    event.shortcut = item->m_shortcut;
+                    return event;
+                }
+            }
+        }
+
+        return { 0 };
+    }
+    DfGuiAction Advance(DfWindow *win) {
+        if (win->input.keys[KEY_ALT]) {
+            if (m_altState == 0)
+                m_altState = 1;
+            else {
+                int numKeyDowns = win->input.numKeyDowns;
+                if (win->input.keyDowns[KEY_ALT])
+                    numKeyDowns--;
+                if (numKeyDowns || win->input.lmbClicked ||
+                        win->input.mmbClicked || win->input.rmbClicked)
+                    m_altState = 2;
+            }
+        }
+
+        if (!win->input.windowHasFocus || win->input.keyDowns[KEY_ESC])
+            ClearAllState();
+
+        CalculateScreenPositions();
+
+        // Menu system can be in one of four states:
+        // 1 - no highlighted menu, no displayed menu, menu bar is not the focused widget.
+        // 2 - highlighted menu, no displayed menu, menu bar is not the focused widget.
+        // 3 - highlighted menu, no displayed menu, menu bar IS the focused widget.
+        // 4 - highlighted menu, displayed menu, menu bar IS the focused widget.
+        DfGuiAction event = { 0 };
+        if (!m_highlightedMenu) {
+            AdvanceNoHighlight(win);
+        }
+        else {
+            AdvanceWithHighlight(win);
+            if (!m_highlightedMenu) return event;
+
+            if (m_displayed == false) {
+                AdvanceHighlightNoDisplay(win);
+            }
+            else {
+                event = m_highlightedMenu->Advance(win);
+                if (event.menuItemLabel) { // If not NULL event...
+                    event.menuName = m_highlightedMenu->m_name;
+                    ClearAllState();
+                }
+            }
+        }
+
+        if (m_contextMenu) {
+            if (win->input.lmbClicked || win->input.rmbClicked) {
+                if (!m_contextMenu->IsMouseOver(win)) {
+                    ClearAllState();
+                }
+            }
+            else {
+                event = m_contextMenu->Advance(win);
+                //event.menuName = ? // TODO
+            }
+        }
+
+        if (win->input.keyUps[KEY_ALT])
+            m_altState = 0;
+
+        event = CheckKeyboardShortcuts(win);
+        return event;
+    }
+    void Render(DfWindow *win) {
+        // Draw the menu bar background
+        RectFill(win->bmp, 0, 0, win->bmp->width, m_height, g_frameColour);
+
+        // Draw the selection box around the highlighted menu
+        if (m_highlightedMenu) {
+            int boxTop = MENU_BAR_TOP_SPACE * g_drawScale;
+            int boxHeight = Menu::GetItemHeight();
+            RectFill(win->bmp, m_highlightedMenu->m_left, boxTop, 
+                m_highlightedMenu->m_titleWidth, boxHeight, g_buttonHighlightColour);
+        }
+
+        // Draw the menu titles
+        for (int i = 0; i < m_numMenus; i++) {
+            Menu *menu = m_menus[i];
+            int x = menu->m_left + MENU_ITEM_X_SPACE * g_drawScale;
+            int y = (MENU_BAR_TOP_SPACE + MENU_ITEM_Y_SPACE) * g_drawScale;
+            DrawTextWithAcceleratorKey(win->bmp, x, y, menu->m_name, 0, g_normalTextColour);
+        }
+
+        // Draw the displayed menu
+        if (m_displayed)
+            m_highlightedMenu->Render(win);
+
+        if (m_contextMenu)
+            m_contextMenu->Render(win);
+    }
+
+    Menu *FindMenuByName(char const *name) {
+        for (int i = 0; i < m_numMenus; ++i) {
+            if (stricmp(name, m_menus[i]->m_name) == 0) return m_menus[i];
+        }
+
+        return NULL;
+    }
+    Menu *FindMenuByHotKey(char c) {
+        for (int i = 0; i < m_numMenus; i++) {
+            if (tolower(c) == tolower(m_menus[i]->m_name[0])) {
+                return m_menus[i];
+            }
+        }
+
+        return NULL;
+    }
+};
+
+void DfMenuBarInit(DfMenuBar *dfMb) {
+    MenuBar *mb = new MenuBar;
+    dfMb->internals = mb;
+}
+
+void DfMenuBarAddAction(DfMenuBar *dfMb, char const *menuName, 
+                        char const *menuItemLabel, DfKeyboardShortcut shortcut) {
+    MenuBar *mb = (MenuBar*)dfMb->internals;
+    Menu *menu = mb->FindMenuByName(menuName);
+    if (!menu)
+        menu = mb->AddMenu(menuName);
+    
+    if (menu)
+        menu->AddItem(menuItemLabel, shortcut);
+}
+
+DfGuiAction DfMenuBarDo(DfWindow *win, DfMenuBar *dfMb) {
+    MenuBar *mb = (MenuBar*)dfMb->internals;
+    DfGuiAction event = mb->Advance(win);
+    mb->Render(win);
+    dfMb->capturingInput = mb->m_capturingInput;
+    dfMb->height = mb->m_height;
+    return event;
 }

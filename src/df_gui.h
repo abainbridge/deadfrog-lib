@@ -127,3 +127,40 @@ typedef struct {
 
 
 int DfButtonDo(DfWindow *win, DfButton *b, int x, int y, int w, int h);
+
+
+// ****************************************************************************
+// Menu Bar and Keyboard Shortcuts
+// ****************************************************************************
+
+typedef struct {
+    unsigned char key; // eg KEY_F1. Equals zero if shortcut is empty/null/unused.
+    unsigned ctrl : 1;
+    unsigned shift : 1;
+    unsigned alt : 1;
+    // TODO add isGlobal.
+} DfKeyboardShortcut;
+
+typedef struct {
+    char const *menuName; // NULL if not on a menu.
+    char const *menuItemLabel; // NULL if not on a menu.
+    DfKeyboardShortcut shortcut; // All zero if there is no shortcut.
+} DfGuiAction;
+
+typedef struct {
+    int height; // Is updated by DfMenuDo(). Use this to determine the remaining space in your window.
+    int capturingInput; // If this is true, other widgets should ignore keyboard and mouse input.
+
+    void *internals;
+} DfMenuBar;
+
+
+void DfMenuBarInit(DfMenuBar *mb);
+
+// Pass menuName=NULL if you don't want a menu entry. 
+// Pass menuItemLabel as NULL if you want to add a separator to a menu.
+// Pass shortcut as all zeros if you don't want a keyboard shortcut.
+void DfMenuBarAddAction(DfMenuBar *mb, char const *menuName, char const *menuItemLabel, DfKeyboardShortcut shortcut);
+
+// If menu item was selected, or its keyboard shortcut was activated, then that menu item is returned.
+DfGuiAction DfMenuBarDo(DfWindow *win, DfMenuBar *menu);
