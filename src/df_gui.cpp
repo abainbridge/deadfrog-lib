@@ -874,97 +874,6 @@ struct MenuBar {
 
         return NULL;
     }
-    void AdvanceNoHighlight(DfWindow *win) {
-        if (!win->input.windowHasFocus)
-            return;
-
-        if (win->input.keyUps[KEY_ALT]) {
-            if (m_altState == 1) {
-                m_capturingInput = true;
-                m_highlightedMenu = m_menus[0];
-                return;
-            }
-        }
-
-        // Is mouse cursor over any of the menu titles?
-        Menu *newHighlightedMenu = GetMenuTitleUnderMouseCursor(win);
-        if (newHighlightedMenu) {
-            // g_app->DisableIdling(); TODO
-            m_highlightedMenu = newHighlightedMenu;
-        }
-    }
-    void AdvanceWithHighlight(DfWindow *win) {
-        bool mouseMoved = win->input.mouseVelX != 0 || win->input.mouseVelY != 0;
-
-        Menu *menu = GetMenuTitleUnderMouseCursor(win);
-        if (menu && menu != m_highlightedMenu) {
-            // g_app->DisableIdling(); TODO
-        }
-
-        // Is keyboard active
-        if (m_capturingInput) {
-            // Have cursor left/right been pressed?
-            int menuIndex = GetHighlightedMenuIdx();
-            if (win->input.keyDowns[KEY_LEFT]) menuIndex--;
-            if (win->input.keyDowns[KEY_RIGHT]) menuIndex++;
-            menuIndex += m_numMenus;
-            menuIndex %= m_numMenus;
-            if (m_menus[menuIndex] != m_highlightedMenu) {
-                m_highlightedMenu = m_menus[menuIndex];
-                m_highlightedMenu->m_highlightedItem = 0;
-            }
-
-            if (menu && mouseMoved) {
-                m_highlightedMenu = menu;
-            }
-        }
-        else if (!m_displayed) {
-            m_highlightedMenu = menu;
-        }
-
-        // Do we want to want to lose key captured or displayed state?
-        bool mouseOverDisplayedMenu = false;
-        if (m_displayed) mouseOverDisplayedMenu = m_highlightedMenu->IsMouseOver(win);
-        if ((m_capturingInput && win->input.keyUps[KEY_ALT] && m_altState == 1) ||
-                (win->input.lmbClicked && menu == NULL && !mouseOverDisplayedMenu) ||
-                (win->input.lmbClicked && m_displayed && menu == m_highlightedMenu)) {
-            ClearAllState();
-            return;
-        }
-
-        if (win->input.keyUps[KEY_ALT] && m_altState == 1 && !m_capturingInput) {
-            m_capturingInput = true;
-            m_highlightedMenu = m_menus[0];
-        }
-    }
-    void AdvanceHighlightNoDisplay(DfWindow *win) {
-        if (win->input.lmbClicked) {
-            Menu *menu = GetMenuTitleUnderMouseCursor(win);
-            if (menu) {
-                m_displayed = true;
-                menu->m_highlightedItem = -1;
-                m_capturingInput = true;
-            }
-        }
-
-        // Select a menu to display if a key has been pressed
-        if (m_capturingInput) {
-            for (int i = 0; i < win->input.numKeysTyped; i++) {
-                Menu *menu = FindMenuByHotKey(win->input.keysTyped[i]);
-                if (menu) {
-                    m_highlightedMenu = menu;
-                    m_displayed = true;
-                    menu->m_highlightedItem = 0;
-                    return;
-                }
-            }
-
-            // Have cursor up/down or return been pressed?
-            if (win->input.keyDowns[KEY_UP] || win->input.keyDowns[KEY_DOWN] || win->input.keyDowns[KEY_ENTER]) {
-                m_displayed = true;
-            }
-        }
-    }
     void ClearAllState() {
         m_highlightedMenu = NULL;
         m_displayed = false;
@@ -1001,6 +910,86 @@ struct MenuBar {
 
         return { 0 };
     }
+    void DisplayMenu(Menu *menu, int highlightedItem) {
+        m_highlightedMenu = menu;
+        m_highlightedMenu->m_highlightedItem = highlightedItem;
+        m_capturingInput = true;
+        m_displayed = true;
+    }
+    DfGuiAction HandleEvents(DfWindow *win) {
+        // The events and states of the menu system are described in
+        // deadfrog-lib/docs/MenuStateMachine.png
+
+        if (!win->input.windowHasFocus || win->input.keyDowns[KEY_ESC])
+             ClearAllState();
+
+        DfGuiAction event = { 0 };
+
+        // Alt key up event.
+        if (win->input.keyUps[KEY_ALT] && m_altState == 1) {
+            if (m_capturingInput)
+                ClearAllState();
+            else {
+                m_highlightedMenu = m_menus[0];
+                m_capturingInput = true;
+            }
+        }
+
+        // Alt+menu hotkey event.
+        Menu *menuFromHotkey = FindMenuByHotKey(win->input.keysTyped[0]);
+        if (win->input.keys[KEY_ALT] && win->input.numKeysTyped)
+            DisplayMenu(menuFromHotkey, 0);
+
+        // Hotkey typed event.
+        if (win->input.numKeysTyped && m_capturingInput && !m_highlightedMenu)
+            DisplayMenu(menuFromHotkey, 0);
+
+        // Return key down event.
+        if (win->input.keyDowns[KEY_ENTER] && m_capturingInput)
+            DisplayMenu(m_highlightedMenu, 0);
+
+        // Cursor left/right key down event.
+        if (m_capturingInput) {
+            int menuIndex = GetHighlightedMenuIdx();
+            if (win->input.keyDowns[KEY_LEFT]) menuIndex--;
+            if (win->input.keyDowns[KEY_RIGHT]) menuIndex++;
+            menuIndex += m_numMenus;
+            menuIndex %= m_numMenus;
+            if (m_menus[menuIndex] != m_highlightedMenu) {
+                m_highlightedMenu = m_menus[menuIndex];
+                m_highlightedMenu->m_highlightedItem = 0;
+            }
+        }
+
+        // Cursor up/down key down event.
+        if ((win->input.keyDowns[KEY_UP] || win->input.keyDowns[KEY_DOWN]) &&
+                m_capturingInput && !m_displayed)
+            DisplayMenu(m_highlightedMenu, 0);
+
+        // Mouse move event.
+        bool mouseMoved = win->input.mouseVelX != 0 || win->input.mouseVelY != 0; 
+        Menu *menuTitleUnderMouseCursor = GetMenuTitleUnderMouseCursor(win);
+        if (mouseMoved && (menuTitleUnderMouseCursor || !m_capturingInput))
+            m_highlightedMenu = menuTitleUnderMouseCursor;
+
+        // Left mouse button down event.
+        if (win->input.lmbClicked) {
+            if (menuTitleUnderMouseCursor) {
+                if (m_displayed) {
+                    ClearAllState();
+                }
+                else {
+                    DisplayMenu(menuTitleUnderMouseCursor, -1);
+                }
+            }
+            else if (m_highlightedMenu && !m_highlightedMenu->IsMouseOver(win)) {
+                ClearAllState();
+            }
+        }
+        
+        event = CheckKeyboardShortcuts(win);
+        return event;
+    }
     DfGuiAction Advance(DfWindow *win) {
         if (win->input.keys[KEY_ALT]) {
             if (m_altState == 0)
@@ -1015,33 +1004,14 @@ struct MenuBar {
             }
         }
 
-        if (!win->input.windowHasFocus || win->input.keyDowns[KEY_ESC])
-            ClearAllState();
-
         CalculateScreenPositions();
 
-        // Menu system can be in one of four states:
-        // 1 - no highlighted menu, no displayed menu, menu bar is not the focused widget.
-        // 2 - highlighted menu, no displayed menu, menu bar is not the focused widget.
-        // 3 - highlighted menu, no displayed menu, menu bar IS the focused widget.
-        // 4 - highlighted menu, displayed menu, menu bar IS the focused widget.
         DfGuiAction event = { 0 };
-        if (!m_highlightedMenu) {
-            AdvanceNoHighlight(win);
-        }
-        else {
-            AdvanceWithHighlight(win);
-            if (!m_highlightedMenu) return event;
-
-            if (m_displayed == false) {
-                AdvanceHighlightNoDisplay(win);
-            }
-            else {
-                event = m_highlightedMenu->Advance(win);
-                if (event.menuItemLabel) { // If not NULL event...
-                    event.menuName = m_highlightedMenu->m_name;
-                    ClearAllState();
-                }
+        if (m_highlightedMenu && m_displayed) {
+            event = m_highlightedMenu->Advance(win);
+            if (event.menuItemLabel) { // If not NULL event...
+                event.menuName = m_highlightedMenu->m_name;
+                ClearAllState();
             }
         }
 
@@ -1051,16 +1021,18 @@ struct MenuBar {
                     ClearAllState();
                 }
             }
-            else {
+            else if (!event.menuItemLabel) {
                 event = m_contextMenu->Advance(win);
                 //event.menuName = ? // TODO
             }
         }
 
+        if (!event.menuItemLabel)
+            event = HandleEvents(win);
+
         if (win->input.keyUps[KEY_ALT])
             m_altState = 0;
 
-        event = CheckKeyboardShortcuts(win);
         return event;
     }
     void Render(DfWindow *win) {
