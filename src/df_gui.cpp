@@ -901,9 +901,7 @@ struct MenuBar {
                     win->input.keys[KEY_CONTROL] == item->m_shortcut.ctrl &&
                     win->input.keys[KEY_SHIFT] == item->m_shortcut.shift &&
                     win->input.keys[KEY_ALT] == item->m_shortcut.alt) {
-                    DfGuiAction event = { 0 };
-                    event.shortcut = item->m_shortcut;
-                    return event;
+                    return { menu->m_name, item->m_label, item->m_shortcut };
                 }
             }
         }
