@@ -934,12 +934,12 @@ struct MenuBar {
         }
 
         // Alt+menu hotkey event.
-        Menu *menuFromHotkey = FindMenuByHotKey(win->input.keysTyped[0]);
-        if (win->input.keys[KEY_ALT] && win->input.numKeysTyped)
+        Menu *menuFromHotkey = FindMenuByHotKey(win);
+        if (win->input.keys[KEY_ALT] && menuFromHotkey)
             DisplayMenu(menuFromHotkey, 0);
 
         // Hotkey typed event.
-        if (win->input.numKeysTyped && m_capturingInput && !m_highlightedMenu)
+        if (win->input.numKeysTyped && m_capturingInput && !m_displayed)
             DisplayMenu(menuFromHotkey, 0);
 
         // Return key down event.
@@ -1068,9 +1068,10 @@ struct MenuBar {
 
         return NULL;
     }
-    Menu *FindMenuByHotKey(char c) {
+    Menu *FindMenuByHotKey(DfWindow *win) {
         for (int i = 0; i < m_numMenus; i++) {
-            if (tolower(c) == tolower(m_menus[i]->m_name[0])) {
+            int keyId = m_menus[i]->m_name[0];
+            if (win->input.keyDowns[keyId]) {
                 return m_menus[i];
             }
         }
