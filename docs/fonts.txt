@@ -5,23 +5,24 @@ A single file can contain multiple sizes of the same font.
 Comparison with Microsoft .FON files
 ------------------------------------
 
-1. The Deadfrog font file will be about 1/3rd the size of the same font stored
+1. The Deadfrog font file will be about 40% the size of the same font stored
 in a .FON file.
 
 2. The parser (to load in the font file) is simpler (200 vs 300 lines of C).
 
 
-Comparison with all the other bitmap font formats
--------------------------------------------------
+Comparison with other bitmap font formats
+-----------------------------------------
 
-They're all produce even larger files and require even more complex parsers.
+They all produce even larger files and require even more complex parsers.
 
 
-# Why use bitmap fonts when everyone else uses vector fonts?
+Why use bitmap fonts when everyone else uses vector fonts?
+----------------------------------------------------------
 
-* Vector fonts are complex - hard to implement a small parser.
+* Vector fonts are complex making it hard to implement a small parser.
 
-* They are large.
+* The font files themselves are large.
 
 * They are hard to author.
 
