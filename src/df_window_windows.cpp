@@ -380,7 +380,7 @@ DfWindow *CreateWin(int width, int height, WindowType winType, char const *winNa
 
 
 DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, char const *winName) {
-//    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
     DfWindow *win = new DfWindow;
     memset(win, 0, sizeof(DfWindow));
