@@ -1080,14 +1080,17 @@ struct MenuBar {
     }
 };
 
+
 void DfMenuBarInit(DfMenuBar *dfMb) {
     MenuBar *mb = new MenuBar;
     dfMb->internals = mb;
 }
 
+
 void DfMenuBarAddAction(DfMenuBar *dfMb, char const *menuName, 
                         char const *menuItemLabel, DfKeyboardShortcut shortcut) {
     MenuBar *mb = (MenuBar*)dfMb->internals;
+    mb->ClearAllState();
     Menu *menu = mb->FindMenuByName(menuName);
     if (!menu)
         menu = mb->AddMenu(menuName);
