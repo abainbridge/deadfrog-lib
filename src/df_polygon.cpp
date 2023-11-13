@@ -1,5 +1,5 @@
 // This code originally came from Michael Abrash's Zen of Graphics,
-// 2nd edition, chapter 23.
+// 2nd edition, chapter 21.
 
 // Color-fills a convex polygon. All vertices are offset by (XOffset,
 // YOffset). "Convex" means that every horizontal line drawn through
@@ -8,7 +8,7 @@
 // edges; both are acceptable anywhere in the polygon), and that the
 // right & left edges never cross. (It's OK for them to touch, though,
 // so long as the right edge never crosses over to the left of the
-// left edge.) Nonconvex polygons won't be drawn properly. Returns 1
+// left edge.) Non-convex polygons won't be drawn properly. Returns 1
 // for success, 0 if memory allocation failed.
 
 #include "df_polygon.h"

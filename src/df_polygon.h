@@ -1,6 +1,3 @@
-// This code originally came from Michael Abrash's Zen of Graphics, 
-// 2nd edition, chapter 23.
-
 #pragma once
 
 
