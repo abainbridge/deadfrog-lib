@@ -1,8 +1,8 @@
-// This module implements a somewhat optimized text renderer.
-// You create a font by specifying the name of any installed font and
-// the point size you want. The font's glyphs will be pre-calculated.
+// This module implements a bitmap font renderer.
+// The supported font file format is custom.
 // Variable width fonts are supported.
 // The renderer currently does not attempt any form of anti-aliasing.
+// See docs/fonts.txt for more info.
 
 #pragma once
 
