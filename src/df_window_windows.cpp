@@ -363,7 +363,7 @@ bool GetDesktopRes(int *width, int *height) {
     HWND desktopWindow = GetDesktopWindow();
     RECT desktopRect;
 
-//    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     if (GetWindowRect(desktopWindow, &desktopRect) == 0)
         return false;
     if (width)
