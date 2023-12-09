@@ -210,6 +210,16 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
             break;
         }
 
+        // If the keyboard shortcut alt+space is pressed, Windows will bring up
+        // a system menu that is part of the system provided window decoration.
+        // We will see the alt down keypress but not the alt up because the
+        // window system takes over our event loop while the menu is displayed.
+        // We're sent WM_EXITMENULOOP when our event loop re-gains control. We
+        // need to clear the alt down state.
+        case WM_EXITMENULOOP:
+            win->input.keys[KEY_ALT] = 0;
+            break;
+
         case WM_MOUSEMOVE:
             break;
 
