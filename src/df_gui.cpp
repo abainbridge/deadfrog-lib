@@ -1063,7 +1063,7 @@ struct MenuBar {
 
     Menu *FindMenuByName(char const *name) {
         for (int i = 0; i < m_numMenus; ++i) {
-            if (stricmp(name, m_menus[i]->m_name) == 0) return m_menus[i];
+            if (strcasecmp(name, m_menus[i]->m_name) == 0) return m_menus[i];
         }
 
         return NULL;
