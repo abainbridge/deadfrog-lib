@@ -37,7 +37,11 @@ static DwmFlushFunc *g_dwmFlush = NULL;
 // call of WndProc(). If the thread local DfWindow pointer it is set, we unset
 // it and add the HWND->DfWindow mapping.
 
+#ifdef _MSC_VER
 static __declspec(thread) DfWindow *g_newWindow = NULL;
+#else
+static thread_local DfWindow *g_newWindow = NULL;
+#endif
 enum { MAX_NUM_WINDOWS = 8 };
 static DfWindow *g_windows[MAX_NUM_WINDOWS] = { 0 };
 
