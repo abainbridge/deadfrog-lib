@@ -10,6 +10,7 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 
 struct WindowPlatformSpecific;
@@ -281,7 +282,6 @@ void UpdateWin(DfWindow *win) {
 }
 
 
-void RegisterRedrawCallback(DfWindow *win, RedrawCallback *proc)
-{
+void RegisterRedrawCallback(DfWindow *win, RedrawCallback *proc) {
     win->redrawCallback = proc;
 }
