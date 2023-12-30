@@ -4,8 +4,8 @@
 #include "df_common.h"
 
 #if _MSC_VER
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+// #define WIN32_LEAN_AND_MEAN
+// #include <windows.h>
 #else
 #include "df_bmp.h"
 #endif
@@ -15,6 +15,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 // ****************************************************************************
