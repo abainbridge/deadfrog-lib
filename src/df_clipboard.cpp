@@ -2,6 +2,9 @@
 
 #include "df_common.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 
 #ifdef _WIN32
 
