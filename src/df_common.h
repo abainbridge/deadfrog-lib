@@ -35,7 +35,7 @@ void ReleaseWarn(bool condition, char const *fmt, ...);
 
 
 #ifdef _MSC_VER
-    #pragma warning(disable: 4244, 4996)
+    #pragma warning(disable: 4244 4996)
     #define strcasecmp stricmp
     #define strncasecmp strnicmp
     #define __func__ __FUNCTION__
