@@ -723,8 +723,6 @@ static void BlitClip(DfBitmap *destBmp, int *dx, int *dy, DfBitmap *srcBmp,
                      int *w, int *h, int *sx, int *sy) {
     *w = srcBmp->width;
     *h = srcBmp->height;
-    *sx = 0;
-    *sy = 0;
 
     if (*dx < destBmp->clipLeft) {
         *dx -= destBmp->clipLeft;
@@ -752,7 +750,7 @@ static void BlitClip(DfBitmap *destBmp, int *dx, int *dy, DfBitmap *srcBmp,
 
 
 void MaskedBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp) {
-    int w, h, sx, sy;
+    int w, h, sx = 0, sy = 0;
     BlitClip(destBmp, &dx, &dy, srcBmp, &w, &h, &sx, &sy);
 
     for (int y = 0; y < h; y++) {
@@ -767,9 +765,21 @@ void MaskedBlit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp) {
 
 
 void Blit(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp) {
-    int w, h, sx, sy;
+    int w, h, sx = 0, sy = 0;
     BlitClip(destBmp, &dx, &dy, srcBmp, &w, &h, &sx, &sy);
 
+    for (int y = 0; y < h; y++) {
+        DfColour *srcLine = GetLine(srcBmp, sy + y) + sx;
+        DfColour *destLine = GetLine(destBmp, dy + y) + dx;
+
+        // I would like to call memcpy() here, but for some reason movsb is
+        // twice as fast on my machine, when built on Linux with GCC or Clang.
+        __movsb((unsigned char *)destLine, (unsigned char *)srcLine, w * sizeof(DfColour));
+    }
+}
+
+
+void BlitEx(DfBitmap *destBmp, int dx, int dy, DfBitmap *srcBmp, int sx, int sy, int w, int h) {
     for (int y = 0; y < h; y++) {
         DfColour *srcLine = GetLine(srcBmp, sy + y) + sx;
         DfColour *destLine = GetLine(destBmp, dy + y) + dx;
@@ -814,12 +824,14 @@ void ScaleDownBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src) {
 
 void ScaleUpBlit(DfBitmap *dest, int x, int y, int scale, DfBitmap *src) {
     int maxSx = IntMin(src->width, (dest->width + x) / scale);
-    int maxSy = IntMin(src->height, (dest->height + y) / scale);
+    int maxSy = IntMin(src->height, (dest->clipBottom + y) / scale);
 
     for (int sy = 0; sy < maxSy; sy++) {
         for (int j = 0; j < scale; j++) {
             DfColour *srcPixel = GetLine(src, sy);
             int destY = y + sy * scale + j;
+            if (destY >= dest->clipBottom)
+                return;
             DfColour *destPixel = GetLine(dest, destY) + x;
 
             for (int sx = 0; sx < maxSx; sx++) {

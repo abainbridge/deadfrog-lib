@@ -70,11 +70,14 @@ DLL_API void        CircleFill      (DfBitmap *bmp, int x, int y, int r, DfColou
 DLL_API void        EllipseOutline  (DfBitmap *bmp, int x, int y, int rx, int ry, DfColour c);
 DLL_API void        EllipseFill     (DfBitmap *bmp, int x, int y, int rx, int ry, DfColour c);
 
-// Copies the source bitmap to the destination bitmap, skipping pixels whose source alpha values are 0
+// Copies the source bitmap to the destination bitmap, skipping pixels whose source alpha values are 0.
 DLL_API void        MaskedBlit      (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
 
-// Copies the source bitmap to the destination bitmap, including pixels whose source alpha values are 0
-DLL_API void        Blit            (DfBitmap *destBmp, int x, int y, DfBitmap *srcBmp);
+// Copies the source bitmap to the destination bitmap, including pixels with alpha of 0.
+DLL_API void        Blit(DfBitmap *destBmp, int destX, int destY, DfBitmap *srcBmp);
+
+// Copies part of the source bitmap to the destination bitmap, including pixels with alpha of 0.
+DLL_API void        BlitEx(DfBitmap *destBmp, int destX, int destY, DfBitmap *srcBmp, int srcX, int srcY, int w, int h);
 
 // Blit while scaling the result down by the specified integer scale factor.
 // The exact integer scaling makes it higher quality and faster than
