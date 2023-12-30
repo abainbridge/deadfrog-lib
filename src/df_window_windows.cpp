@@ -422,8 +422,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
         devmode.dmBitsPerPel = 32;
         devmode.dmPelsWidth = width;
         devmode.dmPelsHeight = height;
-        devmode.dmDisplayFrequency = 60;
-        devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
+        devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
         ReleaseAssert(ChangeDisplaySettings(&devmode, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL,
             "Couldn't change screen resolution to %i x %i", width, height);
     }
