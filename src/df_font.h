@@ -21,16 +21,14 @@ typedef struct _DfBitmap DfBitmap;
 typedef struct _Glyph Glyph;
 
 
-typedef struct _DfFont
-{
-    Glyph       *glyphs[256];   // TODO remove the *, so the glyphs are contiguous in memory.
-    bool        fixedWidth;
-    int         maxCharWidth;
-    int         charHeight; // in pixels
+typedef struct _DfFont {
+    Glyph *glyphs[256];   // TODO remove the *, so the glyphs are contiguous in memory.
+    bool fixedWidth;
+    int maxCharWidth;
+    int charHeight; // in pixels
 } DfFont;
 
-typedef struct _DfFontSource 
-{
+typedef struct _DfFontSource {
     unsigned char const numSizes;
     unsigned char const *pixelWidths; // Max width if not fixed width.
     unsigned char const *pixelHeights;
