@@ -112,7 +112,7 @@ DLL_API bool GetDesktopRes(int *width, int *height);
 
 // Creates a Window (fullscreen is really just a big window) and a bitmap the size of the window
 // to use as the back buffer of a double buffer. Position of the window is determined by the
-// system.
+// system. This function is not thread safe. DO NOT call it from multiple threads simultaneously.
 DLL_API DfWindow *CreateWin(int width, int height, WindowType windowed, char const *winName);
 
 // Same as above but position of the window is specified as x, y.
