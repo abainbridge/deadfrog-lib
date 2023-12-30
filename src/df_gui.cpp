@@ -10,6 +10,7 @@
 // Standard headers.
 #include <ctype.h>
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 
@@ -1098,6 +1099,7 @@ void DfMenuBarAddAction(DfMenuBar *dfMb, char const *menuName,
     if (menu)
         menu->AddItem(menuItemLabel, shortcut);
 }
+
 
 DfGuiAction DfMenuBarDo(DfWindow *win, DfMenuBar *dfMb) {
     MenuBar *mb = (MenuBar*)dfMb->internals;
