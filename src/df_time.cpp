@@ -4,7 +4,7 @@
 static double g_timeShift = 0.0;
 
 
-#if _MSC_VER
+#if _WIN32
 
 
 // Windows specific code ******************************************************
