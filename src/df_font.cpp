@@ -33,10 +33,6 @@ typedef struct _Glyph {
     unsigned m_width;
     int m_numRuns;
     EncodedRun *m_pixelRuns;
-
-    Glyph(int w) {
-        m_width = w;
-    }
 } Glyph;
 
 
@@ -189,7 +185,8 @@ DfFont *LoadFontFromMemory(void const *_buf, int bufLen) {
         }
 
         // Create the glyph to store the encoded runs we've made
-        Glyph *glyph = new Glyph(glyphWidths[i - 32]);
+        Glyph *glyph = new Glyph;
+        glyph->m_width = glyphWidths[i - 32];
         fnt->glyphs[i] = glyph;
 
         // Copy the runs into the glyph
