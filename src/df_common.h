@@ -45,15 +45,6 @@ void ReleaseWarn(bool condition, char const *fmt, ...);
 #endif
 
 
-#ifdef _MSC_VER
-    // Don't use msvcrt's vsprintf. Use the one in the core Windows system instead
-    // to allow us to replace libc with a cut down one to reduce executable sizes.
-    //
-    // The problem is that wvsprintf() doesn't support %f and %g formatting.
-//    #define vsprintf wvsprintf
-#endif
-
-
 static inline int IntMin(int a, int b) { return (a < b) ? a : b; };
 static inline int IntMax(int a, int b) { return (a > b) ? a : b; };
 static inline int RoundToInt(double r) {
