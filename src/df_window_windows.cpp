@@ -1,4 +1,4 @@
-// System headers.
+﻿// System headers.
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <shellapi.h>
@@ -8,18 +8,19 @@
 #include <memory.h>
 
 
-// Prototype of DwmFlush function from Win API.
+// Prototypes of Win API functions that we get via GetProcAddress().
 typedef void (WINAPI DwmFlushFunc)();
+typedef int (__stdcall EnableNonClientDpiScalingFunc)(HWND hwnd);
 
 
-struct WindowPlatformSpecific
-{
+struct WindowPlatformSpecific {
     HWND hWnd;
     MouseCursorType currentMouseCursorType;
 };
 
 
-static DwmFlushFunc *g_dwmFlush = NULL;
+static DwmFlushFunc *g_dwmFlushFunc = NULL;
+static EnableNonClientDpiScalingFunc *g_enabledNonClientDpiScalingFunc = NULL;
 
 
 // ***************************************************************************
@@ -447,14 +448,24 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
         windowStyle, x, y, width, height,
         NULL, NULL, 0, NULL);
 
+
     double now = GetRealTime();
     win->_private->lastUpdateTime = now;
     win->_private->endOfSecond = now + 1.0;
 
-    if (!g_dwmFlush) {
+    if (!g_dwmFlushFunc) {
         HMODULE dwm = LoadLibrary("dwmapi.dll");
-        g_dwmFlush = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
+        g_dwmFlushFunc = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
     }
+
+    if (!g_enabledNonClientDpiScalingFunc) {
+        HMODULE user32 = LoadLibrary("user32.dll");
+        g_enabledNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
+            GetProcAddress(user32, "EnableNonClientDpiScaling");
+    }
+    
+    if (g_enabledNonClientDpiScalingFunc)
+        g_enabledNonClientDpiScalingFunc(win->_private->platSpec->hWnd);
 
     // Register as a drag-and-drop target.
     DragAcceptFiles(win->_private->platSpec->hWnd, true);
@@ -592,8 +603,8 @@ void SetWindowTitle(DfWindow *win, char const *title) {
 
 
 bool WaitVsync() {
-    if (g_dwmFlush) {
-        g_dwmFlush();
+    if (g_dwmFlushFunc) {
+        g_dwmFlushFunc();
         return true;
     }
 
