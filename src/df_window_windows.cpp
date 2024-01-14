@@ -484,6 +484,39 @@ void DestroyWin(DfWindow *win) {
 }
 
 
+void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height) {
+    HMONITOR hmon = MonitorFromWindow(win->_private->platSpec->hWnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO info;
+    info.cbSize = sizeof(MONITORINFO);
+    GetMonitorInfoA(hmon, &info);
+    *x = info.rcWork.left;
+    *y = info.rcWork.top;
+    *width = info.rcWork.right - info.rcWork.left;
+    *height = info.rcWork.bottom - info.rcWork.top;
+}
+
+
+#pragma comment(lib, "dwmapi")
+void SetWindowRect(DfWindow *win, int x, int y, int width, int height) {
+    RECT rectWithShadow;
+    GetWindowRect(win->_private->platSpec->hWnd, &rectWithShadow);
+    int withShadowWidth = rectWithShadow.right - rectWithShadow.left;
+    int withShadowHeight = rectWithShadow.bottom - rectWithShadow.top;
+
+    RECT rectWithoutShadow;
+    DwmGetWindowAttribute(win->_private->platSpec->hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, 
+        &rectWithoutShadow, sizeof(RECT));
+    int withoutShadowWidth = rectWithoutShadow.right - rectWithoutShadow.left;
+    int withoutShadowHeight = rectWithoutShadow.bottom - rectWithoutShadow.top;
+
+    int shadowWidth = abs(withShadowWidth - withoutShadowWidth);
+    int shadowHeight = abs(withShadowHeight - withoutShadowHeight);
+    MoveWindow(win->_private->platSpec->hWnd, 
+        x - shadowWidth/2, y, 
+        width + shadowWidth, height + shadowHeight, false);
+}
+
+
 // This function copies a DfBitmap to the window, so you can actually see it.
 // SetBIBitsToDevice seems to be the fastest way to achieve this on most hardware.
 static void BlitBitmapToWindow(DfWindow *win) {
