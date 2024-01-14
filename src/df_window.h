@@ -120,6 +120,9 @@ DLL_API DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType w
 
 DLL_API void DestroyWin(DfWindow *win);
 
+// Get the DPI of the monitor that the window is on.
+DLL_API int GetMonitorDpi(DfWindow *win);
+
 // Get the work area for the monitor the window is on. This is the pixel size of the monitor minus the task bar size.
 DLL_API void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height);
 

@@ -1,8 +1,11 @@
 ﻿// System headers.
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <dwmapi.h>
+#pragma comment(lib, "dwmapi")
 #include <shellapi.h>
 #include <ShellScalingAPI.h>
+#pragma comment(lib, "Shcore") // Needed for SetProcessDpiAwareness
 
 // Standard headers.
 #include <memory.h>
@@ -369,7 +372,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 }
 
 
-#pragma comment(lib, "Shcore") // Needed for SetProcessDpiAwareness
 bool GetDesktopRes(int *width, int *height) {
     HWND desktopWindow = GetDesktopWindow();
     RECT desktopRect;
@@ -484,6 +486,14 @@ void DestroyWin(DfWindow *win) {
 }
 
 
+int GetMonitorDpi(DfWindow *win) {
+    HMONITOR hmon = MonitorFromWindow(win->_private->platSpec->hWnd, MONITOR_DEFAULTTONEAREST);
+    unsigned dpiX, dpiY;
+    GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+    return dpiX;
+}
+
+
 void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height) {
     HMONITOR hmon = MonitorFromWindow(win->_private->platSpec->hWnd, MONITOR_DEFAULTTONEAREST);
     MONITORINFO info;
@@ -496,7 +506,6 @@ void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height) 
 }
 
 
-#pragma comment(lib, "dwmapi")
 void SetWindowRect(DfWindow *win, int x, int y, int width, int height) {
     RECT rectWithShadow;
     GetWindowRect(win->_private->platSpec->hWnd, &rectWithShadow);
