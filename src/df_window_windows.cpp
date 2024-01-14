@@ -12,7 +12,6 @@
 
 
 // Prototypes of Win API functions that we get via GetProcAddress().
-typedef void (WINAPI DwmFlushFunc)();
 typedef int (__stdcall EnableNonClientDpiScalingFunc)(HWND hwnd);
 
 
@@ -22,7 +21,7 @@ struct WindowPlatformSpecific {
 };
 
 
-static DwmFlushFunc *g_dwmFlushFunc = NULL;
+static bool g_funcPointersInitialized = false;
 static EnableNonClientDpiScalingFunc *g_enabledNonClientDpiScalingFunc = NULL;
 
 
@@ -455,17 +454,12 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     win->_private->lastUpdateTime = now;
     win->_private->endOfSecond = now + 1.0;
 
-    if (!g_dwmFlushFunc) {
-        HMODULE dwm = LoadLibrary("dwmapi.dll");
-        g_dwmFlushFunc = (DwmFlushFunc *)GetProcAddress(dwm, "DwmFlush");
-    }
-
-    if (!g_enabledNonClientDpiScalingFunc) {
+    if (!g_funcPointersInitialized) {
         HMODULE user32 = LoadLibrary("user32.dll");
         g_enabledNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
             GetProcAddress(user32, "EnableNonClientDpiScaling");
     }
-    
+
     if (g_enabledNonClientDpiScalingFunc)
         g_enabledNonClientDpiScalingFunc(win->_private->platSpec->hWnd);
 
@@ -645,10 +639,6 @@ void SetWindowTitle(DfWindow *win, char const *title) {
 
 
 bool WaitVsync() {
-    if (g_dwmFlushFunc) {
-        g_dwmFlushFunc();
-        return true;
-    }
-
-    return false;
+    DwmFlush();
+    return true;
 }
