@@ -303,6 +303,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 //                 return 0;
 //             }
 //             return DefWindowProc(hWnd, message, wParam, lParam);
+        case WM_CREATE:
+            if (g_enabledNonClientDpiScalingFunc)
+                g_enabledNonClientDpiScalingFunc(win->_private->platSpec->hWnd);
+            break;
 
         case WM_SETCURSOR:
             if (LOWORD(lParam) == HTCLIENT) {
@@ -442,6 +446,12 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
         height += borderWidth + titleHeight;
     }
 
+    if (!g_funcPointersInitialized) {
+        HMODULE user32 = LoadLibrary("user32.dll");
+        g_enabledNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
+            GetProcAddress(user32, "EnableNonClientDpiScaling");
+    }
+
     // Create main window.
     // We ignore the returned HWND because it will already have been stored
     // in the HWND->DfWindow mapping before this function returns.
@@ -453,15 +463,6 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     double now = GetRealTime();
     win->_private->lastUpdateTime = now;
     win->_private->endOfSecond = now + 1.0;
-
-    if (!g_funcPointersInitialized) {
-        HMODULE user32 = LoadLibrary("user32.dll");
-        g_enabledNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
-            GetProcAddress(user32, "EnableNonClientDpiScaling");
-    }
-
-    if (g_enabledNonClientDpiScalingFunc)
-        g_enabledNonClientDpiScalingFunc(win->_private->platSpec->hWnd);
 
     // Register as a drag-and-drop target.
     DragAcceptFiles(win->_private->platSpec->hWnd, true);
