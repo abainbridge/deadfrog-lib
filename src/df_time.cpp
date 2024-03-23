@@ -50,7 +50,7 @@ void SleepMillisec(int milliseconds) {
 static double GetLowLevelTime() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    return (double)((int64_t)tv.tv_sec * 1000000 + tv.tv_usec) / 1000000.;
+	return tv.tv_usec / 1e6 + tv.tv_sec;
 }
 
 
