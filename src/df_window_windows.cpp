@@ -348,14 +348,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
         case WM_SIZE:
         {
-            BitmapDelete(win->bmp);
             int w = LOWORD(lParam);
             int h = HIWORD(lParam);
-            win->bmp = BitmapCreate(w, h);
-            if (win->redrawCallback) {
-                win->redrawCallback();
+            if (win->bmp->width != w || win->bmp->height != h) {
+                BitmapDelete(win->bmp);
+                win->bmp = BitmapCreate(w, h);
+                if (win->redrawCallback) {
+                    win->redrawCallback();
+                }
+                win->input.eventSinceAdvance = true;
             }
-            win->input.eventSinceAdvance = true;
             break;
         }
 
