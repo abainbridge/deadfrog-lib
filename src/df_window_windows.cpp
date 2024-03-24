@@ -442,10 +442,8 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
 
         RECT windowRect = { 0, 0, width, height };
         AdjustWindowRect(&windowRect, windowStyle, false);
-        int borderWidth = (windowRect.right - windowRect.left) - width;
-        int titleHeight = ((windowRect.bottom - windowRect.top) - height) - borderWidth;
-        width += borderWidth;
-        height += borderWidth + titleHeight;
+        width = windowRect.right - windowRect.left;
+        height = windowRect.bottom - windowRect.top;
     }
 
     if (!g_funcPointersInitialized) {
