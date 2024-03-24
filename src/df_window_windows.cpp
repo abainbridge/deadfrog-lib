@@ -450,6 +450,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
         HMODULE user32 = LoadLibrary("user32.dll");
         g_enabledNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
             GetProcAddress(user32, "EnableNonClientDpiScaling");
+        g_funcPointersInitialized = true;
     }
 
     // Create main window.
@@ -458,7 +459,6 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     CreateWindow(wc.lpszClassName, wc.lpszClassName,
         windowStyle, x, y, width, height,
         NULL, NULL, 0, NULL);
-
 
     double now = GetRealTime();
     win->_private->lastUpdateTime = now;
