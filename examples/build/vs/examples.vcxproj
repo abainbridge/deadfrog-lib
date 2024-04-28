@@ -194,6 +194,7 @@
     <ClCompile Include="..\..\colour_whirl.cpp" />
     <ClCompile Include="..\..\fractal_fern.cpp" />
     <ClCompile Include="..\..\gas.cpp" />
+    <ClCompile Include="..\..\gravity.cpp" />
     <ClCompile Include="..\..\harmonograph.cpp" />
     <ClCompile Include="..\..\hello_world.cpp" />
     <ClCompile Include="..\..\lattice_boltzmann.cpp" />

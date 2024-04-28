@@ -17,5 +17,6 @@
     <ClCompile Include="..\..\two_windows.cpp" />
     <ClCompile Include="..\..\asteroids.cpp" />
     <ClCompile Include="..\..\test_c.c" />
+    <ClCompile Include="..\..\gravity.cpp" />
   </ItemGroup>
 </Project>
