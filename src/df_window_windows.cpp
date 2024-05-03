@@ -22,7 +22,7 @@ struct WindowPlatformSpecific {
 
 
 static bool g_funcPointersInitialized = false;
-static EnableNonClientDpiScalingFunc *g_enabledNonClientDpiScalingFunc = NULL;
+static EnableNonClientDpiScalingFunc *g_enableNonClientDpiScalingFunc = NULL;
 
 
 // ***************************************************************************
@@ -304,8 +304,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 //             }
 //             return DefWindowProc(hWnd, message, wParam, lParam);
         case WM_CREATE:
-            if (g_enabledNonClientDpiScalingFunc)
-                g_enabledNonClientDpiScalingFunc(win->_private->platSpec->hWnd);
+            if (g_enableNonClientDpiScalingFunc)
+                g_enableNonClientDpiScalingFunc(win->_private->platSpec->hWnd);
             break;
 
         case WM_SETCURSOR:
@@ -425,7 +425,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     if (winType == WT_FULLSCREEN) {
         windowStyle |= WS_POPUP;
 
-        DEVMODE devmode;
+        DEVMODE devmode = {};
         devmode.dmSize = sizeof(DEVMODE);
         devmode.dmBitsPerPel = 32;
         devmode.dmPelsWidth = width;
@@ -448,7 +448,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
 
     if (!g_funcPointersInitialized) {
         HMODULE user32 = LoadLibrary("user32.dll");
-        g_enabledNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
+        g_enableNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
             GetProcAddress(user32, "EnableNonClientDpiScaling");
         g_funcPointersInitialized = true;
     }
@@ -491,7 +491,7 @@ int GetMonitorDpi(DfWindow *win) {
 
 void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height) {
     HMONITOR hmon = MonitorFromWindow(win->_private->platSpec->hWnd, MONITOR_DEFAULTTONEAREST);
-    MONITORINFO info;
+    MONITORINFO info = {};
     info.cbSize = sizeof(MONITORINFO);
     GetMonitorInfoA(hmon, &info);
     *x = info.rcWork.left;
@@ -507,7 +507,7 @@ void SetWindowRect(DfWindow *win, int x, int y, int width, int height) {
     int withShadowWidth = rectWithShadow.right - rectWithShadow.left;
     int withShadowHeight = rectWithShadow.bottom - rectWithShadow.top;
 
-    RECT rectWithoutShadow;
+    RECT rectWithoutShadow = {};
     DwmGetWindowAttribute(win->_private->platSpec->hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, 
         &rectWithoutShadow, sizeof(RECT));
     int withoutShadowWidth = rectWithoutShadow.right - rectWithoutShadow.left;
@@ -525,7 +525,7 @@ void SetWindowRect(DfWindow *win, int x, int y, int width, int height) {
 // SetBIBitsToDevice seems to be the fastest way to achieve this on most hardware.
 static void BlitBitmapToWindow(DfWindow *win) {
     DfBitmap *bmp = win->bmp;
-    BITMAPINFO binfo;
+    BITMAPINFO binfo = {};
     binfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     binfo.bmiHeader.biWidth = bmp->width;
     binfo.bmiHeader.biHeight = -(int)bmp->height;
@@ -611,7 +611,7 @@ void SetWindowIcon(DfWindow *win) {
 
 
 bool IsWindowMaximized(DfWindow *win) {
-    WINDOWPLACEMENT winPlacement;
+    WINDOWPLACEMENT winPlacement = {};
     winPlacement.length = sizeof(WINDOWPLACEMENT);
     GetWindowPlacement(win->_private->platSpec->hWnd, &winPlacement);
     return winPlacement.showCmd == SW_SHOWMAXIMIZED;
