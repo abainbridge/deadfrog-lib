@@ -12,7 +12,9 @@
 
 
 // Prototypes of Win API functions that we get via GetProcAddress().
-typedef int (__stdcall EnableNonClientDpiScalingFunc)(HWND hwnd);
+typedef int(__stdcall EnableNonClientDpiScalingFunc)(HWND hwnd);
+typedef int(__stdcall AdjustWindowRectExForDpi)(
+    RECT *rect, unsigned long style, int hasMenu, unsigned long exStyle, unsigned dpi);
 
 
 struct WindowPlatformSpecific {
@@ -23,6 +25,7 @@ struct WindowPlatformSpecific {
 
 static bool g_funcPointersInitialized = false;
 static EnableNonClientDpiScalingFunc *g_enableNonClientDpiScalingFunc = NULL;
+static AdjustWindowRectExForDpi *g_adjustWindowRectExForDpi = NULL;
 
 
 // ***************************************************************************
@@ -421,6 +424,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
 
     win->bmp = BitmapCreate(width, height);
 
+    int nonclientWidth = width, nonclientHeight = height;
     unsigned windowStyle = WS_VISIBLE;
     if (winType == WT_FULLSCREEN) {
         windowStyle |= WS_POPUP;
@@ -440,25 +444,66 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
         else
             windowStyle |= WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU;
 
+        // Note: This window size calculation might be wrong. We can't be sure
+        // it is correct until we know which monitor (and hence DPI) will be
+        // used.
         RECT windowRect = { 0, 0, width, height };
         AdjustWindowRect(&windowRect, windowStyle, false);
-        width = windowRect.right - windowRect.left;
-        height = windowRect.bottom - windowRect.top;
+        nonclientWidth = windowRect.right - windowRect.left;
+        nonclientHeight = windowRect.bottom - windowRect.top;
     }
 
     if (!g_funcPointersInitialized) {
         HMODULE user32 = LoadLibrary("user32.dll");
         g_enableNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
             GetProcAddress(user32, "EnableNonClientDpiScaling");
+        g_adjustWindowRectExForDpi = (AdjustWindowRectExForDpi*)
+            GetProcAddress(user32, "AdjustWindowRectExForDpi");
         g_funcPointersInitialized = true;
     }
 
     // Create main window.
-    // We ignore the returned HWND because it will already have been stored
-    // in the HWND->DfWindow mapping before this function returns.
-    CreateWindow(wc.lpszClassName, wc.lpszClassName,
-        windowStyle, x, y, width, height,
+    // Note we only temporarily store the returned HWND here (ie in a stack
+    // variable) because it will already have been stored permenantly by our 
+    // WndProc() before CreateWindow() returns.
+    HWND h = CreateWindow(wc.lpszClassName, wc.lpszClassName,
+        windowStyle, x, y, nonclientWidth, nonclientHeight,
         NULL, NULL, 0, NULL);
+
+    // At this point, on a machine with two monitors with different DPIs, the 
+    // client rect we got might not be the dimensions we requested. If we have
+    // AdjustWindowRectExForDpi() available, then we can use it to fix the
+    // problem.
+    if (g_adjustWindowRectExForDpi) {
+        // First check if we got the wrong client rect size.
+        RECT rect;
+        GetClientRect(h, &rect);
+        int resultWidth = rect.right - rect.left;
+        int resultHeight = rect.bottom - rect.top;
+        if (resultWidth != width || resultHeight != height) {
+            // Client rect size is wrong. Try to fix it.
+            rect.left = x;
+            rect.right = x + width;
+            rect.top = y;
+            rect.bottom = y + height;
+            HMONITOR hmon = MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST);
+            unsigned dpiX, dpiY;
+            GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+            g_adjustWindowRectExForDpi(&rect, windowStyle, false, 0, dpiX);
+            int tempWidth2 = rect.right - rect.left;
+            int tempHeight2 = rect.bottom - rect.top;
+
+            SetWindowPos(h, NULL, x, y, tempWidth2, tempHeight2, 0);
+
+            // Check that we got what we asked for this time.
+            //RECT clientRect2;
+            //GetClientRect(h, &clientRect2);
+            //int resultWidth3 = clientRect2.right - clientRect2.left;
+            //int resultHeight3 = clientRect2.bottom - clientRect2.top;
+            //int widthDelta3 = width - resultWidth3;
+            //int heightDelta3 = height - resultHeight3;
+        }
+    }
 
     double now = GetRealTime();
     win->_private->lastUpdateTime = now;
