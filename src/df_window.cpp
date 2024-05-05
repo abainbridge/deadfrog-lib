@@ -17,16 +17,11 @@ struct WindowPlatformSpecific;
 
 
 struct _DfWindowPrivate {
-    bool        lmbPrivate;
-    bool        lmbOld;               // Mouse button states from last frame. Only
-    bool        mmbOld;               // used to computer the deltas.
-    bool        rmbOld;
-
     bool        lastClickWasNC;       // True if mouse was outside the client area of the window when the button was last clicked
     double      lastClickTime;        // Used in double click detection
     int         lmbRepeatsSoFar;      // When lmb is held, this value is used by IsLmbRepeatSet to determine when to return true
 
-    int         mouseOldX;            // Same things but for position
+    int         mouseOldX;            // Used to calculate input.mouseVelX
     int         mouseOldY;
     int         mouseOldZ;
 
@@ -209,17 +204,6 @@ static void InputPollInternal(DfWindow *win)
         if (win->input.keyDowns[i]) win->input.numKeyDowns++;
     }
 
-    win->input.lmb = win->_private->lmbPrivate;
-    win->input.lmbClicked = win->input.lmb == true && win->_private->lmbOld == false;
-    win->input.mmbClicked = win->input.mmb == true && win->_private->mmbOld == false;
-    win->input.rmbClicked = win->input.rmb == true && win->_private->rmbOld == false;
-    win->input.lmbUnClicked = win->input.lmb == false && win->_private->lmbOld == true;
-    win->input.mmbUnClicked = win->input.mmb == false && win->_private->mmbOld == true;
-    win->input.rmbUnClicked = win->input.rmb == false && win->_private->rmbOld == true;
-    win->_private->lmbOld = win->input.lmb;
-    win->_private->mmbOld = win->input.mmb;
-    win->_private->rmbOld = win->input.rmb;
-
     win->input.lmbDoubleClicked = false;
     if (win->input.lmbClicked) {
         double timeNow = GetRealTime();
@@ -236,7 +220,7 @@ static void InputPollInternal(DfWindow *win)
     // them if the last mouse down event was in the client area.
     if (win->_private->lastClickWasNC) {
         win->_private->lastClickWasNC = false;
-        win->_private->lmbPrivate = false;
+        win->input.lmb = false;
         win->input.mmb = false;
         win->input.rmb = false;
     }

@@ -34,8 +34,8 @@ typedef struct {
     bool        windowHasFocus;
     bool        eventSinceAdvance;  // True if we've seen any events since the last advance
 
-    bool        lmb;                // Mouse button states now. These can change in the
-    bool        mmb;                // middle of the frame.
+    bool        lmb;                // Mouse button states now.
+    bool        mmb;
     bool        rmb;
 
     bool        lmbDoubleClicked;

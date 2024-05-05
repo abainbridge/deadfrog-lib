@@ -28,7 +28,6 @@ static EnableNonClientDpiScalingFunc *g_enableNonClientDpiScalingFunc = NULL;
 static AdjustWindowRectExForDpi *g_adjustWindowRectExForDpi = NULL;
 
 
-
 static DfWindow *GetWindowFromHWnd(HWND hWnd) {
     return (DfWindow *)GetPropA(hWnd, "deadfrog");
 }
@@ -73,22 +72,28 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
             break;
 
         case WM_LBUTTONDOWN:
-            win->_private->lmbPrivate = true;
+            win->input.lmb = true;
+            win->input.lmbClicked = true;
             break;
         case WM_LBUTTONUP:
-            win->_private->lmbPrivate = false;
+            win->input.lmb = false;
+            win->input.lmbUnClicked = true;
             break;
         case WM_MBUTTONDOWN:
             win->input.mmb = true;
+            win->input.mmbClicked = true;
             break;
         case WM_MBUTTONUP:
             win->input.mmb = false;
+            win->input.mmbUnClicked = true;
             break;
         case WM_RBUTTONDOWN:
             win->input.rmb = true;
+            win->input.rmbClicked = true;
             break;
         case WM_RBUTTONUP:
             win->input.rmb = false;
+            win->input.rmbUnClicked = true;
             break;
 
         /* Mouse clicks in the Non-client area (ie titlebar) of the window are weird. If we
@@ -97,7 +102,7 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
            never sends us the button up event. I've chosen the second option and fix some of
            the brokenness by generating a fake up event one frame after the down event. */
         case WM_NCLBUTTONDOWN:
-            win->_private->lmbPrivate = true;
+            win->input.lmb = false;
             win->_private->lastClickWasNC = true;
             return -1;
         case WM_NCMBUTTONDOWN:
@@ -193,6 +198,13 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
 
 
 bool InputPoll(DfWindow *win) {
+    win->input.lmbClicked = false;
+    win->input.mmbClicked = false;
+    win->input.rmbClicked = false;
+    win->input.lmbUnClicked = false;
+    win->input.mmbUnClicked = false;
+    win->input.rmbUnClicked = false;
+
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
         // handle or dispatch messages
