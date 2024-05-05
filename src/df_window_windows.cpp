@@ -28,57 +28,10 @@ static EnableNonClientDpiScalingFunc *g_enableNonClientDpiScalingFunc = NULL;
 static AdjustWindowRectExForDpi *g_adjustWindowRectExForDpi = NULL;
 
 
-// ***************************************************************************
-// Horrible mechanism to map HWNDs to DfWindows. Needed so that WndProc() can
-// figure out which DfWindow() it is associated with. This wouldn't be needed
-// if we could pass our DfWindow pointer into CreateWindow() as some void*
-// data that it would give to every WndProc() call. But MS didn't think of that.
-// Worse still, by the time CreateWindow() returns the HWND, WndProc() will
-// already have been called. So we need to have stored the mapping before
-// CreateWindow() returns. We do this by taking advantage of the fact that
-// the initial call of WndProc() is guaranteed to be on the same thread that
-// called CreateWindow(). We use a thread local to store the DfWindow we're
-// in the process of making, before we call CreateWindow(). We check that in
-// every call of GetWindowFromHwnd(), which is called at the start of every
-// call of WndProc(). If the thread local DfWindow pointer it is set, we unset
-// it and add the HWND->DfWindow mapping.
-
-static DfWindow *g_newWindow = NULL;
-enum { MAX_NUM_WINDOWS = 8 };
-static DfWindow *g_windows[MAX_NUM_WINDOWS] = { 0 };
 
 static DfWindow *GetWindowFromHWnd(HWND hWnd) {
-    if (g_newWindow) {
-        for (int i = 0; i < MAX_NUM_WINDOWS; i++) {
-            if (g_windows[i] == NULL) {
-                g_windows[i] = g_newWindow;
-                g_windows[i]->_private->platSpec->hWnd = hWnd;
-                g_newWindow = NULL;
-                return g_windows[i];
-            }
-        }
-
-        ReleaseAssert(0, "Too many windows");
-    }
-
-    for (int i = 0; i < MAX_NUM_WINDOWS; i++) {
-        if (g_windows[i] && g_windows[i]->_private->platSpec->hWnd == hWnd)
-            return g_windows[i];
-    }
-
-    return NULL;
+    return (DfWindow *)GetPropA(hWnd, "deadfrog");
 }
-
-
-static void RemoveHwnd(HWND hWnd) {
-    for (int i = 0; i < MAX_NUM_WINDOWS; i++) {
-        if (g_windows[i] && g_windows[i]->_private->platSpec->hWnd == hWnd)
-            g_windows[i] = NULL;
-    }
-}
-
-// End of horrible mechanism.
-// ***************************************************************************
 
 
 // Returns 0 if the event is handled here, -1 otherwise
@@ -274,7 +227,11 @@ bool InputPoll(DfWindow *win) {
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     DfWindow *win = GetWindowFromHWnd(hWnd);
-    if (!win) goto _default;
+    if (!win) {
+        if (message == WM_NCCREATE && g_enableNonClientDpiScalingFunc)
+            g_enableNonClientDpiScalingFunc(hWnd);
+        goto _default;
+    }
 
     if (message == WM_SYSKEYDOWN && wParam == 115)
         SendMessage(hWnd, WM_CLOSE, 0, 0);
@@ -306,10 +263,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 //                 return 0;
 //             }
 //             return DefWindowProc(hWnd, message, wParam, lParam);
-        case WM_NCCREATE:
-            if (g_enableNonClientDpiScalingFunc)
-                g_enableNonClientDpiScalingFunc(win->_private->platSpec->hWnd);
-            break;
 
         case WM_SETCURSOR:
             if (LOWORD(lParam) == HTCLIENT) {
@@ -365,8 +318,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         }
 
         case WM_CLOSE:
-            if (win)
-                win->windowClosed = true;
+            win->windowClosed = true;
             win->input.eventSinceAdvance = true;
             return 0;
 
@@ -409,8 +361,6 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     memset(win->_private, 0, sizeof(DfWindowPrivate));
     win->_private->platSpec = new WindowPlatformSpecific;
     win->_private->platSpec->currentMouseCursorType = MCT_ARROW;
-
-    g_newWindow = win;
 
     width = ClampInt(width, 100, 4000);
     height = ClampInt(height, 100, 4000);
@@ -463,12 +413,12 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     }
 
     // Create main window.
-    // Note we only temporarily store the returned HWND here (ie in a stack
-    // variable) because it will already have been stored permenantly by our 
-    // WndProc() before CreateWindow() returns.
     HWND h = CreateWindow(wc.lpszClassName, wc.lpszClassName,
         windowStyle, x, y, nonclientWidth, nonclientHeight,
         NULL, NULL, 0, NULL);
+    win->_private->platSpec->hWnd = h;
+
+    SetPropA(h, "deadfrog", win);
 
     // At this point, on a machine with two monitors with different DPIs, the 
     // client rect we got might not be the dimensions we requested. If we have
@@ -519,7 +469,6 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
 
 
 void DestroyWin(DfWindow *win) {
-    RemoveHwnd(win->_private->platSpec->hWnd);
     DestroyWindow(win->_private->platSpec->hWnd);
     BitmapDelete(win->bmp);
     delete win;
