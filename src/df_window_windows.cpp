@@ -306,7 +306,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 //                 return 0;
 //             }
 //             return DefWindowProc(hWnd, message, wParam, lParam);
-        case WM_CREATE:
+        case WM_NCCREATE:
             if (g_enableNonClientDpiScalingFunc)
                 g_enableNonClientDpiScalingFunc(win->_private->platSpec->hWnd);
             break;
