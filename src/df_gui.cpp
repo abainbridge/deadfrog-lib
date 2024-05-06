@@ -43,6 +43,24 @@ int DfMouseInRect(DfWindow *win, int x, int y, int w, int h) {
     return PointInRect(win->input.mouseX, win->input.mouseY, x, y, w, h);
 }
 
+static int ChangeDrawScaleIfDpiChanged() {
+	static int lastDpi = 96;
+	static float prevDrawScale = 1.0f;
+
+	int dpi = GetMonitorDpi(g_window);
+	g_drawScale = prevDrawScale / (float)lastDpi * (float)dpi;
+
+	bool scaleChanged = (dpi != lastDpi);
+	if (scaleChanged) {
+		int width = g_window->bmp->width / prevDrawScale * g_drawScale;
+		int height = g_window->bmp->width / prevDrawScale * g_drawScale;
+        lastDpi = dpi;
+        prevDrawScale = g_drawScale;
+        SetWindowRect(g_window, g_window->left, g_window->top, width, height);
+	}
+
+	return scaleChanged;
+}
 
 void DfGuiDoFrame(DfWindow *win) {
     if (win->input.lmbClicked) {
@@ -50,7 +68,8 @@ void DfGuiDoFrame(DfWindow *win) {
         g_dragStartY = win->input.mouseY;
     }
 
-    int scaleChanged = 0;
+    int scaleChanged = ChangeDrawScaleIfDpiChanged();
+
     if (win->input.keys[KEY_CONTROL]) {
         if (win->input.keyDowns[KEY_EQUALS] || win->input.keyDowns[KEY_PLUS_PAD]) {
             g_drawScale *= 1.1;
