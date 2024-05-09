@@ -5,7 +5,6 @@
 #pragma comment(lib, "dwmapi")
 #include <shellapi.h>
 #include <ShellScalingAPI.h>
-#pragma comment(lib, "Shcore") // Needed for SetProcessDpiAwareness
 
 // Standard headers.
 #include <memory.h>
@@ -13,9 +12,11 @@
 
 // Prototypes of Win API functions that we get via GetProcAddress().
 typedef int(__stdcall EnableNonClientDpiScalingFunc)(HWND hwnd);
-typedef int(__stdcall AdjustWindowRectExForDpi)(
+typedef int(__stdcall AdjustWindowRectExForDpiFunc)(
     RECT *rect, unsigned long style, int hasMenu, unsigned long exStyle, unsigned dpi);
-
+typedef long(__stdcall SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS value);
+typedef long(__stdcall GetDpiForMonitorFunc)(
+    HMONITOR hmonitor, MONITOR_DPI_TYPE dpiType, unsigned *dpiX, unsigned *dpiY);
 
 struct WindowPlatformSpecific {
     HWND hWnd;
@@ -25,11 +26,32 @@ struct WindowPlatformSpecific {
 
 static bool g_funcPointersInitialized = false;
 static EnableNonClientDpiScalingFunc *g_enableNonClientDpiScalingFunc = NULL;
-static AdjustWindowRectExForDpi *g_adjustWindowRectExForDpi = NULL;
+static AdjustWindowRectExForDpiFunc *g_adjustWindowRectExForDpi = NULL;
+static SetProcessDpiAwarenessFunc *g_setProcessDpiAwareness = NULL;
+static GetDpiForMonitorFunc *g_getDpiForMonitor = NULL;
 
 
 static DfWindow *GetWindowFromHWnd(HWND hWnd) {
     return (DfWindow *)GetPropA(hWnd, "deadfrog");
+}
+
+
+static void EnsureFunctionPointers() {
+    if (!g_funcPointersInitialized) {
+        HMODULE user32 = LoadLibrary("user32.dll");
+        g_enableNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
+            GetProcAddress(user32, "EnableNonClientDpiScaling");
+        g_adjustWindowRectExForDpi = (AdjustWindowRectExForDpiFunc*)
+            GetProcAddress(user32, "AdjustWindowRectExForDpiFunc");
+
+        HMODULE shcore = LoadLibrary("shcore.dll");
+        g_setProcessDpiAwareness = (SetProcessDpiAwarenessFunc*)
+            GetProcAddress(shcore, "SetProcessDpiAwareness");
+        g_getDpiForMonitor = (GetDpiForMonitorFunc*)
+            GetProcAddress(shcore, "GetDpiForMonitor");
+
+        g_funcPointersInitialized = true;
+    }
 }
 
 
@@ -131,15 +153,12 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
             break;
 
         case WM_SYSKEYDOWN:
-        {
             ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
             win->input.keys[wParam] = 1;
             win->_private->newKeyDowns[wParam] = 1;
             break;
-        }
 
         case WM_KEYUP:
-        {
             // Alt key ups are presented here when the user keys, for example, Alt+F.
             // Windows will generate a SYSKEYUP event for the release of F, and a
             // normal KEYUP event for the release of the ALT. Very strange.
@@ -147,10 +166,8 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
             win->_private->newKeyUps[wParam] = 1;
             win->input.keys[wParam] = 0;
             break;
-        }
 
         case WM_KEYDOWN:
-        {
             ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYDOWN", wParam);
 
             // The Windows key code for the DELETE key is 46. This is also the ASCII value of '.'
@@ -172,7 +189,6 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
             win->_private->newKeyDowns[wParam] = 1;
             win->input.keys[wParam] = 1;
             break;
-        }
 
         // If the keyboard shortcut alt+space is pressed, Windows will bring up
         // a system menu that is part of the system provided window decoration.
@@ -348,7 +364,8 @@ bool GetDesktopRes(int *width, int *height) {
     HWND desktopWindow = GetDesktopWindow();
     RECT desktopRect;
 
-    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    EnsureFunctionPointers();
+    g_setProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     if (GetWindowRect(desktopWindow, &desktopRect) == 0)
         return false;
     if (width)
@@ -365,7 +382,8 @@ DfWindow *CreateWin(int width, int height, WindowType winType, char const *winNa
 
 
 DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, char const *winName) {
-    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    EnsureFunctionPointers();
+    g_setProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
     DfWindow *win = new DfWindow;
     memset(win, 0, sizeof(DfWindow));
@@ -415,15 +433,6 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
         nonclientHeight = windowRect.bottom - windowRect.top;
     }
 
-    if (!g_funcPointersInitialized) {
-        HMODULE user32 = LoadLibrary("user32.dll");
-        g_enableNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
-            GetProcAddress(user32, "EnableNonClientDpiScaling");
-        g_adjustWindowRectExForDpi = (AdjustWindowRectExForDpi*)
-            GetProcAddress(user32, "AdjustWindowRectExForDpi");
-        g_funcPointersInitialized = true;
-    }
-
     // Create main window.
     HWND h = CreateWindow(wc.lpszClassName, wc.lpszClassName,
         windowStyle, x, y, nonclientWidth, nonclientHeight,
@@ -450,7 +459,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
             rect.bottom = y + height;
             HMONITOR hmon = MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST);
             unsigned dpiX, dpiY;
-            GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+            g_getDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
             g_adjustWindowRectExForDpi(&rect, windowStyle, false, 0, dpiX);
             int tempWidth2 = rect.right - rect.left;
             int tempHeight2 = rect.bottom - rect.top;
@@ -488,9 +497,10 @@ void DestroyWin(DfWindow *win) {
 
 
 int GetMonitorDpi(DfWindow *win) {
+    EnsureFunctionPointers();
     HMONITOR hmon = MonitorFromWindow(win->_private->platSpec->hWnd, MONITOR_DEFAULTTONEAREST);
     unsigned dpiX, dpiY;
-    GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+    g_getDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
     return dpiX;
 }
 
