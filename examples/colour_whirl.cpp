@@ -149,11 +149,8 @@ void ColourWhirlMain() {
 
 	// Seed the bitmap by manually placing the first few colours.
     g_alreadyAddedCol.b = 1;
-    PlaceColour(g_window->bmp, 100, 100, colours[numColours++]);
-    PlaceColour(g_window->bmp, 101, 100, colours[numColours++]);
-    PlaceColour(g_window->bmp, 100, 110, colours[numColours++]);
-    PlaceColour(g_window->bmp, 101, 110, colours[numColours++]);
-    PlaceColour(g_window->bmp, g_window->bmp->width/2, g_window->bmp->height/2, colours[numColours++]);
+    PlaceColour(g_window->bmp, 100, 100, colours[--numColours]);
+    PlaceColour(g_window->bmp, g_window->bmp->width/2, g_window->bmp->height/2, colours[--numColours]);
  
 	// Place all remaining colours.
     for (; numColours && g_numAvailableLocations; numColours--) {         
