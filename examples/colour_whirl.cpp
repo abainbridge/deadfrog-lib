@@ -1,23 +1,25 @@
-#include "df_time.h"
+// This example produces a pretty pattern that uses all the colours of a
+// palette for exactly one pixel each. It does this by starting by placing a few
+// of the colours from the palette as "seed" pixels and then placing the
+// remaining colours next to the colour they are "closest" to on the bitmap.
+
 #include "df_font.h"
+#include "df_time.h"
 #include "df_window.h"
 #include "fonts/df_mono.h"
 #include <limits.h>
 #include <stdlib.h>
 
 
-unsigned available[10000];
-unsigned num_available = 0;
+struct PixelLocation { unsigned short x, y; };
+
+// Locations of pixels where new colours can be plotted. This is the boundary on
+// the bitmap between coloured pixels we've plotted and the black background.
+static PixelLocation g_availableLocations[10000];
+static unsigned g_numAvailableLocations = 0;
 
 
-inline unsigned Coord(unsigned x, unsigned y) 
-{ 
-    return (x<<16) | y; 
-}
-
-
-inline unsigned ColourDiff(DfColour a, DfColour b)
-{
+inline unsigned ColourDiff(DfColour a, DfColour b) {
     int r = (a.r - b.r)/2;
     r *= r;
     int g = (a.g - b.g);
@@ -28,50 +30,46 @@ inline unsigned ColourDiff(DfColour a, DfColour b)
 }
 
 
-// Calculate diff between specified colour and neighbours of specified location
-unsigned CalcDiff(DfWindow *win, unsigned x, unsigned y, DfColour target_colour)
-{
-    unsigned min_diff = UINT_MAX;
+// Calculate diff between specified colour and neighbours of specified location.
+unsigned CalcDiff(DfBitmap *bmp, unsigned short x, unsigned short y, DfColour targetColour) {
+    unsigned minDiff = UINT_MAX;
 
-    DfColour *row = win->bmp->pixels + (y-1) * win->bmp->width + x;
+    DfColour *row = bmp->pixels + (y-1) * bmp->width + x;
 
-    unsigned diff = ColourDiff(row[0], target_colour);
-    if (diff < min_diff)
-        min_diff = diff;
+    unsigned diff = ColourDiff(row[0], targetColour);
+    if (diff < minDiff)
+        minDiff = diff;
 
-    row += win->bmp->width;
+    row += bmp->width;
     
-    diff = ColourDiff(row[-1], target_colour);
-    if (diff < min_diff)
-        min_diff = diff;
+    diff = ColourDiff(row[-1], targetColour);
+    if (diff < minDiff)
+        minDiff = diff;
 
-    diff = ColourDiff(row[1], target_colour);
-    if (diff < min_diff)
-        min_diff = diff;
+    diff = ColourDiff(row[1], targetColour);
+    if (diff < minDiff)
+        minDiff = diff;
 
-    row += win->bmp->width;
+    row += bmp->width;
 
-    diff = ColourDiff(row[0], target_colour);
-    if (diff < min_diff)
-        min_diff = diff;
+    diff = ColourDiff(row[0], targetColour);
+    if (diff < minDiff)
+        minDiff = diff;
 
-    return min_diff;
+    return minDiff;
 }
 
 
-unsigned FindBest(DfWindow *win, DfColour c)
-{
+unsigned FindBestLocationIndex(DfBitmap *bmp, DfColour c) {
     unsigned best = 0;
 
-    unsigned min_diff = UINT_MAX;
-    for (unsigned i = 0; i < num_available; i++)
-    {
-        unsigned x = available[i] >> 16;
-        unsigned y = available[i] & 0xffff;
-        unsigned diff = CalcDiff(win, x, y, c);
-        if (diff < min_diff)
-        {
-            min_diff = diff;
+    unsigned minDiff = UINT_MAX;
+    for (unsigned i = 0; i < g_numAvailableLocations; i++) {
+        unsigned short x = g_availableLocations[i].x;
+        unsigned short y = g_availableLocations[i].y;
+        unsigned diff = CalcDiff(bmp, x, y, c);
+        if (diff < minDiff) {
+            minDiff = diff;
             best = i;
         }
     }
@@ -80,65 +78,68 @@ unsigned FindBest(DfWindow *win, DfColour c)
 }
 
 
-DfColour alreadyAddedCol = g_colourBlack;
+static DfColour g_alreadyAddedCol = g_colourBlack;
 
 
-inline void AddIfNew(DfWindow *win, unsigned x, unsigned y)
-{
-    if (GetPix(win->bmp, x, y).c == g_colourBlack.c)
-    {
-        if (x > 1 && x < (win->bmp->width-1) &&
-            y > 1 && y < (win->bmp->height-1))
+// Add the specified location to the array of available locations if it isn't already in it
+// and isn't the location of a coloured pixel we already plotted.
+//
+// We avoid searching the entire array by cheating: for every location we add to the
+// array, we plot a not quite black pixel on the bitmap. That way we can read the
+// colour of the bitmap at the specified location, and if it is not black, we know
+// not to add the location to the array.
+inline void AddIfNew(DfBitmap *bmp, unsigned short x, unsigned short y) {
+    if (GetPix(bmp, x, y).c == g_colourBlack.c) {
+        if (x > 1 && x < (bmp->width-1) &&
+            y > 1 && y < (bmp->height-1))
         {
-            if (num_available < 10000)
-                available[num_available++] = Coord(x, y);
-            PutPix(win->bmp, x, y, alreadyAddedCol);
+			if (g_numAvailableLocations < 10000) {
+				g_availableLocations[g_numAvailableLocations].x = x;
+				g_availableLocations[g_numAvailableLocations].y = y;
+				g_numAvailableLocations++;
+			}
+			PutPix(bmp, x, y, g_alreadyAddedCol);
         }
     }
 }
 
 
-void PlaceColour(DfWindow *win, unsigned x, unsigned y, DfColour colour)
-{
-    PutPix(win->bmp, x, y, colour);
+void PlaceColour(DfBitmap *bmp, unsigned short x, unsigned short y, DfColour colour) {
+    PutPix(bmp, x, y, colour);
 
-    AddIfNew(win, x-1, y-1);
-    AddIfNew(win, x, y - 1);
-    AddIfNew(win, x + 1, y - 1);
-    AddIfNew(win, x - 1, y);
-    AddIfNew(win, x + 1, y);
-    AddIfNew(win, x - 1, y + 1);
-    AddIfNew(win, x, y + 1);
-    AddIfNew(win, x + 1, y + 1);
+    AddIfNew(bmp, x - 1, y - 1);
+    AddIfNew(bmp, x, y - 1);
+    AddIfNew(bmp, x + 1, y - 1);
+    AddIfNew(bmp, x - 1, y);
+    AddIfNew(bmp, x + 1, y);
+    AddIfNew(bmp, x - 1, y + 1);
+    AddIfNew(bmp, x, y + 1);
+    AddIfNew(bmp, x + 1, y + 1);
 }
 
 
-void ColourWhirlMain()
-{
+void ColourWhirlMain() {
     // Setup the window
     int width, height;
     GetDesktopRes(&width, &height);
-//    DfWindow *win = CreateWin(width, height, false, "Colour Whirl Example");
-    DfWindow *win = CreateWin(1200, 900, WT_WINDOWED_RESIZEABLE, "Colour Whirl Example");
-    BitmapClear(win->bmp, g_colourBlack);
+//    g_defaultWin = CreateWin(width, height, false, "Colour Whirl Example");
+    g_window = CreateWin(1000, 1000, WT_WINDOWED_FIXED, "Colour Whirl Example");
+    BitmapClear(g_window->bmp, g_colourBlack);
 
-    // Create an array of colours
-    int const max_component = 100;
-    double const scale = 256.0 / max_component;
-    DfColour *colours = new DfColour [max_component * max_component * max_component];
-    int n = 0;
-    {
-        for (int r = 0; r < max_component; r++)
-            for (int g = 0; g < max_component; g++)
-                for (int b = 0; b < max_component; b++)
-                    colours[n++] = Colour((int)(r * scale), (int)(g * scale), (int)(b * scale));
-    }
+    // Create the palette of colours.
+    int const maxComponent = 100;
+    double const scale = 256.0 / maxComponent;
+    DfColour *colours = new DfColour [maxComponent * maxComponent * maxComponent];
+    int numColours = 0;
+    for (int r = 0; r < maxComponent; r++)
+        for (int g = 0; g < maxComponent; g++)
+            for (int b = 0; b < maxComponent; b++)
+                colours[numColours++] = Colour((int)(r * scale), (int)(g * scale), (int)(b * scale));
 
-    // Shuffle the array
-    srand((unsigned)(GetRealTime() * 1000.0));
-    for (int i = 0; i < n - 1; i++) 
-    {
-        int j = i + rand() / (RAND_MAX / (n - i) + 1);
+    // Shuffle the palette.
+    srand((unsigned)(GetRealTime() * 1e6));
+    for (int i = 0; i < numColours - 1; i++) {
+        int j = i + rand() / (RAND_MAX / (numColours - i) + 1);
         DfColour t = colours[j];
         colours[j] = colours[i];
         colours[i] = t;
@@ -146,43 +147,44 @@ void ColourWhirlMain()
 
     double start_time = GetRealTime();
 
-    alreadyAddedCol.b = 1;
-    PlaceColour(win, 100, 100, colours[n++]);
-    PlaceColour(win, 101, 100, colours[n++]);
-    PlaceColour(win, 100, 110, colours[n++]);
-    PlaceColour(win, 101, 110, colours[n++]);
-    PlaceColour(win, win->bmp->width/2, win->bmp->height/2, colours[n++]);
+	// Seed the bitmap by manually placing the first few colours.
+    g_alreadyAddedCol.b = 1;
+    PlaceColour(g_window->bmp, 100, 100, colours[numColours++]);
+    PlaceColour(g_window->bmp, 101, 100, colours[numColours++]);
+    PlaceColour(g_window->bmp, 100, 110, colours[numColours++]);
+    PlaceColour(g_window->bmp, 101, 110, colours[numColours++]);
+    PlaceColour(g_window->bmp, g_window->bmp->width/2, g_window->bmp->height/2, colours[numColours++]);
  
-    for (; n && num_available; n--)
-    {         
-        unsigned i = FindBest(win, colours[n]);
-        unsigned x = available[i] >> 16;
-        unsigned y = available[i] & 0xffff;
-        if (num_available > 1)
-            available[i] = available[num_available - 1];
-        num_available--;
+	// Place all remaining colours.
+    for (; numColours && g_numAvailableLocations; numColours--) {         
+        unsigned i = FindBestLocationIndex(g_window->bmp, colours[numColours]);
+        unsigned short x = g_availableLocations[i].x;
+        unsigned short y = g_availableLocations[i].y;
+        if (g_numAvailableLocations > 1)
+            g_availableLocations[i] = g_availableLocations[g_numAvailableLocations - 1];
+        g_numAvailableLocations--;
 
-        PlaceColour(win, x, y, colours[n]);
+        PlaceColour(g_window->bmp, x, y, colours[numColours]);
 
         // Every so often, copy the bitmap to the screen
-        if ((n & 511) == 0)
-        {
+        if ((numColours & 0xfff) == 0) {
             // Abort drawing the set if the user presses escape or clicks the close icon
-            InputPoll(win);
-            if (win->windowClosed || win->input.keyDowns[KEY_ESC])
+            InputPoll(g_window);
+            if (g_window->windowClosed || g_window->input.keyDowns[KEY_ESC])
                 exit(0);
-            UpdateWin(win);
+            UpdateWin(g_window);
         }
     }
 
     double endTime = GetRealTime();
-    DfFont *font = LoadFontFromMemory(df_mono_7x13, sizeof(df_mono_7x13));
-    DrawTextLeft(font, g_colourWhite, win->bmp, 10, 10, "Time taken: %.2f sec. Press ESC.", endTime - start_time);
+    g_defaultFont = LoadFontFromMemory(df_mono_9x18, sizeof(df_mono_9x18));
+    DrawTextLeft(g_defaultFont, g_colourWhite, g_window->bmp, 10, g_window->bmp->height - 20, 
+		"Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
     // Continue to display the window until the user presses escape or clicks the close icon
-    while (!win->windowClosed && !win->input.keys[KEY_ESC])
-    {
-        InputPoll(win);
+    while (!g_window->windowClosed && !g_window->input.keys[KEY_ESC]) {
+        InputPoll(g_window);
+		UpdateWin(g_window);
         SleepMillisec(100);
     }
 }
