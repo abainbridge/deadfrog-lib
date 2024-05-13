@@ -8,6 +8,7 @@
 #include "df_window.h"
 #include "fonts/df_mono.h"
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 
@@ -139,9 +140,12 @@ void ColourWhirlMain() {
     // Shuffle the palette.
     srand((unsigned)(GetRealTime() * 1e6));
     for (int i = 0; i < numColours - 1; i++) {
-        int j = i + rand() / (RAND_MAX / (numColours - i) + 1);
-        DfColour t = colours[j];
-        colours[j] = colours[i];
+        uint64_t j0 = rand();
+        uint64_t j1 = j0 * (numColours - i);
+        uint64_t j2 = j1 / RAND_MAX;
+        uint64_t j3 = j2 + i + 1;
+        DfColour t = colours[j3];
+        colours[j3] = colours[i];
         colours[i] = t;
     }
 
