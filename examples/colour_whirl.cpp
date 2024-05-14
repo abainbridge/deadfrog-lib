@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 struct PixelLocation { unsigned short x, y; };
@@ -22,9 +23,17 @@ static unsigned g_numAvailableLocations = 0;
 
 
 inline unsigned ColourDiff(DfColour a, DfColour b) {
-    int r = abs(a.r - b.r)/2;
-    int g = abs(a.g - b.g);
-    int blue = abs(a.b - b.b)/2;
+    // Parameter 'a' is the colour we read from the bitmap. It will have one of
+    // these possible alpha values: 0=Pixel not yet reached, 1=Pixel is 
+    // presently in g_availableLocations, 255=Pixel has its final colour.
+    // We are only interested in pixels that have their final colour, so return
+    // a large value as the "diff" so that this result isn't chosen as a close
+    // match.
+    if (a.a <= 1) 
+        return 10000;
+    int r = abs(a.r - b.r);
+    int g = abs(a.g - b.g) * 2;
+    int blue = abs(a.b - b.b);
     return r + g + blue;
 }
 
@@ -77,9 +86,6 @@ unsigned FindBestLocationIndex(DfBitmap *bmp, DfColour c) {
 }
 
 
-static DfColour g_alreadyAddedCol = g_colourBlack;
-
-
 // Add the specified location to the array of available locations if it isn't already in it
 // and isn't the location of a coloured pixel we already plotted.
 //
@@ -88,7 +94,9 @@ static DfColour g_alreadyAddedCol = g_colourBlack;
 // colour of the bitmap at the specified location, and if it is not black, we know
 // not to add the location to the array.
 inline void AddLocationIfNew(DfBitmap *bmp, unsigned short x, unsigned short y) {
-    if (GetPix(bmp, x, y).c == g_colourBlack.c) {
+    // Check if pixel has already been visited by looking at alpha value.
+    DfColour *pixel = bmp->pixels + bmp->width * y + x;
+    if (!pixel->a) {
         if (x > 1 && x < (bmp->width-1) &&
             y > 1 && y < (bmp->height-1))
         {
@@ -97,7 +105,9 @@ inline void AddLocationIfNew(DfBitmap *bmp, unsigned short x, unsigned short y) 
 				g_availableLocations[g_numAvailableLocations].y = y;
 				g_numAvailableLocations++;
 			}
-			PutPix(bmp, x, y, g_alreadyAddedCol);
+
+            // Mark this pixel as "already visited" by setting alpha value to 1.
+            pixel->a = 1;
         }
     }
 }
@@ -119,8 +129,14 @@ void ColourWhirlMain() {
     GetDesktopRes(&width, &height);
 //    g_defaultWin = CreateWin(width, height, false, "Colour Whirl Example");
     g_window = CreateWin(1000, 1000, WT_WINDOWED_FIXED, "Colour Whirl Example");
+    
     g_defaultFont = LoadFontFromMemory(df_mono_9x18, sizeof(df_mono_9x18));
-    BitmapClear(g_window->bmp, g_colourBlack);
+    
+    // Clear the bitmap to black, but not by using the normal BitmapClear() 
+    // function because that will set the alpha values to 255. We want them to
+    // be zero, because we will use the alpha channel to keep track of which
+    // pixels have been visited.
+    memset(g_window->bmp->pixels, 0, sizeof(DfColour) * g_window->bmp->width * g_window->bmp->height);
 
     // Create the palette of colours.
     int const maxComponent = 100;
@@ -147,7 +163,6 @@ void ColourWhirlMain() {
     double start_time = GetRealTime();
 
 	// Seed the bitmap by manually placing the first few colours.
-    g_alreadyAddedCol.b = 1;
     for (int i = 0; i < 5; i++) {
         int x = rand() % g_window->bmp->width;
         int y = rand() % g_window->bmp->height;
