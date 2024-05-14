@@ -16,17 +16,15 @@ struct PixelLocation { unsigned short x, y; };
 
 // Locations of pixels where new colours can be plotted. This is the boundary on
 // the bitmap between coloured pixels we've plotted and the black background.
-static PixelLocation g_availableLocations[10000];
+enum { MAX_LOCATIONS = 100 * 1000 };
+static PixelLocation g_availableLocations[MAX_LOCATIONS];
 static unsigned g_numAvailableLocations = 0;
 
 
 inline unsigned ColourDiff(DfColour a, DfColour b) {
-    int r = (a.r - b.r)/2;
-    r *= r;
-    int g = (a.g - b.g);
-    g *= g;
-    int blue = (a.b - b.b)/2;
-    blue *= blue;
+    int r = abs(a.r - b.r)/2;
+    int g = abs(a.g - b.g);
+    int blue = abs(a.b - b.b)/2;
     return r + g + blue;
 }
 
@@ -89,12 +87,12 @@ static DfColour g_alreadyAddedCol = g_colourBlack;
 // array, we plot a not quite black pixel on the bitmap. That way we can read the
 // colour of the bitmap at the specified location, and if it is not black, we know
 // not to add the location to the array.
-inline void AddIfNew(DfBitmap *bmp, unsigned short x, unsigned short y) {
+inline void AddLocationIfNew(DfBitmap *bmp, unsigned short x, unsigned short y) {
     if (GetPix(bmp, x, y).c == g_colourBlack.c) {
         if (x > 1 && x < (bmp->width-1) &&
             y > 1 && y < (bmp->height-1))
         {
-			if (g_numAvailableLocations < 10000) {
+			if (g_numAvailableLocations < MAX_LOCATIONS) {
 				g_availableLocations[g_numAvailableLocations].x = x;
 				g_availableLocations[g_numAvailableLocations].y = y;
 				g_numAvailableLocations++;
@@ -108,14 +106,10 @@ inline void AddIfNew(DfBitmap *bmp, unsigned short x, unsigned short y) {
 void PlaceColour(DfBitmap *bmp, unsigned short x, unsigned short y, DfColour colour) {
     PutPix(bmp, x, y, colour);
 
-    AddIfNew(bmp, x - 1, y - 1);
-    AddIfNew(bmp, x, y - 1);
-    AddIfNew(bmp, x + 1, y - 1);
-    AddIfNew(bmp, x - 1, y);
-    AddIfNew(bmp, x + 1, y);
-    AddIfNew(bmp, x - 1, y + 1);
-    AddIfNew(bmp, x, y + 1);
-    AddIfNew(bmp, x + 1, y + 1);
+    AddLocationIfNew(bmp, x, y - 1);
+    AddLocationIfNew(bmp, x - 1, y);
+    AddLocationIfNew(bmp, x + 1, y);
+    AddLocationIfNew(bmp, x, y + 1);
 }
 
 
@@ -125,6 +119,7 @@ void ColourWhirlMain() {
     GetDesktopRes(&width, &height);
 //    g_defaultWin = CreateWin(width, height, false, "Colour Whirl Example");
     g_window = CreateWin(1000, 1000, WT_WINDOWED_FIXED, "Colour Whirl Example");
+    g_defaultFont = LoadFontFromMemory(df_mono_9x18, sizeof(df_mono_9x18));
     BitmapClear(g_window->bmp, g_colourBlack);
 
     // Create the palette of colours.
@@ -153,10 +148,14 @@ void ColourWhirlMain() {
 
 	// Seed the bitmap by manually placing the first few colours.
     g_alreadyAddedCol.b = 1;
-    PlaceColour(g_window->bmp, 100, 100, colours[--numColours]);
-    PlaceColour(g_window->bmp, g_window->bmp->width/2, g_window->bmp->height/2, colours[--numColours]);
+    for (int i = 0; i < 5; i++) {
+        int x = rand() % g_window->bmp->width;
+        int y = rand() % g_window->bmp->height;
+        PlaceColour(g_window->bmp, x, y, colours[--numColours]);
+    }
  
 	// Place all remaining colours.
+	numColours--;
     for (; numColours && g_numAvailableLocations; numColours--) {         
         unsigned i = FindBestLocationIndex(g_window->bmp, colours[numColours]);
         unsigned short x = g_availableLocations[i].x;
@@ -168,8 +167,8 @@ void ColourWhirlMain() {
         PlaceColour(g_window->bmp, x, y, colours[numColours]);
 
         // Every so often, copy the bitmap to the screen
-        if ((numColours & 0xfff) == 0) {
-            // Abort drawing the set if the user presses escape or clicks the close icon
+        if ((numColours & 0x3ff) == 0) {
+			// Abort drawing the set if the user presses escape or clicks the close icon
             InputPoll(g_window);
             if (g_window->windowClosed || g_window->input.keyDowns[KEY_ESC])
                 exit(0);
@@ -178,7 +177,6 @@ void ColourWhirlMain() {
     }
 
     double endTime = GetRealTime();
-    g_defaultFont = LoadFontFromMemory(df_mono_9x18, sizeof(df_mono_9x18));
     DrawTextLeft(g_defaultFont, g_colourWhite, g_window->bmp, 10, g_window->bmp->height - 20, 
 		"Time taken: %.2f sec. Press ESC.", endTime - start_time);
 
