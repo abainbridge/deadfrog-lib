@@ -2,7 +2,6 @@
 // classic "Beziers" screen saver from Windows 95.
 
 #include "df_bitmap.h"
-#include "df_common.h"
 #include "df_window.h"
 #include <stdlib.h>
 
@@ -14,30 +13,23 @@ struct BezierPoint {
 
 
 void BezierPointInit(BezierPoint *p) {
-    int w = g_window->bmp->width * 0.8;
-    int h = g_window->bmp->height * 0.8;
-    int left = g_window->bmp->width * 0.1;
-    int top = g_window->bmp->height * 0.1;
-    p->x = rand() % w + left;
-    p->y = rand() % h + top;
+    p->x = rand() % g_window->bmp->width;
+    p->y = rand() % g_window->bmp->height;
     p->velX = (rand() / (double)RAND_MAX - 0.5) * 15.0;
     p->velY = (rand() / (double)RAND_MAX - 0.5) * 15.0;
 }
 
 
 void BezierPointAdvance(BezierPoint *p) {
-    int const width = g_window->bmp->width;
-    int const height = g_window->bmp->height;
-
     // Update X component of point.
     p->x += p->velX;
     if (p->x < 0) {
         p->velX = -p->velX;
         p->x = 0;
     }
-    if (p->x >= width) {
+    if (p->x >= g_window->bmp->width) {
         p->velX = -p->velX;
-        p->x = width - 1;
+        p->x = g_window->bmp->width - 1;
     }
 
     // Update Y component of point.
@@ -46,9 +38,9 @@ void BezierPointAdvance(BezierPoint *p) {
         p->velY = -p->velY;
         p->y = 0;
     }
-    if (p->y >= height) {
+    if (p->y >= g_window->bmp->height) {
         p->velY = -p->velY;
-        p->y = height - 1;
+        p->y = g_window->bmp->height - 1;
     }
 }
 
@@ -71,11 +63,6 @@ void BeziersMain() {
         for (int i = 0; i < NUM_POINTS; i++)
             BezierPointAdvance(&points[i]);
 
-        int top = g_window->bmp->height * 0.1;
-        int bottom = g_window->bmp->height * 0.9;
-        int left = g_window->bmp->width * 0.1;
-        int right = g_window->bmp->width * 0.9;
-
         for (int i = 0; i < NUM_POINTS; i += 2) {
             int j = (i + 1) % NUM_POINTS;
             int k = (i + 2) % NUM_POINTS;
@@ -89,12 +76,14 @@ void BeziersMain() {
             int c[2] = { points[k].x, points[k].y };
             int d[2] = { x2, y2 };
 
-//             DrawLine(g_window->bmp, a[0], a[1], b[0], b[1], ctrlLineColour);
-//             DrawLine(g_window->bmp, c[0], c[1], d[0], d[1], ctrlLineColour);
-//             CircleOutline(g_window->bmp, a[0], a[1], 2, g_colourWhite);
-//             CircleOutline(g_window->bmp, b[0], b[1], 2, g_colourWhite);
-//             CircleOutline(g_window->bmp, c[0], c[1], 2, g_colourWhite);
-//             CircleOutline(g_window->bmp, d[0], d[1], 2, g_colourWhite);
+            if (g_window->input.keys[KEY_SPACE]) {
+                DrawLine(g_window->bmp, a[0], a[1], b[0], b[1], ctrlLineColour);
+                DrawLine(g_window->bmp, c[0], c[1], d[0], d[1], ctrlLineColour);
+                CircleOutline(g_window->bmp, a[0], a[1], 2, g_colourWhite);
+                CircleOutline(g_window->bmp, b[0], b[1], 2, g_colourWhite);
+                CircleOutline(g_window->bmp, c[0], c[1], 2, g_colourWhite);
+                CircleOutline(g_window->bmp, d[0], d[1], 2, g_colourWhite);
+            }
 
             DrawBezier(g_window->bmp, a, b, c, d, lineColour);
         }
