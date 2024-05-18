@@ -1,6 +1,7 @@
 void AaPolyTestMain();
 void AsteroidsMain();
 void BenchmarkMain();
+void BeziersMain();
 void ColourWhirlMain();
 void FluidMain();
 void FractalFernMain();
@@ -26,11 +27,12 @@ int main()
 //     AaPolyTestMain();
 //     AsteroidsMain();
 //     BenchmarkMain();
+    BeziersMain();
 //     ColourWhirlMain();
 //     FluidMain();
 //     FractalFernMain();
 //     GasMain();
-     GravityMain();
+//     GravityMain();
 //     HarmonographMain();
 //     HelloWorldMain();
 //     LatticeBoltzmannMain();

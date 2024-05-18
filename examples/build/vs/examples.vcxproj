@@ -191,6 +191,7 @@
     <ClCompile Include="..\..\all.cpp" />
     <ClCompile Include="..\..\asteroids.cpp" />
     <ClCompile Include="..\..\benchmark.cpp" />
+    <ClCompile Include="..\..\beziers.cpp" />
     <ClCompile Include="..\..\colour_whirl.cpp" />
     <ClCompile Include="..\..\fractal_fern.cpp" />
     <ClCompile Include="..\..\gas.cpp" />
