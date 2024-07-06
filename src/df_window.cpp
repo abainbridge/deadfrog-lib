@@ -25,11 +25,6 @@ struct _DfWindowPrivate {
     int         mouseOldY;
     int         mouseOldZ;
 
-    signed char newKeyDowns[KEY_MAX];
-    signed char newKeyUps[KEY_MAX];
-    char        newKeysTyped[MAX_KEYS_TYPED_PER_FRAME];
-    int         newNumKeysTyped;
-
     unsigned    framesThisSecond;
     double      endOfSecond;
     double      lastUpdateTime;
@@ -47,8 +42,8 @@ static void InputPollInternal(DfWindow *win);
 
 static void HandleFocusInEvent(DfWindow *win) {
     win->input.windowHasFocus = true;
-    memset(win->_private->newKeyDowns, 0, KEY_MAX);
-    memset(win->_private->newKeyUps, 0, KEY_MAX);
+    memset(win->input.keyDowns, 0, KEY_MAX);
+    memset(win->input.keyUps, 0, KEY_MAX);
     memset(win->input.keys, 0, KEY_MAX);
 }
 
@@ -185,17 +180,7 @@ bool UntypeKey(DfWindow *win, char key) {
 }
 
 
-static void InputPollInternal(DfWindow *win)
-{
-    memcpy(win->input.keyDowns, win->_private->newKeyDowns, KEY_MAX);
-    memset(win->_private->newKeyDowns, 0, KEY_MAX);
-    memcpy(win->input.keyUps, win->_private->newKeyUps, KEY_MAX);
-    memset(win->_private->newKeyUps, 0, KEY_MAX);
-
-    win->input.numKeysTyped = win->_private->newNumKeysTyped;
-    memcpy(win->input.keysTyped, win->_private->newKeysTyped, win->_private->newNumKeysTyped);
-    win->_private->newNumKeysTyped = 0;
-
+static void InputPollInternal(DfWindow *win) {
     // Count the number of key ups and downs this frame
     win->input.numKeyDowns = 0;
     win->input.numKeyUps = 0;

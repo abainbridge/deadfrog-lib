@@ -88,8 +88,8 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
                 !win->input.keys[KEY_ALT] &&
                 wParam != KEY_ESC) {
                 ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_CHAR", wParam);
-                win->_private->newKeysTyped[win->_private->newNumKeysTyped] = wParam;
-                win->_private->newNumKeysTyped++;
+                win->input.keysTyped[win->input.numKeysTyped] = wParam;
+                win->input.numKeysTyped++;
             }
             break;
 
@@ -149,13 +149,13 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
                 break;
 
             win->input.keys[wParam] = 0;
-            win->_private->newKeyUps[wParam] = 1;
+            win->input.keyUps[wParam] = 1;
             break;
 
         case WM_SYSKEYDOWN:
             ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_SYSKEYDOWN", wParam);
             win->input.keys[wParam] = 1;
-            win->_private->newKeyDowns[wParam] = 1;
+            win->input.keyDowns[wParam] = 1;
             break;
 
         case WM_KEYUP:
@@ -163,7 +163,7 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
             // Windows will generate a SYSKEYUP event for the release of F, and a
             // normal KEYUP event for the release of the ALT. Very strange.
             ReleaseAssert(wParam < KEY_MAX, s_keypressOutOfRangeMsg, "WM_KEYUP", wParam);
-            win->_private->newKeyUps[wParam] = 1;
+            win->input.keyUps[wParam] = 1;
             win->input.keys[wParam] = 0;
             break;
 
@@ -178,15 +178,15 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
                 wParam = KEY_DEL;
 
             if (wParam == KEY_DEL) {
-                win->_private->newKeysTyped[win->_private->newNumKeysTyped] = KEY_DEL;
-                win->_private->newNumKeysTyped++;
+                win->input.keysTyped[win->input.numKeysTyped] = KEY_DEL;
+                win->input.numKeysTyped++;
             }
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0) {
                 // Key event is the Control part of Alt_Gr, so throw it away. There
                 // will be an event for the alt part too.
                 break;
             }
-            win->_private->newKeyDowns[wParam] = 1;
+            win->input.keyDowns[wParam] = 1;
             win->input.keys[wParam] = 1;
             break;
 
@@ -220,6 +220,9 @@ bool InputPoll(DfWindow *win) {
     win->input.lmbUnClicked = false;
     win->input.mmbUnClicked = false;
     win->input.rmbUnClicked = false;
+    memset(win->input.keyDowns, 0, KEY_MAX);
+    memset(win->input.keyUps, 0, KEY_MAX);
+    win->input.numKeysTyped = 0;
 
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
