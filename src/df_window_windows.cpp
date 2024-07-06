@@ -178,7 +178,7 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
                 wParam = KEY_DEL;
 
             if (wParam == KEY_DEL) {
-                win->_private->newKeysTyped[win->input.numKeysTyped] = KEY_DEL;
+                win->_private->newKeysTyped[win->_private->newNumKeysTyped] = KEY_DEL;
                 win->_private->newNumKeysTyped++;
             }
             else if (wParam == KEY_CONTROL && GetAsyncKeyState(VK_MENU) < 0) {
