@@ -552,10 +552,6 @@ static void BlitBitmapToWindow(DfWindow *win) {
     binfo.bmiHeader.biBitCount = 32;
     binfo.bmiHeader.biCompression = BI_RGB;
     binfo.bmiHeader.biSizeImage = bmp->height * bmp->width * 4;
-    binfo.bmiHeader.biXPelsPerMeter = 0;
-    binfo.bmiHeader.biYPelsPerMeter = 0;
-    binfo.bmiHeader.biClrUsed = 0;
-    binfo.bmiHeader.biClrImportant = 0;
 
     HDC dc = GetDC(win->_private->platSpec->hWnd);
 
