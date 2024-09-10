@@ -120,7 +120,9 @@ DLL_API DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType w
 
 DLL_API void DestroyWin(DfWindow *win);
 
-// Get the DPI of the monitor that the window is on.
+// Get the "effective" DPI of the monitor that the window is on. "Effective" means that if the
+// user has configured their computer to display things at 125% scale, you'll get the raw DPI
+// multiplied by 1.25.
 DLL_API int GetMonitorDpi(DfWindow *win);
 
 // Get the work area for the monitor the window is on. This is the pixel size of the monitor minus the task bar size.
