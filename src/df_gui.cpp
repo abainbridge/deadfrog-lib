@@ -1120,6 +1120,19 @@ void DfMenuBarAddAction(DfMenuBar *dfMb, char const *menuName,
 }
 
 
+void DfMenuBarRemoveAction(DfMenuBar *dfMb, char const *menuName,
+    char const *menuItemLabel, DfKeyboardShortcut shortcut) {
+    MenuBar *mb = (MenuBar*)dfMb->internals;
+    mb->ClearAllState();
+    Menu *menu = mb->FindMenuByName(menuName);
+    if (!menu)
+        menu = mb->AddMenu(menuName);
+
+    if (menu)
+        menu->AddItem(menuItemLabel, shortcut);
+}
+
+
 DfGuiAction DfMenuBarDo(DfWindow *win, DfMenuBar *dfMb) {
     MenuBar *mb = (MenuBar*)dfMb->internals;
     DfGuiAction event = mb->Advance(win);
