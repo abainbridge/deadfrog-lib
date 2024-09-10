@@ -205,6 +205,7 @@ static void InputPollInternal(DfWindow *win) {
     // them if the last mouse down event was in the client area.
     if (win->_private->lastClickWasNC) {
         win->_private->lastClickWasNC = false;
+        win->input.lmbClicked = true;
         win->input.lmb = false;
         win->input.mmb = false;
         win->input.rmb = false;
