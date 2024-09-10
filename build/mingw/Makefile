@@ -15,7 +15,7 @@ d_files=$(patsubst %.o,%.d,$(o_files))
 libdeadfrog.a: $(obj_dir) $(o_files)
 	ar cr $@ $(o_files)
 
-# This magic line makes g++ pay attention to the dependency files
+# This line tells Make to pay attention to the dependency files.
 -include $(d_files)
 
 $(obj_dir)/fonts/%.o: $(src_dir)/fonts/%.cpp Makefile
