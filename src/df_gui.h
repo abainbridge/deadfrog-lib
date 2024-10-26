@@ -69,6 +69,7 @@ typedef struct {
     double nextCursorToggleTime;
     char cursorOn;
     int cursorIdx;
+	int selectionIdx; // Equal to cursorIdx if no selection.
 } DfEditBox;
 
 

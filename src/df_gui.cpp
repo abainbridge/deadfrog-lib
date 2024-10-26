@@ -4,6 +4,7 @@
 // Deadfrog lib headers.
 #include "fonts/df_prop.h"
 #include "df_bitmap.h"
+#include "df_clipboard.h"
 #include "df_time.h"
 #include "df_window.h"
 
@@ -187,6 +188,23 @@ int DfVScrollbarDo(DfWindow *win, DfVScrollbar *vs, int x, int y, int w, int h, 
 // Edit box
 // ****************************************************************************
 
+static void EditBoxGetSelectionIndices(DfEditBox *eb, int *c1, int *c2) {
+    *c1 = eb->cursorIdx;
+    *c2 = eb->selectionIdx;
+    if (*c1 > *c2) {
+        *c2 = eb->cursorIdx;
+        *c1 = eb->selectionIdx;
+    }
+}
+
+static void EditBoxDeleteChars(DfEditBox *eb, int startIdx, int numChars) {
+    char *c = eb->text + startIdx;
+    int cLen = strlen(c);
+    numChars = IntMin(numChars, cLen);
+    memmove(c, c + numChars, cLen - numChars);
+    c[cLen - numChars] = '\0';
+}
+
 // Returns 1 if contents changed.
 int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
     DfDrawSunkenBox(win->bmp, x, y, w, h);
@@ -202,59 +220,104 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
         eb->nextCursorToggleTime = now + 0.5;
     }
 
-    if (win->input.keyDowns[KEY_LEFT]) {
-        eb->cursorIdx = IntMax(0, eb->cursorIdx - 1);
-        eb->nextCursorToggleTime = now;
-    }
-    else if (win->input.keyDowns[KEY_RIGHT]) {
-        eb->cursorIdx = IntMin(strlen(eb->text), eb->cursorIdx + 1);
-        eb->nextCursorToggleTime = now;
-    }
-    else if (win->input.keyDowns[KEY_HOME]) {
-        eb->cursorIdx = 0;
-        eb->nextCursorToggleTime = now;
-    }
-    else if (win->input.keyDowns[KEY_END]) {
-        eb->cursorIdx = strlen(eb->text);
-        eb->nextCursorToggleTime = now;
-    }
+    // Update cursor position.
+    {
+        int clearSelection = 0;
 
-    int contentsChanged = 0;
-    for (int i = 0; i < win->input.numKeysTyped; i++) {
-        char c = win->input.keysTyped[i];
-        if (c == 8) { // Backspace
-            if (eb->cursorIdx > 0) {
-                char *move_src = eb->text + eb->cursorIdx;
-                unsigned move_size = strlen(move_src);
-                memmove(move_src - 1, move_src, move_size);
-                move_src[move_size - 1] = '\0';
-                eb->cursorIdx--;
+        if (win->input.keyDowns[KEY_LEFT]) {
+            eb->cursorIdx = IntMax(0, eb->cursorIdx - 1);
+            eb->nextCursorToggleTime = now;
+            clearSelection = !win->input.keys[KEY_SHIFT];
+        }
+        else if (win->input.keyDowns[KEY_RIGHT]) {
+            eb->cursorIdx = IntMin(strlen(eb->text), eb->cursorIdx + 1);
+            eb->nextCursorToggleTime = now;
+            clearSelection = !win->input.keys[KEY_SHIFT];
+        }
+        else if (win->input.keyDowns[KEY_HOME]) {
+            eb->cursorIdx = 0;
+            eb->nextCursorToggleTime = now;
+            clearSelection = !win->input.keys[KEY_SHIFT];
+        }
+        else if (win->input.keyDowns[KEY_END]) {
+            eb->cursorIdx = strlen(eb->text);
+            eb->nextCursorToggleTime = now;
+            clearSelection = !win->input.keys[KEY_SHIFT];
+        }
+        else if (win->input.keys[KEY_CONTROL]) {
+            if (win->input.keyDowns[KEY_A]) {
+                eb->selectionIdx = 0;
+                eb->cursorIdx = strlen(eb->text);
             }
         }
-        else if (c == 127) { // Delete
-            char *moveSrc = eb->text + eb->cursorIdx + 1;
-            unsigned move_size = strlen(moveSrc);
-            memmove(moveSrc - 1, moveSrc, move_size);
-            moveSrc[move_size - 1] = '\0';
+
+        if (clearSelection) {
+            eb->selectionIdx = eb->cursorIdx;
         }
-        else {
-            char *moveSrc = eb->text + eb->cursorIdx;
-            unsigned move_size = strlen(moveSrc);
-            memmove(moveSrc + 1, moveSrc, move_size);
-            eb->text[eb->cursorIdx] = c;
-            eb->text[sizeof(eb->text) - 1] = '\0';
-            eb->cursorIdx = IntMin(eb->cursorIdx + 1, sizeof(eb->text) - 1);
+    }
+
+    // Handle copy to clipboard.
+    if (win->input.keys[KEY_CONTROL] && win->input.keyDowns[KEY_C]) {
+        int c1, c2;
+        EditBoxGetSelectionIndices(eb, &c1, &c2);
+        ClipboardSetData(eb->text + c1, c2 - c1);
+    }
+
+    // Process what the user typed.
+    int contentsChanged = 0;
+    if (win->input.numKeysTyped > 0) {
+        int selectionDeleted = 0;
+        if (eb->selectionIdx != eb->cursorIdx) {
+            // Delete the selected text and clear the selection.
+            int c1, c2;
+            EditBoxGetSelectionIndices(eb, &c1, &c2);
+            EditBoxDeleteChars(eb, c1, c2 - c1);
+            eb->selectionIdx = eb->cursorIdx = c1;
+            selectionDeleted = 1;
         }
 
-        contentsChanged = 1;
+        for (int i = 0; i < win->input.numKeysTyped; i++) {
+            char c = win->input.keysTyped[i];
+            if (c == 8) { // Backspace
+                if (eb->cursorIdx > 0 && !selectionDeleted) {
+                    EditBoxDeleteChars(eb, eb->cursorIdx - 1, 1);
+                    eb->cursorIdx--;
+                }
+            }
+            else if (c == 127) { // Delete
+                if (!selectionDeleted) {
+                    EditBoxDeleteChars(eb, eb->cursorIdx, 1);
+                }
+            }
+            else {
+                char *moveSrc = eb->text + eb->cursorIdx;
+                unsigned moveSize = strlen(moveSrc);
+                memmove(moveSrc + 1, moveSrc, moveSize);
+                eb->text[eb->cursorIdx] = c;
+                moveSrc[moveSize + 1] = '\0';
+                eb->cursorIdx = IntMin(eb->cursorIdx + 1, sizeof(eb->text) - 1);
+            }
+        }
+
         eb->nextCursorToggleTime = now;
+        eb->selectionIdx = eb->cursorIdx;
+        contentsChanged = 1;
     }
+
+    // Draw selection rectangle.
+	if (eb->selectionIdx != eb->cursorIdx) {
+        int c1, c2;
+        EditBoxGetSelectionIndices(eb, &c1, &c2);
+		int x1 = GetTextWidthNumChars(g_defaultFont, eb->text, c1);
+		int x2 = GetTextWidthNumChars(g_defaultFont, eb->text + c1, c2 - c1);
+		RectFill(win->bmp, x + x1, y, x2, g_defaultFont->charHeight, g_selectionColour);
+	}
 
     DrawTextSimple(g_defaultFont, g_normalTextColour, win->bmp, x, y, eb->text);
 
     if (eb->cursorOn) {
         int cursorX = GetTextWidthNumChars(g_defaultFont, eb->text, eb->cursorIdx) + x;
-        RectFill(win->bmp, cursorX, y, 2 * g_drawScale, g_defaultFont->charHeight, g_normalTextColour);
+        RectFill(win->bmp, cursorX, y, g_drawScale * 1.4, g_defaultFont->charHeight, g_normalTextColour);
     }
 
     ClearClipRect(win->bmp);
