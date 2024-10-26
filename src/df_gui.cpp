@@ -44,6 +44,7 @@ int DfMouseInRect(DfWindow *win, int x, int y, int w, int h) {
     return PointInRect(win->input.mouseX, win->input.mouseY, x, y, w, h);
 }
 
+
 static int ChangeDrawScaleIfDpiChanged() {
 	static int lastDpi = 96;
 	static float prevDrawScale = 1.0f;
@@ -63,6 +64,7 @@ static int ChangeDrawScaleIfDpiChanged() {
 
 	return scaleChanged;
 }
+
 
 void DfGuiDoFrame(DfWindow *win) {
     if (win->input.lmbClicked) {
@@ -198,6 +200,7 @@ static void EditBoxGetSelectionIndices(DfEditBox *eb, int *c1, int *c2) {
     }
 }
 
+
 static void EditBoxDeleteChars(DfEditBox *eb, int startIdx, int numChars) {
     char *c = eb->text + startIdx;
     int cLen = strlen(c);
@@ -205,6 +208,7 @@ static void EditBoxDeleteChars(DfEditBox *eb, int startIdx, int numChars) {
     memmove(c, c + numChars, cLen - numChars);
     c[cLen - numChars] = '\0';
 }
+
 
 static void EditBoxInsertChar(DfEditBox *eb, char c) {
     if (c < 32)
@@ -220,12 +224,14 @@ static void EditBoxInsertChar(DfEditBox *eb, char c) {
     eb->cursorIdx = IntMin(eb->cursorIdx + 1, sizeof(eb->text) - 1);
 }
 
+
 static void EditBoxMoveCursorWordLeft(DfEditBox *eb) {
     int startIsAlnum = isalnum(eb->text[eb->cursorIdx - 1]);
     while (eb->cursorIdx > 0 && isalnum(eb->text[eb->cursorIdx - 1]) == startIsAlnum) {
         eb->cursorIdx--;
     }
 }
+
 
 static void EditBoxMoveCursorWordRight(DfEditBox *eb) {
     int startIsAlnum = isalnum(eb->text[eb->cursorIdx]);
@@ -234,6 +240,7 @@ static void EditBoxMoveCursorWordRight(DfEditBox *eb) {
         eb->cursorIdx++;
     }
 }
+
 
 // Returns 1 if contents changed.
 int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
@@ -811,6 +818,7 @@ struct Menu {
 
         return { 0 };
     }
+
     void Render(DfWindow *win) {
         // Calculate how tall and wide the menu needs to be
         int height = GetHeight();
@@ -868,6 +876,7 @@ struct Menu {
     static int GetItemHeight() {
         return g_defaultFont->charHeight + MENU_ITEM_Y_SPACE * 2 * g_drawScale;
     }
+
     int GetWidth() {
         int longest = 0;
         for (int i = 0; i < m_numItems; i++) {
@@ -878,6 +887,7 @@ struct Menu {
 
         return longest + 30 * g_drawScale + m_longestShortcutLen;
     }
+
     int GetHeight() {
         MenuItem *item = m_items[m_numItems - 1];
         int rv = item->m_top - m_top + GetItemHeight();
@@ -887,6 +897,7 @@ struct Menu {
     bool IsMouseOverTitle(DfWindow *win, int menuBarHeight) {
         return !!DfMouseInRect(win, m_left, 0, m_titleWidth, menuBarHeight);
     }
+
     bool IsMouseOver(DfWindow *win) {
         int width = GetWidth();
         int height = GetHeight();
@@ -894,6 +905,7 @@ struct Menu {
             return true;
         return false;
     }
+
     int GetItemUnderMouse(DfWindow *win) {
         if (!IsMouseOver(win)) return -1;
 
@@ -1008,6 +1020,7 @@ struct MenuBar {
             x += menu->m_titleWidth;
         }
     }
+
     int GetHighlightedMenuIdx() {
         for (int i = 0; i < m_numMenus; i++) {
             if (m_menus[i] == m_highlightedMenu)
@@ -1016,6 +1029,7 @@ struct MenuBar {
 
         return -1;
     }
+
     Menu *GetMenuTitleUnderMouseCursor(DfWindow *win) {
         for (int i = 0; i < m_numMenus; i++) {
             Menu *menu = m_menus[i];
@@ -1026,6 +1040,7 @@ struct MenuBar {
 
         return NULL;
     }
+
     void ClearAllState() {
         m_highlightedMenu = NULL;
         m_displayed = false;
@@ -1039,11 +1054,13 @@ struct MenuBar {
         m_numMenus++;
         return m_menus[m_numMenus - 1];
     }
+
     void ShowContextMenu(Menu *contextMenu) {
         m_contextMenu = contextMenu;
         m_contextMenu->m_highlightedItem = 0;
         m_capturingInput = true;
     }
+
     DfGuiAction CheckKeyboardShortcuts(DfWindow *win) {
         for (int i = 0; i < m_numMenus; i++) {
             Menu *menu = m_menus[i];
@@ -1060,12 +1077,14 @@ struct MenuBar {
 
         return { 0 };
     }
+
     void DisplayMenu(Menu *menu, int highlightedItem) {
         m_highlightedMenu = menu;
         m_highlightedMenu->m_highlightedItem = highlightedItem;
         m_capturingInput = true;
         m_displayed = true;
     }
+
     DfGuiAction HandleEvents(DfWindow *win) {
         // The events and states of the menu system are described in
         // deadfrog-lib/docs/MenuStateMachine.png
@@ -1140,6 +1159,7 @@ struct MenuBar {
         event = CheckKeyboardShortcuts(win);
         return event;
     }
+
     DfGuiAction Advance(DfWindow *win) {
         if (win->input.keys[KEY_ALT]) {
             if (m_altState == 0)
@@ -1185,6 +1205,7 @@ struct MenuBar {
 
         return event;
     }
+
     void Render(DfWindow *win) {
         // Draw the menu bar background
         RectFill(win->bmp, 0, 0, win->bmp->width, m_height, g_frameColour);
@@ -1220,6 +1241,7 @@ struct MenuBar {
 
         return NULL;
     }
+
     Menu *FindMenuByHotKey(DfWindow *win) {
         for (int i = 0; i < m_numMenus; i++) {
             int keyId = m_menus[i]->m_name[0];
