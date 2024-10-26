@@ -354,6 +354,14 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
         contentsChanged = 1;
     }
 
+    // Do we need to scroll to keep the cursor visible?
+    {
+        int cursorX = GetTextWidthNumChars(g_defaultFont, eb->text, eb->cursorIdx);
+        if (cursorX > (w * 0.95)) {
+            x += w * 0.95 - cursorX;
+        }
+    }
+
     // Draw selection rectangle.
 	if (eb->selectionIdx != eb->cursorIdx) {
         int c1, c2;
