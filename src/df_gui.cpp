@@ -249,7 +249,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
         eb->nextCursorToggleTime = now + 0.5;
     }
 
-    // Update cursor position.
+    // Process keyboard shortcuts.
     {
         int clearSelection = 0;
 
@@ -280,54 +280,52 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
             clearSelection = !win->input.keys[KEY_SHIFT];
         }
         else if (win->input.keys[KEY_CONTROL]) {
-            if (win->input.keyDowns[KEY_A]) {
+            if (win->input.keyDowns[KEY_A]) { // Select all
                 eb->selectionIdx = 0;
                 eb->cursorIdx = strlen(eb->text);
             }
-            else if (win->input.keyDowns[KEY_BACKSPACE]) {
+            else if (win->input.keyDowns[KEY_BACKSPACE]) { // Delete word left
                 eb->selectionIdx = eb->cursorIdx;
                 EditBoxMoveCursorWordLeft(eb);
                 EditBoxDeleteChars(eb, eb->cursorIdx, eb->selectionIdx - eb->cursorIdx + 1);
                 clearSelection = 1;
             }
-            else if (win->input.keyDowns[KEY_DEL]) {
+            else if (win->input.keyDowns[KEY_DEL]) { // Delete word right
                 eb->selectionIdx = eb->cursorIdx;
                 EditBoxMoveCursorWordRight(eb);
                 EditBoxDeleteChars(eb, eb->selectionIdx, eb->cursorIdx - eb->selectionIdx + 1);
                 eb->cursorIdx = eb->selectionIdx;
+            }
+            else if (win->input.keyDowns[KEY_C]) { // Copy to clipboard
+                int c1, c2;
+                EditBoxGetSelectionIndices(eb, &c1, &c2);
+                ClipboardSetData(eb->text + c1, c2 - c1);
+            }
+            else if (win->input.keyDowns[KEY_X]) { // Cut to clipboard
+                int c1, c2;
+                EditBoxGetSelectionIndices(eb, &c1, &c2);
+                ClipboardSetData(eb->text + c1, c2 - c1);
+                EditBoxDeleteChars(eb, c1, c2 - c1);
+                clearSelection = 1;
+            }
+            else if (win->input.keyDowns[KEY_V]) { // Paste from clipboard
+                int c1, c2;
+                EditBoxGetSelectionIndices(eb, &c1, &c2);
+                EditBoxDeleteChars(eb, c1, c2 - c1);
+
+                int clipBufNumChars;
+                char *clipBuf = ClipboardReceiveData(&clipBufNumChars);
+                for (int i = 0; i < clipBufNumChars; i++)
+                    EditBoxInsertChar(eb, clipBuf[i]);
+                ClipboardReleaseReceivedData(clipBuf);
+
+                clearSelection = 1;
             }
         }
 
         if (clearSelection) {
             eb->selectionIdx = eb->cursorIdx;
         }
-    }
-
-    // Handle cut, copy and paste.
-    if (win->input.keys[KEY_CONTROL] && win->input.keyDowns[KEY_C]) {
-        int c1, c2;
-        EditBoxGetSelectionIndices(eb, &c1, &c2);
-        ClipboardSetData(eb->text + c1, c2 - c1);
-    }
-    else if (win->input.keys[KEY_CONTROL] && win->input.keyDowns[KEY_X]) {
-        int c1, c2;
-        EditBoxGetSelectionIndices(eb, &c1, &c2);
-        ClipboardSetData(eb->text + c1, c2 - c1);
-        EditBoxDeleteChars(eb, c1, c2 - c1);
-        eb->selectionIdx = eb->cursorIdx = c1;
-    }
-    else if (win->input.keys[KEY_CONTROL] && win->input.keyDowns[KEY_V]) {
-        int c1, c2;
-        EditBoxGetSelectionIndices(eb, &c1, &c2);
-        EditBoxDeleteChars(eb, c1, c2 - c1);
-
-        int clipBufNumChars;
-        char *clipBuf = ClipboardReceiveData(&clipBufNumChars);
-        for (int i = 0; i < clipBufNumChars; i++)
-            EditBoxInsertChar(eb, clipBuf[i]);
-        ClipboardReleaseReceivedData(clipBuf);
-
-        eb->selectionIdx = eb->cursorIdx = c1;
     }
 
     // Process what the user typed.
