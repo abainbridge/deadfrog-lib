@@ -205,6 +205,21 @@ static void EditBoxDeleteChars(DfEditBox *eb, int startIdx, int numChars) {
     c[cLen - numChars] = '\0';
 }
 
+static void EditBoxMoveCursorWordLeft(DfEditBox *eb) {
+    int startIsAlnum = isalnum(eb->text[eb->cursorIdx - 1]);
+    while (eb->cursorIdx > 0 && isalnum(eb->text[eb->cursorIdx - 1]) == startIsAlnum) {
+        eb->cursorIdx--;
+    }
+}
+
+static void EditBoxMoveCursorWordRight(DfEditBox *eb) {
+    int startIsAlnum = isalnum(eb->text[eb->cursorIdx]);
+    int len = strlen(eb->text);
+    while (eb->cursorIdx < len && isalnum(eb->text[eb->cursorIdx]) == startIsAlnum) {
+        eb->cursorIdx++;
+    }
+}
+
 // Returns 1 if contents changed.
 int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
     DfDrawSunkenBox(win->bmp, x, y, w, h);
@@ -225,12 +240,18 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
         int clearSelection = 0;
 
         if (win->input.keyDowns[KEY_LEFT]) {
-            eb->cursorIdx = IntMax(0, eb->cursorIdx - 1);
+            if (win->input.keys[KEY_CONTROL])
+                EditBoxMoveCursorWordLeft(eb);
+            else
+                eb->cursorIdx = IntMax(0, eb->cursorIdx - 1);
             eb->nextCursorToggleTime = now;
             clearSelection = !win->input.keys[KEY_SHIFT];
         }
         else if (win->input.keyDowns[KEY_RIGHT]) {
-            eb->cursorIdx = IntMin(strlen(eb->text), eb->cursorIdx + 1);
+            if (win->input.keys[KEY_CONTROL])
+                EditBoxMoveCursorWordRight(eb);
+            else
+                eb->cursorIdx = IntMin(strlen(eb->text), eb->cursorIdx + 1);
             eb->nextCursorToggleTime = now;
             clearSelection = !win->input.keys[KEY_SHIFT];
         }
