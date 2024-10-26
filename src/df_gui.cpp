@@ -205,6 +205,20 @@ static void EditBoxDeleteChars(DfEditBox *eb, int startIdx, int numChars) {
     c[cLen - numChars] = '\0';
 }
 
+static void EditBoxInsertChar(DfEditBox *eb, char c) {
+    if (c < 32)
+        return;
+    unsigned len = strlen(eb->text);
+    if (len >= (sizeof(eb->text) - 1))
+        return;
+    char *moveSrc = eb->text + eb->cursorIdx;
+    unsigned moveSize = len - eb->cursorIdx;
+    memmove(moveSrc + 1, moveSrc, moveSize);
+    eb->text[eb->cursorIdx] = c;
+    moveSrc[moveSize + 1] = '\0';
+    eb->cursorIdx = IntMin(eb->cursorIdx + 1, sizeof(eb->text) - 1);
+}
+
 static void EditBoxMoveCursorWordLeft(DfEditBox *eb) {
     int startIsAlnum = isalnum(eb->text[eb->cursorIdx - 1]);
     while (eb->cursorIdx > 0 && isalnum(eb->text[eb->cursorIdx - 1]) == startIsAlnum) {
@@ -277,11 +291,31 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
         }
     }
 
-    // Handle copy to clipboard.
+    // Handle cut, copy and paste.
     if (win->input.keys[KEY_CONTROL] && win->input.keyDowns[KEY_C]) {
         int c1, c2;
         EditBoxGetSelectionIndices(eb, &c1, &c2);
         ClipboardSetData(eb->text + c1, c2 - c1);
+    }
+    else if (win->input.keys[KEY_CONTROL] && win->input.keyDowns[KEY_X]) {
+        int c1, c2;
+        EditBoxGetSelectionIndices(eb, &c1, &c2);
+        ClipboardSetData(eb->text + c1, c2 - c1);
+        EditBoxDeleteChars(eb, c1, c2 - c1);
+        eb->selectionIdx = eb->cursorIdx = c1;
+    }
+    else if (win->input.keys[KEY_CONTROL] && win->input.keyDowns[KEY_V]) {
+        int c1, c2;
+        EditBoxGetSelectionIndices(eb, &c1, &c2);
+        EditBoxDeleteChars(eb, c1, c2 - c1);
+
+        int clipBufNumChars;
+        char *clipBuf = ClipboardReceiveData(&clipBufNumChars);
+        for (int i = 0; i < clipBufNumChars; i++)
+            EditBoxInsertChar(eb, clipBuf[i]);
+        ClipboardReleaseReceivedData(clipBuf);
+
+        eb->selectionIdx = eb->cursorIdx = c1;
     }
 
     // Process what the user typed.
@@ -311,12 +345,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
                 }
             }
             else {
-                char *moveSrc = eb->text + eb->cursorIdx;
-                unsigned moveSize = strlen(moveSrc);
-                memmove(moveSrc + 1, moveSrc, moveSize);
-                eb->text[eb->cursorIdx] = c;
-                moveSrc[moveSize + 1] = '\0';
-                eb->cursorIdx = IntMin(eb->cursorIdx + 1, sizeof(eb->text) - 1);
+                EditBoxInsertChar(eb, c);
             }
         }
 
