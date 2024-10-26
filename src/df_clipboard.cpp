@@ -24,17 +24,23 @@ char *ClipboardReceiveData(int *numChars) {
     if (!OpenClipboard(NULL))
         return NULL;
 
-    // Retrieve the Clipboard data (specifying that we want ANSI text.
+    // Retrieve the Clipboard data (specifying that we want ANSI text).
     g_clipboardData = GetClipboardData(CF_TEXT);
     if (!g_clipboardData)
-        return NULL;
+        goto err;
 
     // Get a pointer to the data associated with the handle returned from
     // GetClipboardData.
     char *data = (char*)GlobalLock(g_clipboardData);
-    *numChars = strlen(data) + 1;
+    if (!data)
+        goto err;
 
+    *numChars = strlen(data) + 1;
     return data;
+
+err:
+    CloseClipboard();
+    return NULL;
 }
 
 
@@ -68,8 +74,10 @@ int ClipboardSetData(char const *data, int sizeData) {
     // Calling GlobalLock returns a pointer to the data associated with the
     // handle returned from GlobalAlloc()
     char *windowsData = (char*)GlobalLock(clipboardHandle);
-    if (!windowsData)
+    if (!windowsData) {
+        CloseClipboard();
         return 0;
+    }
 
     // Copy the data from the local variable to the global memory.
     memcpy(windowsData, data, sizeData);
