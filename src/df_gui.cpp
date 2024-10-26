@@ -284,6 +284,18 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
                 eb->selectionIdx = 0;
                 eb->cursorIdx = strlen(eb->text);
             }
+            else if (win->input.keyDowns[KEY_BACKSPACE]) {
+                eb->selectionIdx = eb->cursorIdx;
+                EditBoxMoveCursorWordLeft(eb);
+                EditBoxDeleteChars(eb, eb->cursorIdx, eb->selectionIdx - eb->cursorIdx + 1);
+                clearSelection = 1;
+            }
+            else if (win->input.keyDowns[KEY_DEL]) {
+                eb->selectionIdx = eb->cursorIdx;
+                EditBoxMoveCursorWordRight(eb);
+                EditBoxDeleteChars(eb, eb->selectionIdx, eb->cursorIdx - eb->selectionIdx + 1);
+                eb->cursorIdx = eb->selectionIdx;
+            }
         }
 
         if (clearSelection) {
@@ -340,7 +352,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
                 }
             }
             else if (c == 127) { // Delete
-                if (!selectionDeleted) {
+                if (!selectionDeleted && !win->input.keys[KEY_CONTROL]) {
                     EditBoxDeleteChars(eb, eb->cursorIdx, 1);
                 }
             }
