@@ -586,6 +586,17 @@ static int GetStringIdxFromPixelOffset(char const *s, int targetPixelOffset) {
 }
 
 
+static void TextViewSelectWord(DfTextView *tv, char const *line) {
+    int startIsAlnum = !!isalnum(line[tv->selectionStartX]);
+    while (tv->selectionStartX > 0 && !!isalnum(line[tv->selectionStartX - 1]) == startIsAlnum)
+        tv->selectionStartX--;
+
+    int len = strlen(line);
+    while ((tv->selectionEndX + 1) < len && !!isalnum(line[tv->selectionEndX + 1]) == startIsAlnum)
+        tv->selectionEndX++;
+}
+
+
 void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
     int mouseInRect = DfMouseInRect(win, x, y, w, h);
     DfDrawSunkenBox(win->bmp, x, y, w, h);
@@ -622,18 +633,26 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
         // Update selection block if mouse click on current line.
         if (mouseInRect) {
             if (win->input.mouseY >= y && win->input.mouseY < (y + g_defaultFont->charHeight)) {
-                if (win->input.lmbClicked) {
+                if (win->input.lmbDoubleClicked) {
+                    TextViewSelectWord(tv, line);
+                }
+                else if (win->input.lmbClicked) {
                     int pixel_offset = win->input.mouseX - x;
                     tv->selectionStartX = GetStringIdxFromPixelOffset(line, pixel_offset);
                     tv->selectionStartY = line_num;
+                    tv->selectionEndX = tv->selectionStartX;
+                    tv->selectionEndY = tv->selectionStartY;
+                    tv->dragSelecting = 1;
                 }
-
-                if (win->input.lmb) {
+                else if (!win->input.lmb) {
+                    tv->dragSelecting = false;
+                }
+                else if (tv->dragSelecting) {
                     int pixel_offset = win->input.mouseX - x;
                     tv->selectionEndX = GetStringIdxFromPixelOffset(line, pixel_offset);
                     tv->selectionEndY = line_num;
                 }
-            }
+           }
         }
 
         char const *end_of_line = strchr(line, '\n');

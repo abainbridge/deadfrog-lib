@@ -109,6 +109,8 @@ typedef struct {
     int selectionStartY;
     int selectionEndX;
     int selectionEndY;
+
+    int dragSelecting; // True if the LMB is down and we're dragging a selection.
 } DfTextView;
 
 
