@@ -314,12 +314,14 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
                 EditBoxGetSelectionIndices(eb, &c1, &c2);
                 ClipboardSetData(eb->text + c1, c2 - c1);
                 EditBoxDeleteChars(eb, c1, c2 - c1);
+                eb->cursorIdx = eb->selectionIdx = c1;
                 clearSelection = 1;
             }
             else if (win->input.keyDowns[KEY_V]) { // Paste from clipboard
                 int c1, c2;
                 EditBoxGetSelectionIndices(eb, &c1, &c2);
                 EditBoxDeleteChars(eb, c1, c2 - c1);
+                eb->cursorIdx = eb->selectionIdx = c1;
 
                 int clipBufNumChars;
                 char *clipBuf = ClipboardReceiveData(&clipBufNumChars);
@@ -666,7 +668,7 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
             if (line_num == sel_start_y)
                 start_idx = sel_start_x;
             if (line_num == sel_end_y && (sel_end_x + 1) < line_len)
-                end_idx = sel_end_x + 1;
+                end_idx = sel_end_x;
 
             int sel_x = x + GetTextWidthNumChars(g_defaultFont, line, start_idx);
             int sel_w = GetTextWidthNumChars(g_defaultFont, line + start_idx, end_idx - start_idx);
@@ -708,7 +710,7 @@ char const *DfTextViewGetSelectedText(DfTextView *tv, int *numChars) {
         lineNum++;
     }
 
-    *numChars = line - startOfBlock + selEndX + 1;
+    *numChars = line - startOfBlock + selEndX;
 
     return startOfBlock;
 }
