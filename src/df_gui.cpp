@@ -191,6 +191,8 @@ int DfVScrollbarDo(DfWindow *win, DfVScrollbar *vs, int x, int y, int w, int h, 
 // Edit box
 // ****************************************************************************
 
+#define CURSOR_TOGGLE_PERIOD 0.5
+
 static void EditBoxGetSelectionIndices(DfEditBox *eb, int *c1, int *c2) {
     *c1 = eb->cursorIdx;
     *c2 = eb->selectionIdx;
@@ -198,6 +200,13 @@ static void EditBoxGetSelectionIndices(DfEditBox *eb, int *c1, int *c2) {
         *c2 = eb->cursorIdx;
         *c1 = eb->selectionIdx;
     }
+}
+
+
+static void EditBoxForceCusorOn(DfEditBox *eb) {
+    eb->cursorOn = 1;
+    double now = GetRealTime();
+    eb->nextCursorToggleTime = now + CURSOR_TOGGLE_PERIOD;
 }
 
 
@@ -254,7 +263,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
     double now = GetRealTime();
     if (now > eb->nextCursorToggleTime) {
         eb->cursorOn = !eb->cursorOn;
-        eb->nextCursorToggleTime = now + 0.5;
+        eb->nextCursorToggleTime = now + CURSOR_TOGGLE_PERIOD;
     }
 
     // Process keyboard shortcuts.
@@ -266,43 +275,46 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
                 EditBoxMoveCursorWordLeft(eb);
             else
                 eb->cursorIdx = IntMax(0, eb->cursorIdx - 1);
-            eb->nextCursorToggleTime = now;
             clearSelection = !win->input.keys[KEY_SHIFT];
+            EditBoxForceCusorOn(eb);
         }
         else if (win->input.keyDowns[KEY_RIGHT]) {
             if (win->input.keys[KEY_CONTROL])
                 EditBoxMoveCursorWordRight(eb);
             else
                 eb->cursorIdx = IntMin(strlen(eb->text), eb->cursorIdx + 1);
-            eb->nextCursorToggleTime = now;
             clearSelection = !win->input.keys[KEY_SHIFT];
+            EditBoxForceCusorOn(eb);
         }
         else if (win->input.keyDowns[KEY_HOME]) {
             eb->cursorIdx = 0;
-            eb->nextCursorToggleTime = now;
             clearSelection = !win->input.keys[KEY_SHIFT];
+            EditBoxForceCusorOn(eb);
         }
         else if (win->input.keyDowns[KEY_END]) {
             eb->cursorIdx = strlen(eb->text);
-            eb->nextCursorToggleTime = now;
             clearSelection = !win->input.keys[KEY_SHIFT];
+            EditBoxForceCusorOn(eb);
         }
         else if (win->input.keys[KEY_CONTROL]) {
             if (win->input.keyDowns[KEY_A]) { // Select all
                 eb->selectionIdx = 0;
                 eb->cursorIdx = strlen(eb->text);
+                EditBoxForceCusorOn(eb);
             }
             else if (win->input.keyDowns[KEY_BACKSPACE]) { // Delete word left
                 eb->selectionIdx = eb->cursorIdx;
                 EditBoxMoveCursorWordLeft(eb);
                 EditBoxDeleteChars(eb, eb->cursorIdx, eb->selectionIdx - eb->cursorIdx + 1);
                 clearSelection = 1;
+                EditBoxForceCusorOn(eb);
             }
             else if (win->input.keyDowns[KEY_DEL]) { // Delete word right
                 eb->selectionIdx = eb->cursorIdx;
                 EditBoxMoveCursorWordRight(eb);
                 EditBoxDeleteChars(eb, eb->selectionIdx, eb->cursorIdx - eb->selectionIdx + 1);
                 eb->cursorIdx = eb->selectionIdx;
+                EditBoxForceCusorOn(eb);
             }
             else if (win->input.keyDowns[KEY_C]) { // Copy to clipboard
                 int c1, c2;
@@ -316,6 +328,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
                 EditBoxDeleteChars(eb, c1, c2 - c1);
                 eb->cursorIdx = eb->selectionIdx = c1;
                 clearSelection = 1;
+                EditBoxForceCusorOn(eb);
             }
             else if (win->input.keyDowns[KEY_V]) { // Paste from clipboard
                 int c1, c2;
@@ -330,6 +343,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
                 ClipboardReleaseReceivedData(clipBuf);
 
                 clearSelection = 1;
+                EditBoxForceCusorOn(eb);
             }
         }
 
@@ -369,7 +383,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
             }
         }
 
-        eb->nextCursorToggleTime = now;
+        EditBoxForceCusorOn(eb);
         eb->selectionIdx = eb->cursorIdx;
         contentsChanged = 1;
     }
