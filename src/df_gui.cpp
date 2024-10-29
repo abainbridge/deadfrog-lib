@@ -608,7 +608,7 @@ static void TextViewSelectWord(DfTextView *tv, char const *line) {
         tv->selectionStartX--;
 
     int len = strlen(line);
-    while ((tv->selectionEndX + 1) < len && !!isalnum(line[tv->selectionEndX + 1]) == startIsAlnum)
+    while ((tv->selectionEndX) < len && !!isalnum(line[tv->selectionEndX]) == startIsAlnum)
         tv->selectionEndX++;
 }
 
@@ -681,7 +681,7 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
             int end_idx = line_len;
             if (line_num == sel_start_y)
                 start_idx = sel_start_x;
-            if (line_num == sel_end_y && (sel_end_x + 1) < line_len)
+            if (line_num == sel_end_y && sel_end_x < line_len)
                 end_idx = sel_end_x;
 
             int sel_x = x + GetTextWidthNumChars(g_defaultFont, line, start_idx);
