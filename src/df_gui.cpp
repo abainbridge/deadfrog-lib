@@ -712,6 +712,16 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
         y += g_defaultFont->charHeight;
     }
 
+    // Clear selection if user clicks below the last line of text.
+    if (win->input.lmbClicked && win->input.mouseY >= y &&
+            win->input.mouseY < win->bmp->clipBottom &&
+            win->input.mouseX > win->bmp->clipLeft &&
+            win->input.mouseX < win->bmp->clipRight) {
+        tv->dragSelecting = false;
+        tv->selectionEndX = tv->selectionStartX;
+        tv->selectionEndY = tv->selectionStartY;
+    }
+
     ClearClipRect(win->bmp);
 }
 
