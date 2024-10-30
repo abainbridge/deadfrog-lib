@@ -251,6 +251,15 @@ static void EditBoxMoveCursorWordRight(DfEditBox *eb) {
 }
 
 
+static void EditBoxSelectWord(DfEditBox *eb) {
+    EditBoxMoveCursorWordRight(eb);
+    int tmp = eb->cursorIdx;
+    EditBoxMoveCursorWordLeft(eb);
+    eb->selectionIdx = eb->cursorIdx;
+    eb->cursorIdx = tmp;
+}
+
+
 static int GetStringIdxFromPixelOffset(char const *s, int targetPixelOffset) {
     int pixelOffset = 0;
     for (int i = 0; ; i++) {
@@ -290,6 +299,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
     // Process mouse input
     {
         if (win->input.lmbDoubleClicked && DfMouseInRect(win, x, y, w, h)) {
+            EditBoxSelectWord(eb);
         }
         else if (win->input.lmbClicked && DfMouseInRect(win, x, y, w, h)) {
             eb->cursorIdx = GetStringIdxFromPixelOffset(eb->text, win->input.mouseX - x);
