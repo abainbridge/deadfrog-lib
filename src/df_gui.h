@@ -70,6 +70,7 @@ typedef struct {
     char cursorOn;
     int cursorIdx;
 	int selectionIdx; // Equal to cursorIdx if no selection.
+    int dragSelecting; // True if we're creating a selection with the mouse.
 } DfEditBox;
 
 
@@ -110,7 +111,7 @@ typedef struct {
     int selectionEndX;
     int selectionEndY;
 
-    int dragSelecting; // True if the LMB is down and we're dragging a selection.
+    int dragSelecting; // True if we're creating a selection with the mouse.
 } DfTextView;
 
 

@@ -251,6 +251,19 @@ static void EditBoxMoveCursorWordRight(DfEditBox *eb) {
 }
 
 
+static int GetStringIdxFromPixelOffset(char const *s, int targetPixelOffset) {
+    int pixelOffset = 0;
+    for (int i = 0; s[i] != '\0'; i++) {
+        pixelOffset += GetTextWidthNumChars(g_defaultFont, s + i, 1);
+        if (pixelOffset > targetPixelOffset) {
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+
 // Returns 1 if contents changed.
 int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
     DfDrawSunkenBox(win->bmp, x, y, w, h);
@@ -264,6 +277,31 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
     if (now > eb->nextCursorToggleTime) {
         eb->cursorOn = !eb->cursorOn;
         eb->nextCursorToggleTime = now + CURSOR_TOGGLE_PERIOD;
+    }
+
+    // Do we need to scroll to keep the cursor visible?
+    {
+        int cursorX = GetTextWidthNumChars(g_defaultFont, eb->text, eb->cursorIdx);
+        if (cursorX > (w * 0.95)) {
+            x += w * 0.95 - cursorX;
+        }
+    }
+
+    // Process mouse input
+    {
+        if (win->input.lmbDoubleClicked && DfMouseInRect(win, x, y, w, h)) {
+        }
+        else if (win->input.lmbClicked && DfMouseInRect(win, x, y, w, h)) {
+            eb->cursorIdx = GetStringIdxFromPixelOffset(eb->text, win->input.mouseX - x);
+            eb->selectionIdx = eb->cursorIdx;
+            eb->dragSelecting = 1;
+        }
+        else if (!win->input.lmb) {
+            eb->dragSelecting = 0;
+        }
+        else if (eb->dragSelecting) {
+            eb->selectionIdx = GetStringIdxFromPixelOffset(eb->text, win->input.mouseX - x);
+        }
     }
 
     // Process keyboard shortcuts.
@@ -386,14 +424,6 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
         EditBoxForceCusorOn(eb);
         eb->selectionIdx = eb->cursorIdx;
         contentsChanged = 1;
-    }
-
-    // Do we need to scroll to keep the cursor visible?
-    {
-        int cursorX = GetTextWidthNumChars(g_defaultFont, eb->text, eb->cursorIdx);
-        if (cursorX > (w * 0.95)) {
-            x += w * 0.95 - cursorX;
-        }
     }
 
     // Draw selection rectangle.
@@ -589,19 +619,6 @@ static int GetSelectionCoords(DfTextView *tv, int *sx, int *sy, int *ex, int *ey
 }
 
 
-static int GetStringIdxFromPixelOffset(char const *s, int targetPixelOffset) {
-    int pixelOffset = 0;
-    for (int i = 0; s[i] != '\0'; i++) {
-        pixelOffset += GetTextWidthNumChars(g_defaultFont, s + i, 1);
-        if (pixelOffset > targetPixelOffset) {
-            return i;
-        }
-    }
-
-    return 0;
-}
-
-
 static void TextViewSelectWord(DfTextView *tv, char const *line) {
     int startIsAlnum = !!isalnum(line[tv->selectionStartX]);
     while (tv->selectionStartX > 0 && !!isalnum(line[tv->selectionStartX - 1]) == startIsAlnum)
@@ -668,7 +685,7 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
                     tv->selectionEndX = GetStringIdxFromPixelOffset(line, pixel_offset);
                     tv->selectionEndY = line_num;
                 }
-           }
+            }
         }
 
         char const *end_of_line = strchr(line, '\n');
