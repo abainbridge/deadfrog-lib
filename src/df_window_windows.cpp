@@ -42,7 +42,7 @@ static void EnsureFunctionPointers() {
         g_enableNonClientDpiScalingFunc = (EnableNonClientDpiScalingFunc*)
             GetProcAddress(user32, "EnableNonClientDpiScaling");
         g_adjustWindowRectExForDpi = (AdjustWindowRectExForDpiFunc*)
-            GetProcAddress(user32, "AdjustWindowRectExForDpiFunc");
+            GetProcAddress(user32, "AdjustWindowRectExForDpi");
 
         HMODULE shcore = LoadLibrary("shcore.dll");
         g_setProcessDpiAwareness = (SetProcessDpiAwarenessFunc*)
