@@ -253,9 +253,9 @@ static void EditBoxMoveCursorWordRight(DfEditBox *eb) {
 
 static int GetStringIdxFromPixelOffset(char const *s, int targetPixelOffset) {
     int pixelOffset = 0;
-    for (int i = 0; s[i] != '\0'; i++) {
+    for (int i = 0; ; i++) {
         pixelOffset += GetTextWidthNumChars(g_defaultFont, s + i, 1);
-        if (pixelOffset > targetPixelOffset) {
+        if (s[i] == '\0' || s[i] == '\n' || pixelOffset > targetPixelOffset) {
             return i;
         }
     }
@@ -300,7 +300,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
             eb->dragSelecting = 0;
         }
         else if (eb->dragSelecting) {
-            eb->selectionIdx = GetStringIdxFromPixelOffset(eb->text, win->input.mouseX - x);
+            eb->cursorIdx = GetStringIdxFromPixelOffset(eb->text, win->input.mouseX - x);
         }
     }
 
@@ -437,7 +437,7 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
 
     DrawTextSimple(g_defaultFont, g_normalTextColour, win->bmp, x, y, eb->text);
 
-    if (eb->cursorOn) {
+    if (eb->cursorOn && !eb->dragSelecting) {
         int cursorX = GetTextWidthNumChars(g_defaultFont, eb->text, eb->cursorIdx) + x;
         RectFill(win->bmp, cursorX, y, g_drawScale * 1.4, g_defaultFont->charHeight, g_normalTextColour);
     }
