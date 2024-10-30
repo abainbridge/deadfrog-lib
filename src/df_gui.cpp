@@ -55,7 +55,7 @@ static int ChangeDrawScaleIfDpiChanged() {
 	if (scaleChanged) {
 		g_drawScale = prevDrawScale / (float)lastDpi * (float)dpi;
 		int width = g_window->bmp->width / prevDrawScale * g_drawScale;
-		int height = g_window->bmp->width / prevDrawScale * g_drawScale;
+		int height = g_window->bmp->height / prevDrawScale * g_drawScale;
         lastDpi = dpi;
         SetWindowRect(g_window, g_window->left, g_window->top, width, height);
 	}
