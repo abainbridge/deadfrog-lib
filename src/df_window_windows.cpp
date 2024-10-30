@@ -440,9 +440,16 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType winType, 
     HWND h = CreateWindow(wc.lpszClassName, wc.lpszClassName,
         windowStyle, x, y, nonclientWidth, nonclientHeight,
         NULL, NULL, 0, NULL);
-    win->_private->platSpec->hWnd = h;
 
+    win->_private->platSpec->hWnd = h;
     SetPropA(h, "deadfrog", win);
+    
+    {
+        RECT rect;
+        GetWindowRect(h, &rect);
+        win->left = rect.left;
+        win->top = rect.top;
+    }
 
     // At this point, on a machine with two monitors with different DPIs, the 
     // client rect we got might not be the dimensions we requested. If we have
