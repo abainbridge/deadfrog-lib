@@ -8,7 +8,6 @@
 #include <string.h>
 
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
 #ifndef M_PI
 # define M_PI 3.1415926535
 #endif

@@ -27,6 +27,7 @@ extern "C"
 #define NOINLINE __attribute__((noinline))
 #endif
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 void DebugOut(char const *fmt, ...);
 
