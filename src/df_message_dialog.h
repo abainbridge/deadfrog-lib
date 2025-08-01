@@ -23,7 +23,6 @@ typedef enum {
 
 typedef enum {
     MsgDlgRtnCode_Fail = -1,
-    MsgDlgRtnCode_Abort,
     MsgDlgRtnCode_Cancel,
     MsgDlgRtnCode_No,
     MsgDlgRtnCode_Ok,
