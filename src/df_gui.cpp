@@ -46,10 +46,12 @@ int DfMouseInRect(DfWindow *win, int x, int y, int w, int h) {
 
 
 static int ChangeDrawScaleIfDpiChanged() {
-	static int lastDpi = 96;
+	static int lastDpi = -1;
 	static float prevDrawScale = 1.0f;
 
 	int dpi = GetMonitorDpi(g_window);
+    if (lastDpi < 0)
+        lastDpi = dpi;
 
 	bool scaleChanged = (dpi != lastDpi);
 	if (scaleChanged) {
