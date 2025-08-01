@@ -67,6 +67,8 @@ static int ChangeDrawScaleIfDpiChanged() {
 
 
 void DfGuiDoFrame(DfWindow *win) {
+    SetMouseCursor(win, MCT_ARROW);
+
     if (win->input.lmbClicked) {
         g_dragStartX = win->input.mouseX;
         g_dragStartY = win->input.mouseY;
@@ -263,10 +265,15 @@ static void EditBoxSelectWord(DfEditBox *eb) {
 static int GetStringIdxFromPixelOffset(char const *s, int targetPixelOffset) {
     int pixelOffset = 0;
     for (int i = 0; ; i++) {
-        pixelOffset += GetTextWidthNumChars(g_defaultFont, s + i, 1);
-        if (s[i] == '\0' || s[i] == '\n' || pixelOffset > targetPixelOffset) {
+        if (s[i] == '\0' || s[i] == '\n') {
             return i;
         }
+
+        int charWidth = GetTextWidthNumChars(g_defaultFont, s + i, 1);
+        if (pixelOffset + charWidth / 2 > targetPixelOffset)
+            return i;
+
+        pixelOffset += charWidth;
     }
 
     return 0;
@@ -275,6 +282,10 @@ static int GetStringIdxFromPixelOffset(char const *s, int targetPixelOffset) {
 
 // Returns 1 if contents changed.
 int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
+    int mouseInRect = DfMouseInRect(win, x, y, w, h);
+    if (mouseInRect)
+        SetMouseCursor(win, MCT_IBEAM);
+
     DfDrawSunkenBox(win->bmp, x, y, w, h);
     x += 2 * g_drawScale;
     y += 4 * g_drawScale;
@@ -298,10 +309,10 @@ int DfEditBoxDo(DfWindow *win, DfEditBox *eb, int x, int y, int w, int h) {
 
     // Process mouse input
     {
-        if (win->input.lmbDoubleClicked && DfMouseInRect(win, x, y, w, h)) {
+        if (win->input.lmbDoubleClicked && mouseInRect) {
             EditBoxSelectWord(eb);
         }
-        else if (win->input.lmbClicked && DfMouseInRect(win, x, y, w, h)) {
+        else if (win->input.lmbClicked && mouseInRect) {
             eb->cursorIdx = GetStringIdxFromPixelOffset(eb->text, win->input.mouseX - x);
             eb->selectionIdx = eb->cursorIdx;
             eb->dragSelecting = 1;
@@ -642,6 +653,8 @@ static void TextViewSelectWord(DfTextView *tv, char const *line) {
 
 void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
     int mouseInRect = DfMouseInRect(win, x, y, w, h);
+    if (mouseInRect)
+        SetMouseCursor(win, MCT_IBEAM);
     DfDrawSunkenBox(win->bmp, x, y, w, h);
 
     int borderWidth = 2 * g_drawScale;
