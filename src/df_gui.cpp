@@ -696,30 +696,29 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
     GetSelectionCoords(tv, &sel_start_x, &sel_start_y, &sel_end_x, &sel_end_y);
 
     y -= tv->vScrollbar.currentVal;
+    int firstLineY = y;
     int line_num;
     for (line_num = 0; *line != '\0'; line_num++) {
         // Update selection block if mouse click on current line.
-        if (mouseInRect) {
-            if (win->input.mouseY >= y && win->input.mouseY < (y + g_defaultFont->charHeight)) {
-                if (win->input.lmbDoubleClicked) {
-                    TextViewSelectWord(tv, line);
-                }
-                else if (win->input.lmbClicked) {
-                    int pixel_offset = win->input.mouseX - x;
-                    tv->selectionStartX = GetStringIdxFromPixelOffset(line, pixel_offset);
-                    tv->selectionStartY = line_num;
-                    tv->selectionEndX = tv->selectionStartX;
-                    tv->selectionEndY = tv->selectionStartY;
-                    tv->dragSelecting = true;
-                }
-                else if (!win->input.lmb) {
-                    tv->dragSelecting = false;
-                }
-                else if (tv->dragSelecting) {
-                    int pixel_offset = win->input.mouseX - x;
-                    tv->selectionEndX = GetStringIdxFromPixelOffset(line, pixel_offset);
-                    tv->selectionEndY = line_num;
-                }
+        if (win->input.mouseY >= y && win->input.mouseY < (y + g_defaultFont->charHeight)) {
+            if (mouseInRect && win->input.lmbDoubleClicked) {
+                TextViewSelectWord(tv, line);
+            }
+            else if (mouseInRect && win->input.lmbClicked) {
+                int pixel_offset = win->input.mouseX - x;
+                tv->selectionStartX = GetStringIdxFromPixelOffset(line, pixel_offset);
+                tv->selectionStartY = line_num;
+                tv->selectionEndX = tv->selectionStartX;
+                tv->selectionEndY = tv->selectionStartY;
+                tv->dragSelecting = true;
+            }
+            else if (!win->input.lmb) {
+                tv->dragSelecting = false;
+            }
+            else if (tv->dragSelecting) {
+                int pixel_offset = win->input.mouseX - x;
+                tv->selectionEndX = GetStringIdxFromPixelOffset(line, pixel_offset);
+                tv->selectionEndY = line_num;
             }
         }
 
@@ -751,6 +750,18 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
         tv->dragSelecting = true;
         tv->selectionEndX = tv->selectionStartX = 0;
         tv->selectionEndY = tv->selectionStartY = line_num;
+    }
+
+    // Update drag selection if mouse cursor is above or below the visible text.
+    if (tv->dragSelecting) {
+        if (win->input.mouseY < firstLineY) {
+            tv->selectionEndX = 0;
+            tv->selectionEndY = 0;
+        }
+        if (win->input.mouseY >= y) {
+            tv->selectionEndX = 0;
+            tv->selectionEndY = line_num;
+        }
     }
 
     ClearClipRect(win->bmp);
