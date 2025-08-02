@@ -654,6 +654,14 @@ static void TextViewSelectWord(DfTextView *tv, char const *line) {
 }
 
 
+static char const *TextViewGetEndOfLine(char const *line) {
+    char const *end_of_line = strchr(line, '\n');
+    if (!end_of_line)
+        end_of_line = line + strlen(line) + 1;
+    return end_of_line;
+}
+
+
 void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
     int mouseInRect = DfMouseInRect(win, x, y, w, h);
     if (mouseInRect)
@@ -688,7 +696,8 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
     GetSelectionCoords(tv, &sel_start_x, &sel_start_y, &sel_end_x, &sel_end_y);
 
     y -= tv->vScrollbar.currentVal;
-    for (int line_num = 0; *line != '\0'; line_num++) {
+    int line_num;
+    for (line_num = 0; *line != '\0'; line_num++) {
         // Update selection block if mouse click on current line.
         if (mouseInRect) {
             if (win->input.mouseY >= y && win->input.mouseY < (y + g_defaultFont->charHeight)) {
@@ -701,7 +710,7 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
                     tv->selectionStartY = line_num;
                     tv->selectionEndX = tv->selectionStartX;
                     tv->selectionEndY = tv->selectionStartY;
-                    tv->dragSelecting = 1;
+                    tv->dragSelecting = true;
                 }
                 else if (!win->input.lmb) {
                     tv->dragSelecting = false;
@@ -714,9 +723,7 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
             }
         }
 
-        char const *end_of_line = strchr(line, '\n');
-        if (!end_of_line) 
-            end_of_line = line + strlen(line) + 1;
+        char const *end_of_line = TextViewGetEndOfLine(line);
         int line_len = end_of_line - line - 1;
 
         // Draw selection block
@@ -740,13 +747,10 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
     }
 
     // Clear selection if user clicks below the last line of text.
-    if (win->input.lmbClicked && win->input.mouseY >= y &&
-            win->input.mouseY < win->bmp->clipBottom &&
-            win->input.mouseX > win->bmp->clipLeft &&
-            win->input.mouseX < win->bmp->clipRight) {
-        tv->dragSelecting = false;
-        tv->selectionEndX = tv->selectionStartX;
-        tv->selectionEndY = tv->selectionStartY;
+    if (win->input.lmbClicked && mouseInRect && win->input.mouseY >= y) {
+        tv->dragSelecting = true;
+        tv->selectionEndX = tv->selectionStartX = 0;
+        tv->selectionEndY = tv->selectionStartY = line_num;
     }
 
     ClearClipRect(win->bmp);
@@ -762,7 +766,7 @@ char const *DfTextViewGetSelectedText(DfTextView *tv, int *numChars) {
     char const *line = tv->wrappedText;
     int lineNum = 0;
     while (lineNum < selStartY) {
-        char const *endOfLine = strchr(line, '\n');
+        char const *endOfLine = TextViewGetEndOfLine(line);
         DebugAssert(endOfLine);
         line = endOfLine + 1;
         lineNum++;
@@ -772,7 +776,7 @@ char const *DfTextViewGetSelectedText(DfTextView *tv, int *numChars) {
 
     // Find the end of the selected text.
     while (lineNum < selEndY) {
-        char const *endOfLine = strchr(line, '\n');
+        char const *endOfLine = TextViewGetEndOfLine(line);
         DebugAssert(endOfLine);
         line = endOfLine + 1;
         lineNum++;
