@@ -603,6 +603,7 @@ static int TextViewWrapText(DfTextView *tv, int w) {
 
         if (*wordIn == '\0') {
             *wordOut = '\0';
+            y += g_defaultFont->charHeight;
             break;
         }
 
@@ -687,7 +688,7 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
     GetSelectionCoords(tv, &sel_start_x, &sel_start_y, &sel_end_x, &sel_end_y);
 
     y -= tv->vScrollbar.currentVal;
-    for (int line_num = 0; ; line_num++) {
+    for (int line_num = 0; *line != '\0'; line_num++) {
         // Update selection block if mouse click on current line.
         if (mouseInRect) {
             if (win->input.mouseY >= y && win->input.mouseY < (y + g_defaultFont->charHeight)) {
@@ -714,7 +715,8 @@ void DfTextViewDo(DfWindow *win, DfTextView *tv, int x, int y, int w, int h) {
         }
 
         char const *end_of_line = strchr(line, '\n');
-        if (!end_of_line) break;
+        if (!end_of_line) 
+            end_of_line = line + strlen(line) + 1;
         int line_len = end_of_line - line - 1;
 
         // Draw selection block
