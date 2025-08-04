@@ -6,6 +6,7 @@
 
 extern DfColour g_backgroundColour;
 extern DfColour g_frameColour;
+extern DfColour g_buttonColour;
 extern DfColour g_buttonShadowColour;
 extern DfColour g_buttonHighlightColour;
 extern DfColour g_normalTextColour;
