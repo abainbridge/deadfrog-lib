@@ -149,6 +149,7 @@ typedef struct {
 typedef struct {
     char const *menuName; // NULL if not on a menu.
     char const *menuItemLabel; // NULL if not on a menu.
+    int hotKeyIndex; // Index into menuItemLabel
     DfKeyboardShortcut shortcut; // All zero if there is no shortcut.
 } DfGuiAction;
 
@@ -162,10 +163,13 @@ typedef struct {
 
 void DfMenuBarInit(DfMenuBar *mb);
 
-// Pass menuName=NULL if you don't want a menu entry. 
-// Pass menuItemLabel as NULL if you want to add a separator to a menu.
+// Set menuName=NULL if you don't want a menu entry. 
+// Set menuItemLabel=NULL if you want to add a separator to a menu.
+// hotKeyIndex is the index in menuItemLabel that you want to underline and use as the hotkey. 
 // Pass shortcut as all zeros if you don't want a keyboard shortcut.
-void DfMenuBarAddAction(DfMenuBar *mb, char const *menuName, char const *menuItemLabel, DfKeyboardShortcut shortcut);
+// NOTE: the menuName and menuItemLabel pointers will be copied, so whatever you pass in needs to stay valid forever.
+void DfMenuBarAddAction(DfMenuBar *mb, char const *menuName, char const *menuItemLabel, 
+    int hotkeyIndex, DfKeyboardShortcut shortcut);
 
 // If menu item was selected, or its keyboard shortcut was activated, then that menu item is returned.
 DfGuiAction DfMenuBarDo(DfWindow *win, DfMenuBar *menu);

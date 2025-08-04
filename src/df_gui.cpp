@@ -832,14 +832,10 @@ enum {
 
 struct MenuItem {
     char *m_shortcutDisplayString;
-    DfKeyboardShortcut m_shortcut;
-
-    // All the public pointers are owned by the creator, eg the caller of Menu::AddItem().
-    char const *m_label;
-    int         m_hotKeyIndex;  // Index into m_label, indicating which character is the keyboard hot-key for that item
+    DfGuiAction m_action;
     int         m_top;
 
-    bool IsSeparator() { return !m_label; }
+    bool IsSeparator() { return !m_action.menuItemLabel; }
 };
 
 
@@ -860,20 +856,18 @@ struct Menu {
         m_longestShortcutLen = 0;
     }
 
-    void AddItem(char const *label, DfKeyboardShortcut shortcut) {
-        if (m_numItems >= 10) return;
+    void AddItem(DfGuiAction action) {
+        if (m_numItems >= ARRAY_SIZE(m_items)) return;
 
         MenuItem *item = new MenuItem;
-        item->m_shortcut = shortcut;
-        item->m_label = label;
-        item->m_hotKeyIndex = 0;
+        item->m_action = action;
 
-        if (shortcut.key) {
+        if (action.shortcut.key) {
             char buf[64] = "";
-            if (shortcut.ctrl) strcat(buf, "Ctrl+");
-            if (shortcut.shift) strcat(buf, "Shift+");
-            if (shortcut.alt) strcat(buf, "Alt+");
-            strcat(buf, GetKeyName(shortcut.key));
+            if (action.shortcut.ctrl) strcat(buf, "Ctrl+");
+            if (action.shortcut.shift) strcat(buf, "Shift+");
+            if (action.shortcut.alt) strcat(buf, "Alt+");
+            strcat(buf, GetKeyName(action.shortcut.key));
             item->m_shortcutDisplayString = strdup(buf);
         }
         else {
@@ -909,7 +903,7 @@ struct Menu {
         for (int i = 0; i < win->input.numKeysTyped; i++) {
             MenuItem *item = FindMenuItemByHotkey(win->input.keysTyped[i]);
             if (item) {
-                return { NULL, item->m_label, item->m_shortcut };
+                return item->m_action;
             }
         }
 
@@ -917,7 +911,7 @@ struct Menu {
         if (m_highlightedItem != -1 &&
                (g_window->input.keyDowns[KEY_ENTER] || g_window->input.lmbUnClicked)) {
             MenuItem *item = m_items[m_highlightedItem];
-            return { NULL, item->m_label, item->m_shortcut };
+            return item->m_action;
         }
 
         return { 0 };
@@ -954,12 +948,13 @@ struct Menu {
             else {
                 // Item label text
                 int textY = item->m_top + MENU_ITEM_Y_SPACE * g_drawScale;
+                char const *label = item->m_action.menuItemLabel;
                 DrawTextSimple(g_defaultFont, g_normalTextColour, win->bmp,
-                    x + 10, textY, item->m_label);
+                    x + 10, textY, label);
 
-                if (item->m_hotKeyIndex >= 0) {
-                    int offset = GetTextWidthNumChars(g_defaultFont, item->m_label, item->m_hotKeyIndex);
-                    int len = GetTextWidthNumChars(g_defaultFont, item->m_label + item->m_hotKeyIndex, 1);
+                if (item->m_action.hotKeyIndex >= 0) {
+                    int offset = GetTextWidthNumChars(g_defaultFont, label, item->m_action.hotKeyIndex);
+                    int len = GetTextWidthNumChars(g_defaultFont, label + item->m_action.hotKeyIndex, 1);
 
                     // Underline hot key
                     int underscoreOffset = RoundToInt(g_defaultFont->charHeight * 0.88f);
@@ -985,7 +980,7 @@ struct Menu {
         int longest = 0;
         for (int i = 0; i < m_numItems; i++) {
             MenuItem *item = m_items[i];
-            int width = GetTextWidth(g_defaultFont, item->m_label);
+            int width = GetTextWidth(g_defaultFont, item->m_action.menuItemLabel);
             if (width > longest) longest = width;
         }
 
@@ -1067,8 +1062,8 @@ struct Menu {
         c = tolower(c);
         for (int i = 0; i < m_numItems; i++) {
             MenuItem *item = m_items[i];
-            if (item->m_hotKeyIndex >= 0) {
-                char hotkey = tolower(item->m_label[item->m_hotKeyIndex]);
+            if (item->m_action.hotKeyIndex >= 0) {
+                char hotkey = tolower(item->m_action.menuItemLabel[item->m_action.hotKeyIndex]);
                 if (hotkey == c) {
                     return item;
                 }
@@ -1170,11 +1165,11 @@ struct MenuBar {
             Menu *menu = m_menus[i];
             for (int j = 0; j < menu->m_numItems; j++) {
                 MenuItem *item = menu->m_items[j];
-                if (win->input.keyDowns[item->m_shortcut.key] &&
-                    win->input.keys[KEY_CONTROL] == item->m_shortcut.ctrl &&
-                    win->input.keys[KEY_SHIFT] == item->m_shortcut.shift &&
-                    win->input.keys[KEY_ALT] == item->m_shortcut.alt) {
-                    return { menu->m_name, item->m_label, item->m_shortcut };
+                if (win->input.keyDowns[item->m_action.shortcut.key] &&
+                    win->input.keys[KEY_CONTROL] == item->m_action.shortcut.ctrl &&
+                    win->input.keys[KEY_SHIFT] == item->m_action.shortcut.shift &&
+                    win->input.keys[KEY_ALT] == item->m_action.shortcut.alt) {
+                    return item->m_action;
                 }
             }
         }
@@ -1287,6 +1282,9 @@ struct MenuBar {
                 event.menuName = m_highlightedMenu->m_name;
                 ClearAllState();
             }
+            else {
+                SetMouseCursor(win, MCT_ARROW);
+            }
         }
 
         if (m_contextMenu) {
@@ -1366,7 +1364,7 @@ void DfMenuBarInit(DfMenuBar *dfMb) {
 
 
 void DfMenuBarAddAction(DfMenuBar *dfMb, char const *menuName, 
-                        char const *menuItemLabel, DfKeyboardShortcut shortcut) {
+        char const *menuItemLabel, int hotKeyIndex, DfKeyboardShortcut shortcut) {
     MenuBar *mb = (MenuBar*)dfMb->internals;
     mb->ClearAllState();
     Menu *menu = mb->FindMenuByName(menuName);
@@ -1374,7 +1372,7 @@ void DfMenuBarAddAction(DfMenuBar *dfMb, char const *menuName,
         menu = mb->AddMenu(menuName);
     
     if (menu)
-        menu->AddItem(menuItemLabel, shortcut);
+        menu->AddItem({ menuName, menuItemLabel, hotKeyIndex, shortcut });
 }
 
 
@@ -1387,7 +1385,7 @@ void DfMenuBarRemoveAction(DfMenuBar *dfMb, char const *menuName,
         menu = mb->AddMenu(menuName);
 
     if (menu)
-        menu->AddItem(menuItemLabel, shortcut);
+        menu->AddItem({ menuName, menuItemLabel, 0, shortcut });
 }
 
 
