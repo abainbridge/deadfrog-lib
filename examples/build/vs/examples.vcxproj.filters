@@ -19,5 +19,6 @@
     <ClCompile Include="..\..\test_c.c" />
     <ClCompile Include="..\..\gravity.cpp" />
     <ClCompile Include="..\..\beziers.cpp" />
+    <ClCompile Include="..\..\line_segment_art.cpp" />
   </ItemGroup>
 </Project>

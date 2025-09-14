@@ -10,6 +10,7 @@ void GravityMain();
 void HarmonographMain();
 void HelloWorldMain();
 void LatticeBoltzmannMain(); 
+void LineSegmentArtMain();
 void MandelbrotMain();
 void Sierpinski3DMain();
 void StretchBlitMain();
@@ -27,7 +28,7 @@ int main()
 //     AaPolyTestMain();
 //     AsteroidsMain();
 //     BenchmarkMain();
-    BeziersMain();
+//     BeziersMain();
 //     ColourWhirlMain();
 //     FluidMain();
 //     FractalFernMain();
@@ -36,6 +37,7 @@ int main()
 //     HarmonographMain();
 //     HelloWorldMain();
 //     LatticeBoltzmannMain();
+    LineSegmentArtMain();
 //     MandelbrotMain();
 //     Sierpinski3DMain();
 //     StretchBlitMain();
