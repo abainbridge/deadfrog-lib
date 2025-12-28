@@ -13,13 +13,13 @@ extern "C"
 // Stores a Vertex at 16 times pixel resolution, so that subpixel positions can
 // be represented. For example, pixel coordinate (0.5, 1.5) is represented by 
 // (8, 24).
-typedef struct DfVertex {
+typedef struct DfVec2 {
     int x, y;
-} DfVertex;
+} DfVec2;
 
 
 // Polygon must be convex. Vertex order should be anti-clockwise.
-void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col);
+void FillPolygonAa(DfBitmap *bmp, DfVec2 *verts, int numVerts, DfColour col);
 
 
 #ifdef __cplusplus

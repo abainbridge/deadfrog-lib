@@ -83,7 +83,7 @@ static void RenderScanline(DfBitmap *bmp, int y, DfColour col) {
 }
 
 
-static bool IsConvexAndAnticlockwise(DfVertex *verts, int numVerts) {
+static bool IsConvexAndAnticlockwise(DfVec2 *verts, int numVerts) {
     for (int a = 0; a < numVerts; a++) {
         int b = (a + 1) % numVerts;
         int c = (a + 2) % numVerts;
@@ -102,14 +102,14 @@ static bool IsConvexAndAnticlockwise(DfVertex *verts, int numVerts) {
 }
 
 
-void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
+void FillPolygonAa(DfBitmap *bmp, DfVec2 *verts, int numVerts, DfColour col)
 {
     if (!IsConvexAndAnticlockwise(verts, numVerts))
         return;
 
     // Convert the verts passed in into the format we use internally,
     // find the max vertex y value and the vertex with minimum y.
-    DfVertex *vertLeft = verts;
+    DfVec2 *vertLeft = verts;
     int maxY = INT_MIN;
     for (int i = 0; i < numVerts; i++) {
         verts[i].y /= SUBXRES / SUBYRES;
@@ -118,10 +118,10 @@ void FillPolygonAa(DfBitmap *bmp, DfVertex *verts, int numVerts, DfColour col)
         }
         maxY = IntMax(maxY, verts[i].y);
     }
-    DfVertex *endVert = &verts[numVerts - 1];
+    DfVec2 *endVert = &verts[numVerts - 1];
 
     // Initialize scanning edges.
-    DfVertex *nextVertLeft, *vertRight, *nextVertRight;
+    DfVec2 *nextVertLeft, *vertRight, *nextVertRight;
     vertRight = nextVertRight = nextVertLeft = vertLeft;
 
 #define NEXT_LEFT_EDGE() \

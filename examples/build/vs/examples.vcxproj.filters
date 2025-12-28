@@ -20,5 +20,6 @@
     <ClCompile Include="..\..\gravity.cpp" />
     <ClCompile Include="..\..\beziers.cpp" />
     <ClCompile Include="..\..\line_segment_art.cpp" />
+    <ClCompile Include="..\..\scatter_plot.cpp" />
   </ItemGroup>
 </Project>

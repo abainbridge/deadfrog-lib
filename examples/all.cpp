@@ -10,6 +10,7 @@ void GravityMain();
 void HarmonographMain();
 void HelloWorldMain();
 void LatticeBoltzmannMain(); 
+void ScatterPlotMain();
 void LineSegmentArtMain();
 void MandelbrotMain();
 void Sierpinski3DMain();
@@ -37,7 +38,8 @@ int main()
 //     HarmonographMain();
 //     HelloWorldMain();
 //     LatticeBoltzmannMain();
-    LineSegmentArtMain();
+    ScatterPlotMain();
+//     LineSegmentArtMain();
 //     MandelbrotMain();
 //     Sierpinski3DMain();
 //     StretchBlitMain();
