@@ -1,4 +1,4 @@
-﻿// System headers.
+// System headers.
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <dwmapi.h>

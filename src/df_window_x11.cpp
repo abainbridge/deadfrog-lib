@@ -566,12 +566,18 @@ static void HandleEvent(DfWindow *win) {
         switch (platSpec->recvBuf[1]) {
             case 1:
                 win->input.lmb = 1;
-                win->_private->lmbPrivate = true;
+                win->input.lmbClicked = true;
                 break;
-            case 2: win->input.mmb = 1; break;
-            case 3: win->input.rmb = 1; break;
-            case 4: win->input.mouseZ += 30; break;
-            case 5: win->input.mouseZ -= 30; break;
+            case 2:
+                win->input.mmb = 1;
+                win->input.mmbClicked = true;
+                break;
+            case 3:
+                win->input.rmb = 1;
+                win->input.rmbClicked = true;
+                break;
+            case 4: win->input.mouseZ += 60; break;
+            case 5: win->input.mouseZ -= 60; break;
         }
         //printf("down:%i\n", platSpec->recvBuf[1]);
         break;
@@ -580,10 +586,16 @@ static void HandleEvent(DfWindow *win) {
         switch (platSpec->recvBuf[1]) {
             case 1:
                 win->input.lmb = 0;
-                win->_private->lmbPrivate = false;
+                win->input.lmbUnClicked = true;
                 break;
-            case 2: win->input.mmb = 0; break;
-            case 3: win->input.rmb = 0; break;
+            case 2:
+                win->input.mmb = 0;
+                win->input.mmbUnClicked = true;
+                break;
+            case 3:
+                win->input.rmb = 0;
+                win->input.rmbUnClicked = true;
+                break;
         }
         //printf("up:%i\n", platSpec->recvBuf[1]);
         break;
@@ -1045,6 +1057,13 @@ bool WaitVsync() {
 
 
 bool InputPoll(DfWindow *win) {
+    win->input.lmbClicked = false;
+    win->input.mmbClicked = false;
+    win->input.rmbClicked = false;
+    win->input.lmbUnClicked = false;
+    win->input.mmbUnClicked = false;
+    win->input.rmbUnClicked = false;
+
     bool rv = HandleEvents(win);
     InputPollInternal(win);
     return rv;
