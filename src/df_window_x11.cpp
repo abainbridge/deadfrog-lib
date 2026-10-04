@@ -1,5 +1,4 @@
 // Platform includes
-#include <linux/limits.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -38,6 +37,7 @@
 enum {
     X11_OPCODE_CREATE_WINDOW = 1,
     X11_OPCODE_MAP_WINDOW = 8,
+    X11_OPCODE_CONFIGURE_WINDOW = 12,
     X11_OPCODE_CHANGE_PROPERTY = 18,
     X11_OPCODE_SET_SELECTION_OWNER = 22,
     X11_OPCODE_QUERY_KEYMAP = 44,
@@ -326,7 +326,7 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
 
     if (keycode == KEY_BACK_TICK) {
         if (shift) {
-            return '¬';
+            return '\xac'; // Â¬
         }
         return '`';
     }
@@ -337,7 +337,7 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
                case KEY_0: return ')';
                case KEY_1: return '!';
                case KEY_2: return '"';
-               case KEY_3: return '£';
+               case KEY_3: return '\xa3'; // Â£
                case KEY_4: return '$';
                case KEY_5: return '%';
                case KEY_6: return '^';
@@ -570,8 +570,8 @@ static void HandleEvent(DfWindow *win) {
                 break;
             case 2: win->input.mmb = 1; break;
             case 3: win->input.rmb = 1; break;
-            case 4: win->input.mouseZ++; break;
-            case 5: win->input.mouseZ--; break;
+            case 4: win->input.mouseZ += 30; break;
+            case 5: win->input.mouseZ -= 30; break;
         }
         //printf("down:%i\n", platSpec->recvBuf[1]);
         break;
@@ -759,14 +759,14 @@ static void ConnectToXserver(DfWindow *win) {
     }
 
     // Read Xauthority.
-    char xauthFilenameBuf[PATH_MAX];
+    char xauthFilenameBuf[2048];
     char const *xauthFilename = getenv("XAUTHORITY");
     if (!xauthFilename) {
         char const *homeDir = getenv("HOME");
         size_t homeDirLen = strlen(homeDir);
         char const xauth_appender[] = "/.Xauthority";
         size_t xauth_appender_len = sizeof(xauth_appender);
-        if (homeDirLen + xauth_appender_len > PATH_MAX) {
+        if (homeDirLen + xauth_appender_len >= sizeof(xauthFilenameBuf)) {
             FATAL_ERROR("HOME too long");
         }
         memcpy(xauthFilenameBuf, homeDir, homeDirLen);
@@ -937,6 +937,36 @@ void DestroyWin(DfWindow *win) {
     delete win->_private->platSpec;
     delete win->_private;
     delete win;
+}
+
+
+// TODO: Proper job
+int GetMonitorDpi(DfWindow *win) {
+    return 96;
+}
+
+
+// TODO: Proper job
+void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height) {
+    *x = 0;
+    *y = 0;
+    *width = 1920;
+    *height = 1080;
+}
+
+
+void SetWindowRect(DfWindow *win, int x, int y, int width, int height) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    uint32_t packet[7];
+    packet[0] = X11_OPCODE_CONFIGURE_WINDOW | (7 << 16);
+    packet[1] = platSpec->windowId;
+    packet[2] = 0xf;    // flags to say we want to set x, y, width and height
+    packet[3] = x;
+    packet[4] = y;
+    packet[5] = width;
+    packet[6] = height;
+
+    SendBuf(platSpec, packet, sizeof(packet));
 }
 
 
@@ -1187,7 +1217,7 @@ static void SendChangePropertyRequest(WindowPlatformSpecific *platSpec, uint32_t
         // clipboard data.
 //        puts("Sending ChangeProperty with clipboard contents");
 
-        const int amtPadding = 4 - platSpec->clipboardTxDataNumChars & 3;
+        const int amtPadding = 4 - (platSpec->clipboardTxDataNumChars & 3);
         const int numWords = 6 + (platSpec->clipboardTxDataNumChars + amtPadding) / 4;
 //        printf("amtPadding:%d numWords:%d numChars:%d\n", amtPadding, numWords, platSpec->clipboardTxDataNumChars);
         uint32_t packet[6];

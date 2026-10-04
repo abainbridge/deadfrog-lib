@@ -2,14 +2,14 @@
 
 #include "df_message_dialog.h"
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 
+#ifdef _MSC_VER
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 void DebugOut(char const *fmt, ...) {
     char buf[512];
     va_list ap;
@@ -17,7 +17,9 @@ void DebugOut(char const *fmt, ...) {
     vsprintf(buf, fmt, ap);
     OutputDebugString(buf);
 }
-
+#else
+#define DebugOut(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__);
+#endif
 
 void ReleaseAssert(bool condition, char const *fmt, ...) {
     if (!condition) {
