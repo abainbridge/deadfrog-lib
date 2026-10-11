@@ -121,7 +121,7 @@ void ClipboardReleaseReceivedData(char const *data) {
 
 int ClipboardSetData(char const *data, int numChars) {
     X11InternalClipboardSetData(data, numChars);
-    return 0;
+    return 1;
 }
 
 

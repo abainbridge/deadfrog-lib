@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <pthread.h>
 
 // Standard includes
 #include <stdint.h>
@@ -1013,6 +1014,16 @@ static void BlitBitmapToWindow(DfWindow *win) {
 }
 
 
+static void *FakeWindowMessageLoop(void *ignored) {
+    while (1) {
+        SleepMillisec(100);
+        HandleEvents(&g_fakeWindow);
+    }
+
+    return NULL;
+}
+
+
 static void CreateFakeWindowIfNeeded() {
     if (g_fakeWindow._private) return;
 
@@ -1038,6 +1049,9 @@ static void CreateFakeWindowIfNeeded() {
     SendBuf(platSpec, packet, sizeof(packet));
 
     MakeSocketNonBlocking(platSpec);
+
+    pthread_t thread;
+    pthread_create(&thread, NULL, FakeWindowMessageLoop, NULL);
 }
 
 
@@ -1290,3 +1304,4 @@ void X11InternalClipboardSetData(char const *data, int numChars) {
     packet[3] = 0;
     SendBuf(platSpec, packet, sizeof(packet));
 }
+
