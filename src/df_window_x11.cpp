@@ -1015,9 +1015,26 @@ static void BlitBitmapToWindow(DfWindow *win) {
 
 
 static void *FakeWindowMessageLoop(void *ignored) {
+    // This event loop only exists to handle get-clipboard-data requests. We'd
+    // like to only poll for these events infrequently to minimised CPU usage.
+    // But, perhaps surprisingly, the paste action in another app results in
+    // about ten events being sent to us. We need to respond to all of them
+    // quickly enough so that paste in the other application doesn't feel laggy.
+    // As a result, the sleep behaviour in this loop is more complex than you'd
+    // think it needs to be.
+    int numItersUntilSlow = 0;
     while (1) {
-        SleepMillisec(100);
-        HandleEvents(&g_fakeWindow);
+        if (HandleEvents(&g_fakeWindow))
+            numItersUntilSlow = 100;
+
+        if (numItersUntilSlow < 1) {
+            SleepMillisec(100);
+            numItersUntilSlow = -1;
+        }
+        else {
+            SleepMillisec(1);
+            numItersUntilSlow--;
+        }
     }
 
     return NULL;
