@@ -577,8 +577,8 @@ static void HandleEvent(DfWindow *win) {
                 win->input.rmb = 1;
                 win->input.rmbClicked = true;
                 break;
-            case 4: win->input.mouseZ += 60; break;
-            case 5: win->input.mouseZ -= 60; break;
+            case 4: win->input.mouseZ += 120; break;
+            case 5: win->input.mouseZ -= 120; break;
         }
         //printf("down:%i\n", platSpec->recvBuf[1]);
         break;
@@ -1304,4 +1304,3 @@ void X11InternalClipboardSetData(char const *data, int numChars) {
     packet[3] = 0;
     SendBuf(platSpec, packet, sizeof(packet));
 }
-
