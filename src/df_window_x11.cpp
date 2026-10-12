@@ -540,15 +540,15 @@ static void HandleEvent(DfWindow *win) {
         {
             unsigned char x11_keycode = platSpec->recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
-            win->_private->newKeyDowns[df_keycode] = 1;
+            win->input.keyDowns[df_keycode] = 1;
             win->input.keys[df_keycode] = 1;
             int modifiers = platSpec->recvBuf[28];
             char ascii = dfKeycodeToAscii(df_keycode, modifiers);
     //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
 
             if (ascii) {
-                win->_private->newKeysTyped[win->_private->newNumKeysTyped] = ascii;
-                win->_private->newNumKeysTyped++;
+                win->input.keysTyped[win->input.numKeysTyped] = ascii;
+                win->input.numKeysTyped++;
             }
             break;
         }
@@ -557,7 +557,7 @@ static void HandleEvent(DfWindow *win) {
         {
             unsigned char x11_keycode = platSpec->recvBuf[1];
             unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
-            win->_private->newKeyUps[df_keycode] = 1;
+            win->input.keyUps[df_keycode] = 1;
             win->input.keys[df_keycode] = 0;
     //printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
             break;
@@ -1077,6 +1077,9 @@ bool InputPoll(DfWindow *win) {
     win->input.lmbUnClicked = false;
     win->input.mmbUnClicked = false;
     win->input.rmbUnClicked = false;
+    memset(win->input.keyDowns, 0, KEY_MAX);
+    memset(win->input.keyUps, 0, KEY_MAX);
+    win->input.numKeysTyped = 0;
 
     bool rv = HandleEvents(win);
     InputPollInternal(win);
