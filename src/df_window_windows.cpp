@@ -214,15 +214,7 @@ static int EventHandler(DfWindow *win, unsigned int message, unsigned int wParam
 
 
 bool InputPoll(DfWindow *win) {
-    win->input.lmbClicked = false;
-    win->input.mmbClicked = false;
-    win->input.rmbClicked = false;
-    win->input.lmbUnClicked = false;
-    win->input.mmbUnClicked = false;
-    win->input.rmbUnClicked = false;
-    memset(win->input.keyDowns, 0, KEY_MAX);
-    memset(win->input.keyUps, 0, KEY_MAX);
-    win->input.numKeysTyped = 0;
+    PreInputPollInternal();
 
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {

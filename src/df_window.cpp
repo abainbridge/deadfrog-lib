@@ -37,6 +37,7 @@ DfWindow *g_window = NULL;
 
 
 static void InitInput(DfWindow *);
+static void PreInputPollInternal(DfWindow *win);
 static void InputPollInternal(DfWindow *win);
 
 
@@ -179,6 +180,17 @@ bool UntypeKey(DfWindow *win, char key) {
     return false;
 }
 
+static void PreInputPollInternal(DfWindow *win) {
+    win->input.lmbClicked = false;
+    win->input.mmbClicked = false;
+    win->input.rmbClicked = false;
+    win->input.lmbUnClicked = false;
+    win->input.mmbUnClicked = false;
+    win->input.rmbUnClicked = false;
+    memset(win->input.keyDowns, 0, KEY_MAX);
+    memset(win->input.keyUps, 0, KEY_MAX);
+    win->input.numKeysTyped = 0;
+}
 
 static void InputPollInternal(DfWindow *win) {
     // Count the number of key ups and downs this frame

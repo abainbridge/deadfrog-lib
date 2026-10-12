@@ -1088,15 +1088,7 @@ bool WaitVsync() {
 
 
 bool InputPoll(DfWindow *win) {
-    win->input.lmbClicked = false;
-    win->input.mmbClicked = false;
-    win->input.rmbClicked = false;
-    win->input.lmbUnClicked = false;
-    win->input.mmbUnClicked = false;
-    win->input.rmbUnClicked = false;
-    memset(win->input.keyDowns, 0, KEY_MAX);
-    memset(win->input.keyUps, 0, KEY_MAX);
-    win->input.numKeysTyped = 0;
+    PreInputPollInternal(win);
 
     bool rv = HandleEvents(win);
     InputPollInternal(win);
