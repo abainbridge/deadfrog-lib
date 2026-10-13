@@ -42,8 +42,10 @@ enum {
     X11_OPCODE_CHANGE_PROPERTY = 18,
     X11_OPCODE_SET_SELECTION_OWNER = 22,
     X11_OPCODE_QUERY_KEYMAP = 44,
+    X11_OPCODE_OPEN_FONT = 45,
     X11_OPCODE_CREATE_GC = 55,
     X11_OPCODE_PUT_IMAGE = 72,
+    X11_OPCODE_CREATE_GLYPH_CURSOR = 94,
 
     X11_EVENT_CODE_SELECTION_NOTIFY = 31,
 
@@ -180,6 +182,11 @@ struct WindowPlatformSpecific {
     int targetsId;
     int wmDeleteWindowId;
     int wmProtocolsId;
+    int cursorIbeamId;
+    int cursorResizeWidthId;
+    int cursorResizeHeightId;
+
+    MouseCursorType currentCursor;
 
     char *clipboardRxData;  // NULL except between calls of X11InternalClipboardRequestData() and ClipboardReleaseReceivedData()
     char *clipboardTxData;
@@ -706,6 +713,44 @@ static bool GetReply(DfWindow *win, int expectedLen) {
 // ****************************************************************************
 
 
+static void OpenFont(DfWindow *win, uint32_t fontId, char const *fontName) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    uint16_t nameLen = (uint16_t)strlen(fontName);
+    uint16_t padLen = (4 - (nameLen % 4)) % 4;
+
+    // Request size in bytes: Header(4) + FontID(4) + NameLen(2) + Pad(2) + Name + Pad
+    uint32_t totalBytes = 12 + nameLen + padLen;
+    uint16_t wordCount = totalBytes / 4;
+
+    uint32_t buf[256] = { 0 };
+    buf[0] = X11_OPCODE_OPEN_FONT | (wordCount << 16);
+    buf[1] = fontId;   // Client-allocated Font Resource ID
+    buf[2] = nameLen;  // Length of font name string
+
+    memcpy(&buf[3], fontName, nameLen);
+    SendBuf(platSpec, buf, totalBytes);
+}
+
+static void CreateGlyphCursor(DfWindow *win, uint32_t cursor_id, uint32_t font_id,
+                            uint16_t source_char, uint16_t mask_char,
+                            uint16_t fore_r, uint16_t fore_g, uint16_t fore_b,
+                            uint16_t back_r, uint16_t back_g, uint16_t back_b) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    unsigned len = 8;
+    uint32_t buf[len];
+
+    buf[0] = X11_OPCODE_CREATE_GLYPH_CURSOR | (len << 16);
+    buf[1] = cursor_id;// Client-allocated Cursor Resource ID
+    buf[2] = font_id;  // Source Font ID
+    buf[3] = font_id;  // Mask Font ID (same font)
+    buf[4] = source_char | (mask_char << 16);
+    buf[5] = fore_r | (fore_g << 16);
+    buf[6] = fore_b | (back_r << 16);
+    buf[7] = back_g | (back_b << 16);
+
+    SendBuf(platSpec, buf, sizeof(buf));
+}
+
 static void MapWindow(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     int const len = 2;
@@ -841,6 +886,26 @@ static void ConnectToXserver(DfWindow *win) {
         platSpec->wmDeleteWindowId, platSpec->wmProtocolsId);
 
     platSpec->windowId = generateId(win);
+
+    // Setup mouse cursors
+    uint32_t fontId = generateId(win);
+    OpenFont(win, fontId, "cursor");
+    platSpec->cursorIbeamId = generateId(win);
+    CreateGlyphCursor(win, platSpec->cursorIbeamId, fontId,
+        152, 153, // Ibeam glyph ID
+        0, 0, 0, // Black FG
+        0xffff, 0xffff, 0xffff); // White BG
+    platSpec->cursorResizeWidthId = generateId(win);
+    CreateGlyphCursor(win, platSpec->cursorResizeWidthId, fontId,
+        108, 109,
+        0, 0, 0,
+        0xffff, 0xffff, 0xffff);
+    platSpec->cursorResizeHeightId = generateId(win);
+    CreateGlyphCursor(win, platSpec->cursorResizeHeightId, fontId,
+        116, 117,
+        0, 0, 0,
+        0xffff, 0xffff, 0xffff);
+    platSpec->currentCursor = MCT_ARROW;
 }
 
 
@@ -1105,6 +1170,25 @@ void HideMouse(DfWindow *win) {
 
 
 void SetMouseCursor(DfWindow *win, MouseCursorType t) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    if (t == platSpec->currentCursor) return;
+
+    int len = 4;
+    uint32_t buf[len];
+
+    buf[0] = X11_OPCODE_CHANGE_WINDOW_ATTRIBUTES | (len << 16);
+    buf[1] = platSpec->windowId;
+    buf[2] = 0x4000; // CW_CURSOR
+
+    switch (t) {
+    case MCT_IBEAM: buf[3] = platSpec->cursorIbeamId; break;
+    case MCT_RESIZE_WIDTH: buf[3] = platSpec->cursorResizeWidthId; break;
+    case MCT_RESIZE_HEIGHT: buf[3] = platSpec->cursorResizeHeightId; break;
+    default: buf[3] = 0; break;
+    }
+
+    SendBuf(platSpec, buf, sizeof(buf));
+    platSpec->currentCursor = t;
 }
 
 
