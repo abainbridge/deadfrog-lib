@@ -37,6 +37,7 @@
 
 enum {
     X11_OPCODE_CREATE_WINDOW = 1,
+    X11_OPCODE_CHANGE_WINDOW_ATTRIBUTES = 2,
     X11_OPCODE_MAP_WINDOW = 8,
     X11_OPCODE_CONFIGURE_WINDOW = 12,
     X11_OPCODE_CHANGE_PROPERTY = 18,
@@ -713,6 +714,12 @@ static bool GetReply(DfWindow *win, int expectedLen) {
 // ****************************************************************************
 
 
+static uint32_t generateId(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    return platSpec->nextResourceId++;
+}
+
+
 static void OpenFont(DfWindow *win, uint32_t fontId, char const *fontName) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     uint16_t nameLen = (uint16_t)strlen(fontName);
@@ -731,25 +738,27 @@ static void OpenFont(DfWindow *win, uint32_t fontId, char const *fontName) {
     SendBuf(platSpec, buf, totalBytes);
 }
 
-static void CreateGlyphCursor(DfWindow *win, uint32_t cursor_id, uint32_t font_id,
-                            uint16_t source_char, uint16_t mask_char,
-                            uint16_t fore_r, uint16_t fore_g, uint16_t fore_b,
-                            uint16_t back_r, uint16_t back_g, uint16_t back_b) {
+
+static int CreateGlyphCursor(DfWindow *win, uint32_t fontId, uint16_t mainGlyphIdx) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     unsigned len = 8;
     uint32_t buf[len];
+    uint16_t maskGlyphIdx = mainGlyphIdx + 1;
+    int newCursorId = generateId(win);
 
     buf[0] = X11_OPCODE_CREATE_GLYPH_CURSOR | (len << 16);
-    buf[1] = cursor_id;// Client-allocated Cursor Resource ID
-    buf[2] = font_id;  // Source Font ID
-    buf[3] = font_id;  // Mask Font ID (same font)
-    buf[4] = source_char | (mask_char << 16);
-    buf[5] = fore_r | (fore_g << 16);
-    buf[6] = fore_b | (back_r << 16);
-    buf[7] = back_g | (back_b << 16);
+    buf[1] = newCursorId;
+    buf[2] = fontId;  // Source Font ID
+    buf[3] = fontId;  // Mask Font ID (same font)
+    buf[4] = mainGlyphIdx | (maskGlyphIdx << 16);
+    buf[5] = 0; // Foreground red and green channels
+    buf[6] = 0xffff0000ul; // Foreground blue in hi word, Background red in low.
+    buf[7] = 0xfffffffful; // Background green and blue.
 
     SendBuf(platSpec, buf, sizeof(buf));
+    return newCursorId;
 }
+
 
 static void MapWindow(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
@@ -785,12 +794,6 @@ static int GetAtomId(DfWindow *win, char const *atomName) {
     ConsumeMessage(platSpec, 32);
 
     return *id;
-}
-
-
-static uint32_t generateId(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    return platSpec->nextResourceId++;
 }
 
 
@@ -890,21 +893,9 @@ static void ConnectToXserver(DfWindow *win) {
     // Setup mouse cursors
     uint32_t fontId = generateId(win);
     OpenFont(win, fontId, "cursor");
-    platSpec->cursorIbeamId = generateId(win);
-    CreateGlyphCursor(win, platSpec->cursorIbeamId, fontId,
-        152, 153, // Ibeam glyph ID
-        0, 0, 0, // Black FG
-        0xffff, 0xffff, 0xffff); // White BG
-    platSpec->cursorResizeWidthId = generateId(win);
-    CreateGlyphCursor(win, platSpec->cursorResizeWidthId, fontId,
-        108, 109,
-        0, 0, 0,
-        0xffff, 0xffff, 0xffff);
-    platSpec->cursorResizeHeightId = generateId(win);
-    CreateGlyphCursor(win, platSpec->cursorResizeHeightId, fontId,
-        116, 117,
-        0, 0, 0,
-        0xffff, 0xffff, 0xffff);
+    platSpec->cursorIbeamId = CreateGlyphCursor(win, fontId, 152);
+    platSpec->cursorResizeWidthId = CreateGlyphCursor(win, fontId, 108);
+    platSpec->cursorResizeHeightId = CreateGlyphCursor(win, fontId, 116);
     platSpec->currentCursor = MCT_ARROW;
 }
 
