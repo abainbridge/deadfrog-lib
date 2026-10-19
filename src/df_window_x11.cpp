@@ -68,26 +68,7 @@ enum {
     X11_EVENT_POINTERMOTION = 0x40,
     X11_EVENT_POINTERMOTIONHINT = 0x80,
     X11_EVENT_STRUCTURE_NOTIFY = 0x20000,
-//     X11_EVENT_RESIZEREDIRECT = 0x40000,
     X11_EVENT_FOCUSCHANGE = 0x200000,
-//      #x00000100     Button1Motion
-//      #x00000200     Button2Motion
-//      #x00000400     Button3Motion
-//      #x00000800     Button4Motion
-//      #x00001000     Button5Motion
-//      #x00002000     ButtonMotion
-//      #x00004000     KeymapState
-//      #x00008000     Exposure
-//      #x00010000     VisibilityChange
-//      #x00020000     StructureNotify
-//      #x00040000     ResizeRedirect
-//      #x00080000     SubstructureNotify
-//      #x00100000     SubstructureRedirect
-//      #x00200000     FocusChange
-//      #x00400000     PropertyChange
-//      #x00800000     ColormapChange
-//      #x01000000     OwnerGrabButton
-//      #xFE000000     unused but must be zero
 };
 
 typedef struct __attribute__((packed)) {
@@ -178,25 +159,24 @@ struct WindowPlatformSpecific {
     uint32_t windowId;
 
     // Atom values.
-    int clipboardId;
-    int stringId;
-    int xselDataId;
-    int targetsId;
-    int wmDeleteWindowId;
-    int wmProtocolsId;
+    int clipboardAtom;
+    int stringAtom;
+    int xselDataAtom;
+    int targetsAtom;
+    int wmDeleteWindowAtom;
+    int wmProtocolsAtom;
+    int xdndPositionAtom;
+    int xdndStatusAtom;
+    int xdndDropAtom;
+    int xdndActionCopyAtom;
+    int xdndSelectionAtom;
+    int uriListAtom;
+    int xdndFilenameAtom;
+    int xdndFinishedAtom;
+
     int cursorIbeamId;
     int cursorResizeWidthId;
     int cursorResizeHeightId;
-
-    int xdndPositionId;
-    int xdndStatusId;
-    int xdndDropId;
-    int xdndActionCopyId;
-    int xdndSelectionId;
-    int uriListId;
-    int xdndFilenameId;
-    int xdndFinishedId;
-
     int dropSourceWinId;
 
     MouseCursorType currentCursor;
@@ -207,15 +187,14 @@ struct WindowPlatformSpecific {
 };
 
 
+static bool GetReply(DfWindow *win, int expectedLen);
+static void ReceiveClipboardData(DfWindow *win);
+
+
 // Not a visible window. Just used to store a connection to the XServer. Used
 // for things like GetDesktopRes() and the clipboard routines which need to
 // even if not real window exists.
 static DfWindow g_fakeWindow = { 0 };
-
-
-static void ReceiveClipboardData(DfWindow *);
-static void SendChangePropertyRequest(WindowPlatformSpecific *, uint32_t destWindow, uint32_t target, uint32_t property);
-static void SendSendEventSelectionNotify(WindowPlatformSpecific *, uint32_t destWindow, uint32_t target, uint32_t property, uint32_t time);
 
 
 static int x11KeycodeToDfKeycode(int i) {
@@ -545,6 +524,407 @@ static uint32_t GetU32FromRecvBuf(WindowPlatformSpecific *platSpec, int offset) 
 }
 
 
+// ****************************************************************************
+// X11 protocol pack and send functions
+// ****************************************************************************
+
+
+static void MapWindow(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int const len = 2;
+    uint32_t packet[len];
+    packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
+    packet[1] = platSpec->windowId;
+    SendBuf(platSpec, packet, 8);
+}
+
+
+static void SendXdndStatus(DfWindow *win, int targetWinId) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int len = 11;
+    uint32_t buf[len];
+    buf[0] = X11_OPCODE_SEND_EVENT | (len << 16);
+    buf[1] = targetWinId;
+    buf[2] = 0;
+    buf[3] = X11_OPCODE_CLIENT_MESSAGE;
+    buf[3] |= (32 << 8); // format = 32-bit
+    buf[4] = targetWinId;
+    buf[5] = platSpec->xdndStatusAtom;
+    buf[6] = platSpec->windowId;
+    buf[7] = 1; // Accept drop messages flag.
+    buf[8] = 0; // Min x & y values for drop area.
+    buf[9] = 0; // Width and height of drop area.
+    buf[10] = platSpec->xdndActionCopyAtom;
+    SendBuf(platSpec, buf, sizeof(buf));
+}
+
+
+static void SendXConvertSelection(DfWindow *win, uint32_t timestamp) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int len = 6;
+    uint32_t buf[len];
+    buf[0] = X11_OPCODE_CONVERT_SELECTION | (len << 16);
+    buf[1] = platSpec->windowId; // Requestor window, ie us.
+    buf[2] = platSpec->xdndSelectionAtom; // We'd like the DND data please.
+    buf[3] = platSpec->uriListAtom; // Specifically the file name
+    buf[4] = platSpec->xdndFilenameAtom;
+    buf[5] = timestamp;
+    SendBuf(platSpec, buf, sizeof(buf));
+}
+
+
+static void SendGetPropertyRequest(DfWindow *win, uint32_t property) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    uint32_t packet[6];
+    packet[0] = 20 | 6 << 16;
+    packet[1] = platSpec->windowId; // window
+    packet[2] = property;
+    packet[3] = 0; // Type = any
+    packet[4] = 0; // offset = 0
+    packet[5] = 0xfffffffful; // length
+    SendBuf(platSpec, packet, sizeof(packet));
+}
+
+
+static void SendXdndFinished(DfWindow *win, uint32_t targetWinId) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int len = 11;
+    uint32_t buf[len] = { 0 };
+    buf[0] = X11_OPCODE_SEND_EVENT | (len << 16);
+    buf[1] = targetWinId;
+    buf[2] = 0;
+    buf[3] = X11_OPCODE_CLIENT_MESSAGE;
+    buf[3] |= (32 << 8); // format = 32-bit
+    buf[4] = targetWinId;
+    buf[5] = platSpec->xdndFinishedAtom;
+    buf[6] = platSpec->windowId;
+    buf[7] = 1; // Flags: bit 0 = success
+    buf[8] = platSpec->xdndActionCopyAtom;
+    SendBuf(platSpec, buf, sizeof(buf));
+}
+
+
+static void SendChangePropertyRequest(WindowPlatformSpecific *platSpec, uint32_t destWindow,
+                                      uint32_t target, uint32_t property) {
+    if (target == platSpec->targetsAtom) {
+        // This branch sends a change property request that is used as the
+        // response to a SelectionRequest. It tells the recipient what format the
+        // clipboard data that we are about to send will be in.
+//        puts("Sending ChangeProperty with clipboard data format");
+        const int numWords = 8;
+        uint32_t packet[numWords];
+        packet[0] = X11_OPCODE_CHANGE_PROPERTY | numWords << 16;
+        packet[1] = destWindow;
+        packet[2] = property;
+        packet[3] = 4; // type is ATOM.
+        packet[4] = 32; // Format unit is 32 bits.
+        packet[5] = 2; // Length is 2 format units;
+        packet[6] = platSpec->targetsAtom;
+        packet[7] = platSpec->stringAtom;
+        SendBuf(platSpec, packet, sizeof(packet));
+    }
+    else {
+        // This branch sends a change property request that includes the actual
+        // clipboard data.
+//        puts("Sending ChangeProperty with clipboard contents");
+
+        const int amtPadding = 4 - (platSpec->clipboardTxDataNumChars & 3);
+        const int numWords = 6 + (platSpec->clipboardTxDataNumChars + amtPadding) / 4;
+//        printf("amtPadding:%d numWords:%d numChars:%d\n", amtPadding, numWords, platSpec->clipboardTxDataNumChars);
+        uint32_t packet[6];
+        packet[0] = X11_OPCODE_CHANGE_PROPERTY | numWords << 16;
+        packet[1] = destWindow;
+        packet[2] = property;
+        packet[3] = platSpec->stringAtom; // type is STRING.
+        packet[4] = 8; // Format unit is this many bits.
+        packet[5] = platSpec->clipboardTxDataNumChars; // Length in format units;
+        SendBuf(platSpec, packet, sizeof(packet));
+        SendBuf(platSpec, platSpec->clipboardTxData, platSpec->clipboardTxDataNumChars + amtPadding);
+    }
+}
+
+
+static void SendSendEventSelectionNotify(WindowPlatformSpecific *platSpec, uint32_t destWindow,
+                                         uint32_t target, uint32_t property, uint32_t time) {
+//    puts("Sending SendEventSelectionNotify");
+    uint32_t packet[11];
+    packet[0] = 25 | 11 << 16;
+    packet[1] = destWindow;
+    packet[2] = 0; // event mask
+    packet[3] = 31; // SelectionNotify
+    packet[4] = time;
+    packet[5] = destWindow; // requestor
+    packet[6] = platSpec->clipboardAtom;
+    packet[7] = target;
+    packet[8] = property;
+    packet[9] = 0;
+    packet[10] = 0;
+
+    SendBuf(platSpec, packet, sizeof(packet));
+}
+
+
+// ****************************************************************************
+// Higher level X11 protocol handling
+// ****************************************************************************
+
+static uint32_t GenerateId(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    return platSpec->nextResourceId++;
+}
+
+
+static int CreateGlyphCursor(DfWindow *win, uint32_t fontId, uint16_t mainGlyphIdx) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    unsigned len = 8;
+    uint32_t buf[len];
+    uint16_t maskGlyphIdx = mainGlyphIdx + 1;
+    int newCursorId = GenerateId(win);
+
+    buf[0] = X11_OPCODE_CREATE_GLYPH_CURSOR | (len << 16);
+    buf[1] = newCursorId;
+    buf[2] = fontId;  // Source Font ID
+    buf[3] = fontId;  // Mask Font ID (same font)
+    buf[4] = mainGlyphIdx | (maskGlyphIdx << 16);
+    buf[5] = 0; // Foreground red and green channels
+    buf[6] = 0xffff0000ul; // Foreground blue in hi word, Background red in low.
+    buf[7] = 0xfffffffful; // Background green and blue.
+
+    SendBuf(platSpec, buf, sizeof(buf));
+    return newCursorId;
+}
+
+
+static void OpenFont(DfWindow *win, uint32_t fontId, char const *fontName) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    uint16_t nameLen = (uint16_t)strlen(fontName);
+    uint16_t padLen = (4 - (nameLen % 4)) % 4;
+
+    // Request size in bytes: Header(4) + FontID(4) + NameLen(2) + Pad(2) + Name + Pad
+    uint32_t totalBytes = 12 + nameLen + padLen;
+    uint16_t wordCount = totalBytes / 4;
+
+    uint32_t buf[256] = { 0 };
+    buf[0] = X11_OPCODE_OPEN_FONT | (wordCount << 16);
+    buf[1] = fontId;   // Client-allocated Font Resource ID
+    buf[2] = nameLen;  // Length of font name string
+
+    memcpy(&buf[3], fontName, nameLen);
+    SendBuf(platSpec, buf, totalBytes);
+}
+
+
+static int GetAtomId(DfWindow *win, char const *atomName) {
+    int atomNameLen = strlen(atomName);
+    if (atomNameLen > 19) return 0;
+
+    int requestLenWords = (11 + atomNameLen) / 4;
+    int requestLenBytes = requestLenWords * 4;
+    uint8_t packet[30] = { 0 };
+    packet[0] = 16; // opcode = InternAtom.
+    packet[1] = 0; // only_if_exists = 0.
+    packet[2] = requestLenWords;
+    packet[4] = atomNameLen; // Atom name len in bytes.
+    memcpy(packet + 8, atomName, atomNameLen);
+
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    SendBuf(platSpec, packet, requestLenBytes);
+
+    while (!GetReply(win, 32))
+        ;
+
+    uint16_t *id = (uint16_t *)(platSpec->recvBuf + 8);
+
+    ConsumeMessage(platSpec, 32);
+
+    return *id;
+}
+
+
+// Initialize the connection to the Xserver if we haven't already.
+static void ConnectToXserver(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    if (platSpec->socketFd >= 0) return;
+
+    char *displayString = getenv("DISPLAY");
+    char socketName[] = "/tmp/.X11-unix/X0";
+    if (displayString && displayString[0] == ':' && isdigit(displayString[1]))
+        socketName[16] = displayString[1];
+
+    // Open socket and connect.
+    platSpec->socketFd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (platSpec->socketFd < 0) {
+        FATAL_ERROR("Create socket failed");
+    }
+    struct sockaddr_un servAddr = { 0 };
+    servAddr.sun_family = AF_UNIX;
+    strcpy(servAddr.sun_path, socketName);
+    if (connect(platSpec->socketFd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
+        FATAL_ERROR("Couldn't connect");
+    }
+
+    // Read Xauthority.
+    char xauthFilenameBuf[2048];
+    char const *xauthFilename = getenv("XAUTHORITY");
+    if (!xauthFilename) {
+        char const *homeDir = getenv("HOME");
+        size_t homeDirLen = strlen(homeDir);
+        char const xauth_appender[] = "/.Xauthority";
+        size_t xauth_appender_len = sizeof(xauth_appender);
+        if (homeDirLen + xauth_appender_len >= sizeof(xauthFilenameBuf)) {
+            FATAL_ERROR("HOME too long");
+        }
+        memcpy(xauthFilenameBuf, homeDir, homeDirLen);
+        strcpy(xauthFilenameBuf + homeDirLen, xauth_appender);
+        xauthFilename = xauthFilenameBuf;
+    }
+    FILE *xauthFile = fopen(xauthFilename, "rb");
+    if (!xauthFile) {
+        FATAL_ERROR("Couldn't open '%s'.", xauthFilename);
+    }
+    char xauthCookie[4096];
+    size_t xauthLen = fread(xauthCookie, 1, sizeof(xauthCookie), xauthFile);
+    if (xauthLen < 0) {
+        FATAL_ERROR("Couldn't read from .Xauthority.");
+    }
+    fclose(xauthFile);
+
+    // Send connection request.
+    connection_request_t request = { 0 };
+    request.order = 'l';  // Little endian.
+    request.major_version = 11;
+    request.minor_version = 0;
+    request.auth_proto_name_len = 18;
+    request.auth_proto_data_len = 16;
+    SendBuf(platSpec, &request, sizeof(connection_request_t));
+    SendBuf(platSpec, "MIT-MAGIC-COOKIE-1\0\0", 20);
+    SendBuf(platSpec, xauthCookie + xauthLen - 16, 16);
+
+    // Read connection reply header.
+    FatalRead(platSpec, &platSpec->connectionReplyHeader, sizeof(connectionReplyHeader_t));
+    if (platSpec->connectionReplyHeader.success == 0) {
+        FATAL_ERROR("Connection reply indicated failure.");
+    }
+
+    // Read rest of connection reply.
+    platSpec->connectionReplySuccessBody = (connectionReplySuccessBody_t*)new char[platSpec->connectionReplyHeader.len * 4];
+    FatalRead(platSpec, platSpec->connectionReplySuccessBody,
+               platSpec->connectionReplyHeader.len * 4);
+
+    // Set some pointers into the connection reply because they'll be convenient later.
+    int vendorLenPlusPadding = (platSpec->connectionReplySuccessBody->vendor_len + 3) & ~3;
+    platSpec->pixmapFormats = (pixmap_format_t *)(platSpec->connectionReplySuccessBody->vendor_string +
+                             vendorLenPlusPadding);
+    platSpec->screens = (screen_t *)(platSpec->pixmapFormats +
+                                  platSpec->connectionReplySuccessBody->num_pixmapFormats);
+
+    platSpec->nextResourceId = platSpec->connectionReplySuccessBody->id_base;
+
+    // Get some Atom ids that we will use later.
+    platSpec->clipboardAtom = GetAtomId(win, "CLIPBOARD");
+    platSpec->stringAtom = GetAtomId(win, "STRING");
+    platSpec->xselDataAtom = GetAtomId(win, "XSEL_DATA");
+    platSpec->targetsAtom = GetAtomId(win, "TARGETS");
+    platSpec->wmDeleteWindowAtom = GetAtomId(win, "WM_DELETE_WINDOW");
+    platSpec->wmProtocolsAtom = GetAtomId(win, "WM_PROTOCOLS");
+    platSpec->xdndPositionAtom = GetAtomId(win, "XdndPosition");
+    platSpec->xdndStatusAtom = GetAtomId(win, "XdndStatus");
+    platSpec->xdndDropAtom = GetAtomId(win, "XdndDrop");
+    platSpec->xdndActionCopyAtom = GetAtomId(win, "XdndActionCopy");
+    platSpec->xdndSelectionAtom = GetAtomId(win, "XdndSelection");
+    platSpec->uriListAtom = GetAtomId(win, "text/uri-list");
+    platSpec->xdndFilenameAtom = GetAtomId(win, "XdndFilename");
+    platSpec->xdndFinishedAtom = GetAtomId(win, "XdndFinished");
+
+    platSpec->windowId = GenerateId(win);
+
+    // Setup mouse cursors
+    uint32_t fontId = GenerateId(win);
+    OpenFont(win, fontId, "cursor");
+    platSpec->cursorIbeamId = CreateGlyphCursor(win, fontId, 152);
+    platSpec->cursorResizeWidthId = CreateGlyphCursor(win, fontId, 108);
+    platSpec->cursorResizeHeightId = CreateGlyphCursor(win, fontId, 116);
+    platSpec->currentCursor = MCT_ARROW;
+}
+
+
+static void CreateGc(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    platSpec->graphicsContextId = GenerateId(win);
+    int const len = 4;
+    uint32_t packet[len];
+    packet[0] = X11_OPCODE_CREATE_GC | (len<<16);
+    packet[1] = platSpec->graphicsContextId;
+    packet[2] = platSpec->windowId;
+    packet[3] = 0; // Value mask.
+
+    SendBuf(platSpec, packet, sizeof(packet));
+}
+
+
+static void EnableDeleteWindowEvent(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+
+    // See InterClient Communication Conventions Manual v2.0. The section
+    // heading is "Window Deletion".
+    int requestLen = 7;
+    uint32_t packet[requestLen];
+    packet[0] = X11_OPCODE_CHANGE_PROPERTY | (requestLen << 16);
+    packet[1] = platSpec->windowId;
+    packet[2] = platSpec->wmProtocolsAtom; // Property.
+    packet[3] = 4; // Type = ATOM.
+    packet[4] = 32; // Format = 32 bits per item.
+    packet[5] = 1; // Length = 1 item.
+    packet[6] = platSpec->wmDeleteWindowAtom; // Item data.
+
+    SendBuf(platSpec, packet, sizeof(packet));
+}
+
+
+static void MakeSocketNonBlocking(WindowPlatformSpecific *platSpec) {
+    // Make socket non-blocking.
+    int flags = fcntl(platSpec->socketFd, F_GETFL, 0);
+    if (flags == -1) {
+        FATAL_ERROR("Couldn't get flags of socket");
+    }
+    flags |= O_NONBLOCK;
+    if (fcntl(platSpec->socketFd, F_SETFL, flags) != 0) {
+        FATAL_ERROR("Couldn't set socket as non-blocking");
+    }
+}
+
+
+static void BlitBitmapToWindow(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+
+    // *** Send back-buffer to Xserver.
+    int W = win->bmp->width;
+    int H = win->bmp->height;
+    enum { MAX_BYTES_PER_REQUEST = 65535 }; // Len field is 16-bits
+    int num_rows_in_chunk = (MAX_BYTES_PER_REQUEST - 6) / W; // -6 because of packet header
+    DfColour *row = win->bmp->pixels;
+    for (int y = 0; y < H; y += num_rows_in_chunk) {
+        if (y + num_rows_in_chunk > H) {
+            num_rows_in_chunk = H - y;
+        }
+
+        uint32_t packet[6];
+        uint32_t bmp_format = 2 << 8;
+        uint32_t request_len = (uint32_t)(W * num_rows_in_chunk + 6) << 16;
+        packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
+        packet[1] = platSpec->windowId;
+        packet[2] = platSpec->graphicsContextId;
+        packet[3] = W | (num_rows_in_chunk << 16); // Width and height.
+        packet[4] = 0 | (y << 16); // Dst X and Y.
+        packet[5] = 24 << 8; // Bit depth.
+
+        SendBuf(platSpec, packet, sizeof(packet));
+        SendBuf(platSpec, row, W * num_rows_in_chunk * 4);
+        row += W * num_rows_in_chunk;
+    }
+}
+
+
 static void HandleEvent(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     if (platSpec->recvBuf[0] == 1) {
@@ -656,7 +1036,7 @@ static void HandleEvent(DfWindow *win) {
             uint32_t time = GetU32FromRecvBuf(platSpec, 4);
             uint32_t requestor = GetU32FromRecvBuf(platSpec, 12);
             uint32_t selection = GetU32FromRecvBuf(platSpec, 16);
-            ReleaseAssert(selection == platSpec->clipboardId, "selection was %x", selection);
+            ReleaseAssert(selection == platSpec->clipboardAtom, "selection was %x", selection);
             uint32_t target = GetU32FromRecvBuf(platSpec, 20);
             uint32_t property = GetU32FromRecvBuf(platSpec, 24);
             printf("Recv'd Selection request. Time=%x Requestor=%x target=%x property=%x\n",
@@ -678,16 +1058,16 @@ static void HandleEvent(DfWindow *win) {
     case 33: // Client message.
         {
             int type = GetU32FromRecvBuf(platSpec, 8);
-            if (type == platSpec->wmProtocolsId) {
+            if (type == platSpec->wmProtocolsAtom) {
                 printf("WM_PROTOCOLS\n");
                 win->windowClosed = true;
             }
-//             else if (type == platSpec->xdndPositionId) {
+//             else if (type == platSpec->xdndPositionAtom) {
 //                 int winToSendTo = GetU32FromRecvBuf(platSpec, 12);
 //                 printf("xdndPosition from win %x\n", winToSendTo);
 //                 SendXdndStatus(win, winToSendTo);
 //             }
-//             else if (type == platSpec->xdndDropId) {
+//             else if (type == platSpec->xdndDropAtom) {
 //                 uint32_t timestamp = GetU32FromRecvBuf(platSpec, 24);
 //                 platSpec->dropSourceWinId = GetU32FromRecvBuf(platSpec, 12);
 //                 printf("xdndDrop timestamp=%x srcWinId=%x\n", timestamp, platSpec->dropSourceWinId);
@@ -741,403 +1121,8 @@ static bool GetReply(DfWindow *win, int expectedLen) {
 
 
 // ****************************************************************************
-// End of socket handling code.
+// Clipboard functions
 // ****************************************************************************
-
-
-static uint32_t GenerateId(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    return platSpec->nextResourceId++;
-}
-
-
-static void OpenFont(DfWindow *win, uint32_t fontId, char const *fontName) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    uint16_t nameLen = (uint16_t)strlen(fontName);
-    uint16_t padLen = (4 - (nameLen % 4)) % 4;
-
-    // Request size in bytes: Header(4) + FontID(4) + NameLen(2) + Pad(2) + Name + Pad
-    uint32_t totalBytes = 12 + nameLen + padLen;
-    uint16_t wordCount = totalBytes / 4;
-
-    uint32_t buf[256] = { 0 };
-    buf[0] = X11_OPCODE_OPEN_FONT | (wordCount << 16);
-    buf[1] = fontId;   // Client-allocated Font Resource ID
-    buf[2] = nameLen;  // Length of font name string
-
-    memcpy(&buf[3], fontName, nameLen);
-    SendBuf(platSpec, buf, totalBytes);
-}
-
-
-static int CreateGlyphCursor(DfWindow *win, uint32_t fontId, uint16_t mainGlyphIdx) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    unsigned len = 8;
-    uint32_t buf[len];
-    uint16_t maskGlyphIdx = mainGlyphIdx + 1;
-    int newCursorId = GenerateId(win);
-
-    buf[0] = X11_OPCODE_CREATE_GLYPH_CURSOR | (len << 16);
-    buf[1] = newCursorId;
-    buf[2] = fontId;  // Source Font ID
-    buf[3] = fontId;  // Mask Font ID (same font)
-    buf[4] = mainGlyphIdx | (maskGlyphIdx << 16);
-    buf[5] = 0; // Foreground red and green channels
-    buf[6] = 0xffff0000ul; // Foreground blue in hi word, Background red in low.
-    buf[7] = 0xfffffffful; // Background green and blue.
-
-    SendBuf(platSpec, buf, sizeof(buf));
-    return newCursorId;
-}
-
-
-static void MapWindow(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    int const len = 2;
-    uint32_t packet[len];
-    packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
-    packet[1] = platSpec->windowId;
-    SendBuf(platSpec, packet, 8);
-}
-
-
-static void SendXdndStatus(DfWindow *win, int targetWinId) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    int len = 11;
-    uint32_t buf[len];
-    buf[0] = X11_OPCODE_SEND_EVENT | (len << 16);
-    buf[1] = targetWinId;
-    buf[2] = 0;
-    buf[3] = X11_OPCODE_CLIENT_MESSAGE;
-    buf[3] |= (32 << 8); // format = 32-bit
-    buf[4] = targetWinId;
-    buf[5] = platSpec->xdndStatusId;
-    buf[6] = platSpec->windowId;
-    buf[7] = 1; // Accept drop messages flag.
-    buf[8] = 0; // Min x & y values for drop area.
-    buf[9] = 0; // Width and height of drop area.
-    buf[10] = platSpec->xdndActionCopyId;
-    SendBuf(platSpec, buf, sizeof(buf));
-}
-
-
-static void SendXConvertSelection(DfWindow *win, uint32_t timestamp) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    int len = 6;
-    uint32_t buf[len];
-    buf[0] = X11_OPCODE_CONVERT_SELECTION | (len << 16);
-    buf[1] = platSpec->windowId; // Requestor window, ie us.
-    buf[2] = platSpec->xdndSelectionId; // We'd like the DND data please.
-    buf[3] = platSpec->uriListId; // Specifically the file name
-    buf[4] = platSpec->xdndFilenameId;
-    buf[5] = timestamp;
-    SendBuf(platSpec, buf, sizeof(buf));
-}
-
-
-static int GetAtomId(DfWindow *win, char const *atomName) {
-    int atomNameLen = strlen(atomName);
-    if (atomNameLen > 19) return 0;
-
-    int requestLenWords = (11 + atomNameLen) / 4;
-    int requestLenBytes = requestLenWords * 4;
-    uint8_t packet[30] = { 0 };
-    packet[0] = 16; // opcode = InternAtom.
-    packet[1] = 0; // only_if_exists = 0.
-    packet[2] = requestLenWords;
-    packet[4] = atomNameLen; // Atom name len in bytes.
-    memcpy(packet + 8, atomName, atomNameLen);
-
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    SendBuf(platSpec, packet, requestLenBytes);
-
-    while (!GetReply(win, 32))
-        ;
-
-    uint16_t *id = (uint16_t *)(platSpec->recvBuf + 8);
-
-    ConsumeMessage(platSpec, 32);
-
-    return *id;
-}
-
-
-// Initialize the connection to the Xserver if we haven't already.
-static void ConnectToXserver(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    if (platSpec->socketFd >= 0) return;
-
-    char *displayString = getenv("DISPLAY");
-    char socketName[] = "/tmp/.X11-unix/X0";
-    if (displayString && displayString[0] == ':' && isdigit(displayString[1]))
-        socketName[16] = displayString[1];
-
-    // Open socket and connect.
-    platSpec->socketFd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (platSpec->socketFd < 0) {
-        FATAL_ERROR("Create socket failed");
-    }
-    struct sockaddr_un servAddr = { 0 };
-    servAddr.sun_family = AF_UNIX;
-    strcpy(servAddr.sun_path, socketName);
-    if (connect(platSpec->socketFd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
-        FATAL_ERROR("Couldn't connect");
-    }
-
-    // Read Xauthority.
-    char xauthFilenameBuf[2048];
-    char const *xauthFilename = getenv("XAUTHORITY");
-    if (!xauthFilename) {
-        char const *homeDir = getenv("HOME");
-        size_t homeDirLen = strlen(homeDir);
-        char const xauth_appender[] = "/.Xauthority";
-        size_t xauth_appender_len = sizeof(xauth_appender);
-        if (homeDirLen + xauth_appender_len >= sizeof(xauthFilenameBuf)) {
-            FATAL_ERROR("HOME too long");
-        }
-        memcpy(xauthFilenameBuf, homeDir, homeDirLen);
-        strcpy(xauthFilenameBuf + homeDirLen, xauth_appender);
-        xauthFilename = xauthFilenameBuf;
-    }
-    FILE *xauthFile = fopen(xauthFilename, "rb");
-    if (!xauthFile) {
-        FATAL_ERROR("Couldn't open '%s'.", xauthFilename);
-    }
-    char xauthCookie[4096];
-    size_t xauthLen = fread(xauthCookie, 1, sizeof(xauthCookie), xauthFile);
-    if (xauthLen < 0) {
-        FATAL_ERROR("Couldn't read from .Xauthority.");
-    }
-    fclose(xauthFile);
-
-    // Send connection request.
-    connection_request_t request = { 0 };
-    request.order = 'l';  // Little endian.
-    request.major_version = 11;
-    request.minor_version = 0;
-    request.auth_proto_name_len = 18;
-    request.auth_proto_data_len = 16;
-    SendBuf(platSpec, &request, sizeof(connection_request_t));
-    SendBuf(platSpec, "MIT-MAGIC-COOKIE-1\0\0", 20);
-    SendBuf(platSpec, xauthCookie + xauthLen - 16, 16);
-
-    // Read connection reply header.
-    FatalRead(platSpec, &platSpec->connectionReplyHeader, sizeof(connectionReplyHeader_t));
-    if (platSpec->connectionReplyHeader.success == 0) {
-        FATAL_ERROR("Connection reply indicated failure.");
-    }
-
-    // Read rest of connection reply.
-    platSpec->connectionReplySuccessBody = (connectionReplySuccessBody_t*)new char[platSpec->connectionReplyHeader.len * 4];
-    FatalRead(platSpec, platSpec->connectionReplySuccessBody,
-               platSpec->connectionReplyHeader.len * 4);
-
-    // Set some pointers into the connection reply because they'll be convenient later.
-    int vendorLenPlusPadding = (platSpec->connectionReplySuccessBody->vendor_len + 3) & ~3;
-    platSpec->pixmapFormats = (pixmap_format_t *)(platSpec->connectionReplySuccessBody->vendor_string +
-                             vendorLenPlusPadding);
-    platSpec->screens = (screen_t *)(platSpec->pixmapFormats +
-                                  platSpec->connectionReplySuccessBody->num_pixmapFormats);
-
-    platSpec->nextResourceId = platSpec->connectionReplySuccessBody->id_base;
-
-    // Get some Atom ids that we will use later.
-    platSpec->clipboardId = GetAtomId(win, "CLIPBOARD");
-    platSpec->stringId = GetAtomId(win, "STRING");
-    platSpec->xselDataId = GetAtomId(win, "XSEL_DATA");
-    platSpec->targetsId = GetAtomId(win, "TARGETS");
-    platSpec->wmDeleteWindowId = GetAtomId(win, "WM_DELETE_WINDOW");
-    platSpec->wmProtocolsId = GetAtomId(win, "WM_PROTOCOLS");
-    platSpec->xdndPositionId = GetAtomId(win, "XdndPosition");
-    platSpec->xdndStatusId = GetAtomId(win, "XdndStatus");
-    platSpec->xdndDropId = GetAtomId(win, "XdndDrop");
-    platSpec->xdndActionCopyId = GetAtomId(win, "XdndActionCopy");
-    platSpec->xdndSelectionId = GetAtomId(win, "XdndSelection");
-    platSpec->uriListId = GetAtomId(win, "text/uri-list");
-    platSpec->xdndFilenameId = GetAtomId(win, "XdndFilename");
-    platSpec->xdndFinishedId = GetAtomId(win, "XdndFinished");
-
-    platSpec->windowId = GenerateId(win);
-
-    // Setup mouse cursors
-    uint32_t fontId = GenerateId(win);
-    OpenFont(win, fontId, "cursor");
-    platSpec->cursorIbeamId = CreateGlyphCursor(win, fontId, 152);
-    platSpec->cursorResizeWidthId = CreateGlyphCursor(win, fontId, 108);
-    platSpec->cursorResizeHeightId = CreateGlyphCursor(win, fontId, 116);
-    platSpec->currentCursor = MCT_ARROW;
-}
-
-
-static void CreateGc(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    platSpec->graphicsContextId = GenerateId(win);
-    int const len = 4;
-    uint32_t packet[len];
-    packet[0] = X11_OPCODE_CREATE_GC | (len<<16);
-    packet[1] = platSpec->graphicsContextId;
-    packet[2] = platSpec->windowId;
-    packet[3] = 0; // Value mask.
-
-    SendBuf(platSpec, packet, sizeof(packet));
-}
-
-
-DfWindow *CreateWin(int width, int height, WindowType winType, char const *winName) {
-    return CreateWinPos(0, 0, width, height, winType, winName);
-}
-
-
-static void EnableDeleteWindowEvent(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-
-    // See InterClient Communication Conventions Manual v2.0. The section
-    // heading is "Window Deletion".
-    int requestLen = 7;
-    uint32_t packet[requestLen];
-    packet[0] = X11_OPCODE_CHANGE_PROPERTY | (requestLen << 16);
-    packet[1] = platSpec->windowId;
-    packet[2] = platSpec->wmProtocolsId; // Property.
-    packet[3] = 4; // Type = ATOM.
-    packet[4] = 32; // Format = 32 bits per item.
-    packet[5] = 1; // Length = 1 item.
-    packet[6] = platSpec->wmDeleteWindowId; // Item data.
-
-    SendBuf(platSpec, packet, sizeof(packet));
-}
-
-
-static void MakeSocketNonBlocking(WindowPlatformSpecific *platSpec) {
-    // Make socket non-blocking.
-    int flags = fcntl(platSpec->socketFd, F_GETFL, 0);
-    if (flags == -1) {
-        FATAL_ERROR("Couldn't get flags of socket");
-    }
-    flags |= O_NONBLOCK;
-    if (fcntl(platSpec->socketFd, F_SETFL, flags) != 0) {
-        FATAL_ERROR("Couldn't set socket as non-blocking");
-    }
-}
-
-
-DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {
-    DfWindow *win = new DfWindow;
-    memset(win, 0, sizeof(DfWindow));
-    win->_private = new DfWindowPrivate;
-    memset(win->_private, 0, sizeof(DfWindowPrivate));
-    win->_private->platSpec = new WindowPlatformSpecific;
-    memset(win->_private->platSpec, 0, sizeof(WindowPlatformSpecific));
-    win->_private->platSpec->socketFd = -1;
-
-    win->bmp = BitmapCreate(width, height);
-
-    ConnectToXserver(win);
-
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-
-    int const len = 9;
-    uint32_t packet[len];
-    packet[0] = X11_OPCODE_CREATE_WINDOW | (len<<16);
-    packet[1] = platSpec->windowId;
-    packet[2] = platSpec->screens[0].root_id;
-    packet[3] = 0; // x,y pos. System will position window. TODO - use x and y
-    packet[4] = width | (height<<16);
-    packet[5] = 0; // DEFAULT_BORDER and DEFAULT_GROUP.
-    packet[6] = 0; // Visual: Copy from parent.
-    packet[7] = 0x800; // value_mask = event-mask
-    packet[8] = X11_EVENT_KEYPRESS | X11_EVENT_KEYRELEASE | X11_EVENT_POINTERMOTION |
-                X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE | X11_EVENT_STRUCTURE_NOTIFY |
-                X11_EVENT_FOCUSCHANGE;
-    SendBuf(platSpec, packet, sizeof(packet));
-
-    CreateGc(win);
-    MapWindow(win);
-    SetWindowTitle(win, winName);
-    EnableDeleteWindowEvent(win);
-
-    MakeSocketNonBlocking(platSpec);
-    InitInput(win);
-
-    return win;
-}
-
-
-void DestroyWin(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    uint32_t packet[2] = { 0 };
-    packet[0] = 4; // OPCODE_DESTROY_WINDOW
-    packet[0] |= 2 << 16; // Length
-    packet[1] = platSpec->windowId;
-    SendBuf(platSpec, packet, sizeof(packet));
-
-    BitmapDelete(win->bmp);
-    delete[] platSpec->connectionReplySuccessBody;
-    delete win->_private->platSpec;
-    delete win->_private;
-    delete win;
-}
-
-
-// TODO: Proper job
-int GetMonitorDpi(DfWindow *win) {
-    return 96;
-}
-
-
-// TODO: Proper job
-void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height) {
-    *x = 0;
-    *y = 0;
-    *width = 1920;
-    *height = 1080;
-}
-
-
-void SetWindowRect(DfWindow *win, int x, int y, int width, int height) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    uint32_t packet[7];
-    packet[0] = X11_OPCODE_CONFIGURE_WINDOW | (7 << 16);
-    packet[1] = platSpec->windowId;
-    packet[2] = 0xf;    // flags to say we want to set x, y, width and height
-    packet[3] = x;
-    packet[4] = y;
-    packet[5] = width;
-    packet[6] = height;
-
-    SendBuf(platSpec, packet, sizeof(packet));
-}
-
-
-static void BlitBitmapToWindow(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-
-    // *** Send back-buffer to Xserver.
-    int W = win->bmp->width;
-    int H = win->bmp->height;
-    enum { MAX_BYTES_PER_REQUEST = 65535 }; // Len field is 16-bits
-    int num_rows_in_chunk = (MAX_BYTES_PER_REQUEST - 6) / W; // -6 because of packet header
-    DfColour *row = win->bmp->pixels;
-    for (int y = 0; y < H; y += num_rows_in_chunk) {
-        if (y + num_rows_in_chunk > H) {
-            num_rows_in_chunk = H - y;
-        }
-
-        uint32_t packet[6];
-        uint32_t bmp_format = 2 << 8;
-        uint32_t request_len = (uint32_t)(W * num_rows_in_chunk + 6) << 16;
-        packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
-        packet[1] = platSpec->windowId;
-        packet[2] = platSpec->graphicsContextId;
-        packet[3] = W | (num_rows_in_chunk << 16); // Width and height.
-        packet[4] = 0 | (y << 16); // Dst X and Y.
-        packet[5] = 24 << 8; // Bit depth.
-
-        SendBuf(platSpec, packet, sizeof(packet));
-        SendBuf(platSpec, row, W * num_rows_in_chunk * 4);
-        row += W * num_rows_in_chunk;
-    }
-}
-
 
 static void *FakeWindowMessageLoop(void *ignored) {
     // This event loop only exists to handle get-clipboard-data requests. We'd
@@ -1197,12 +1182,118 @@ static void CreateFakeWindowIfNeeded() {
 }
 
 
+static void ReceiveClipboardData(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    SendGetPropertyRequest(win, platSpec->xselDataAtom);
+//    printf("Getting GetProperty response\n");
+
+    while (!GetReply(win, 32))
+        ;
+
+    uint8_t *buf = platSpec->recvBuf;
+    uint32_t type = *((uint32_t *)(buf + 8));
+    if (type == platSpec->stringAtom) {
+        uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
+
+        uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
+//        printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
+
+        ConsumeMessage(platSpec, 32);
+
+        platSpec->clipboardRxData = new char[lenOfValueInFmtUnits + 1];
+        char *nextWritePoint = platSpec->clipboardRxData;
+
+        uint32_t numBytesLeft = lenOfValueInFmtUnits;
+        while (numBytesLeft > 0) {
+            ReadFromXServer(platSpec);
+
+            ssize_t stringLen = IntMin(platSpec->recvBufNumBytesAvailable, numBytesLeft);
+            memcpy(nextWritePoint, (char const *)buf, stringLen);
+            nextWritePoint += stringLen;
+
+            ConsumeMessage(platSpec, stringLen);
+            numBytesLeft -= stringLen;
+        }
+        platSpec->clipboardRxData[lenOfValueInFmtUnits] = '\0';
+
+        uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
+        ConsumeMessage(platSpec, amtPadding);
+    }
+}
+
+
+char *X11InternalClipboardRequestData() {
+    CreateFakeWindowIfNeeded();
+    WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
+
+    if (platSpec->clipboardRxData) return NULL;
+
+//    puts("Sending ConvertSelection request");
+    uint32_t packet[6];
+    packet[0] = 24 | 6 << 16;
+    packet[1] = platSpec->windowId; // requestor
+    packet[2] = platSpec->clipboardAtom; // selection
+    packet[3] = platSpec->stringAtom; // target
+    packet[4] = platSpec->xselDataAtom; // property
+    packet[5] = 0; // time
+    SendBuf(platSpec, packet, sizeof(packet));
+
+    double endTime = GetRealTime() + 0.1;
+    do {
+        InputPoll(&g_fakeWindow);
+
+        if (platSpec->clipboardRxData) {
+            break;
+        }
+    } while (GetRealTime() < endTime);
+
+    return platSpec->clipboardRxData;
+}
+
+
+void X11InternalClipboardReleaseReceivedData() {
+    CreateFakeWindowIfNeeded();
+    WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
+    delete [] platSpec->clipboardRxData;
+    platSpec->clipboardRxData = NULL;
+}
+
+
+void X11InternalClipboardSetData(char const *data, int numChars) {
+    CreateFakeWindowIfNeeded();
+    WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
+
+    delete [] platSpec->clipboardTxData;
+    platSpec->clipboardTxData = new char[numChars + 3]; // +3 to allow for maximum amount of padding needed when buffer is sent to xServer.
+    platSpec->clipboardTxDataNumChars = numChars;
+    memcpy(platSpec->clipboardTxData, data, numChars);
+    memset(platSpec->clipboardTxData + numChars, 0, 3); // Prevent Valgrind complaining about uninitialized memory.
+
+//    puts("Sending SetSelectionOwner request");
+    uint32_t packet[4];
+    packet[0] = X11_OPCODE_SET_SELECTION_OWNER | 4 << 16;
+    packet[1] = platSpec->windowId;
+    packet[2] = platSpec->clipboardAtom;
+    packet[3] = 0;
+    SendBuf(platSpec, packet, sizeof(packet));
+}
+
+
+// ****************************************************************************
+// Deadfrog Lib API functions
+// ****************************************************************************
+
 bool GetDesktopRes(int *width, int *height) {
     CreateFakeWindowIfNeeded();
     WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
     *width = platSpec->screens[0].width;
     *height = platSpec->screens[0].height;
     return true;
+}
+
+
+DfWindow *CreateWin(int width, int height, WindowType winType, char const *winName) {
+    return CreateWinPos(0, 0, width, height, winType, winName);
 }
 
 
@@ -1291,190 +1382,89 @@ void SetWindowTitle(DfWindow *win, char const *title) {
 void SetWindowIcon(DfWindow *win) {}
 
 
-static void SendGetPropertyRequest(DfWindow *win, uint32_t property) {
+DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {
+    DfWindow *win = new DfWindow;
+    memset(win, 0, sizeof(DfWindow));
+    win->_private = new DfWindowPrivate;
+    memset(win->_private, 0, sizeof(DfWindowPrivate));
+    win->_private->platSpec = new WindowPlatformSpecific;
+    memset(win->_private->platSpec, 0, sizeof(WindowPlatformSpecific));
+    win->_private->platSpec->socketFd = -1;
+
+    win->bmp = BitmapCreate(width, height);
+
+    ConnectToXserver(win);
+
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
-//    puts("sending GetProperty request");
-    uint32_t packet[6];
-    packet[0] = 20 | 6 << 16;
-    packet[1] = platSpec->windowId; // window
-    packet[2] = property;
-    packet[3] = 0; // Type = any
-    packet[4] = 0; // offset = 0
-    packet[5] = 0xfffffffful; // length
-    SendBuf(platSpec, packet, sizeof(packet));
-}
 
-
-static void SendXdndFinished(DfWindow *win, uint32_t targetWinId) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    int len = 11;
-    uint32_t buf[len] = { 0 };
-    buf[0] = X11_OPCODE_SEND_EVENT | (len << 16);
-    buf[1] = targetWinId;
-    buf[2] = 0;
-    buf[3] = X11_OPCODE_CLIENT_MESSAGE;
-    buf[3] |= (32 << 8); // format = 32-bit
-    buf[4] = targetWinId;
-    buf[5] = platSpec->xdndFinishedId;
-    buf[6] = platSpec->windowId;
-    buf[7] = 1; // Flags: bit 0 = success
-    buf[8] = platSpec->xdndActionCopyId;
-    SendBuf(platSpec, buf, sizeof(buf));
-}
-
-
-static void ReceiveClipboardData(DfWindow *win) {
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    SendGetPropertyRequest(win, platSpec->xselDataId);
-//    printf("Getting GetProperty response\n");
-
-    while (!GetReply(win, 32))
-        ;
-
-    uint8_t *buf = platSpec->recvBuf;
-    uint32_t type = *((uint32_t *)(buf + 8));
-    if (type == platSpec->stringId) {
-        uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
-
-        uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
-//        printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
-
-        ConsumeMessage(platSpec, 32);
-
-        platSpec->clipboardRxData = new char[lenOfValueInFmtUnits + 1];
-        char *nextWritePoint = platSpec->clipboardRxData;
-
-        uint32_t numBytesLeft = lenOfValueInFmtUnits;
-        while (numBytesLeft > 0) {
-            ReadFromXServer(platSpec);
-
-            ssize_t stringLen = IntMin(platSpec->recvBufNumBytesAvailable, numBytesLeft);
-            memcpy(nextWritePoint, (char const *)buf, stringLen);
-            nextWritePoint += stringLen;
-
-            ConsumeMessage(platSpec, stringLen);
-            numBytesLeft -= stringLen;
-        }
-        platSpec->clipboardRxData[lenOfValueInFmtUnits] = '\0';
-
-        uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
-        ConsumeMessage(platSpec, amtPadding);
-    }
-}
-
-
-char *X11InternalClipboardRequestData() {
-    CreateFakeWindowIfNeeded();
-    WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
-
-    if (platSpec->clipboardRxData) return NULL;
-
-//    puts("Sending ConvertSelection request");
-    uint32_t packet[6];
-    packet[0] = 24 | 6 << 16;
-    packet[1] = platSpec->windowId; // requestor
-    packet[2] = platSpec->clipboardId; // selection
-    packet[3] = platSpec->stringId; // target
-    packet[4] = platSpec->xselDataId; // property
-    packet[5] = 0; // time
-    SendBuf(platSpec, packet, sizeof(packet));
-
-    double endTime = GetRealTime() + 0.1;
-    do {
-        InputPoll(&g_fakeWindow);
-
-        if (platSpec->clipboardRxData) {
-            break;
-        }
-    } while (GetRealTime() < endTime);
-
-    return platSpec->clipboardRxData;
-}
-
-
-void X11InternalClipboardReleaseReceivedData() {
-    CreateFakeWindowIfNeeded();
-    WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
-    delete [] platSpec->clipboardRxData;
-    platSpec->clipboardRxData = NULL;
-}
-
-
-static void SendChangePropertyRequest(WindowPlatformSpecific *platSpec, uint32_t destWindow,
-                                      uint32_t target, uint32_t property) {
-    if (target == platSpec->targetsId) {
-        // This branch sends a change property request that is used as the
-        // response to a SelectionRequest. It tells the recipient what format the
-        // clipboard data that we are about to send will be in.
-//        puts("Sending ChangeProperty with clipboard data format");
-        const int numWords = 8;
-        uint32_t packet[numWords];
-        packet[0] = X11_OPCODE_CHANGE_PROPERTY | numWords << 16;
-        packet[1] = destWindow;
-        packet[2] = property;
-        packet[3] = 4; // type is ATOM.
-        packet[4] = 32; // Format unit is 32 bits.
-        packet[5] = 2; // Length is 2 format units;
-        packet[6] = platSpec->targetsId;
-        packet[7] = platSpec->stringId;
-        SendBuf(platSpec, packet, sizeof(packet));
-    }
-    else {
-        // This branch sends a change property request that includes the actual
-        // clipboard data.
-//        puts("Sending ChangeProperty with clipboard contents");
-
-        const int amtPadding = 4 - (platSpec->clipboardTxDataNumChars & 3);
-        const int numWords = 6 + (platSpec->clipboardTxDataNumChars + amtPadding) / 4;
-//        printf("amtPadding:%d numWords:%d numChars:%d\n", amtPadding, numWords, platSpec->clipboardTxDataNumChars);
-        uint32_t packet[6];
-        packet[0] = X11_OPCODE_CHANGE_PROPERTY | numWords << 16;
-        packet[1] = destWindow;
-        packet[2] = property;
-        packet[3] = platSpec->stringId; // type is STRING.
-        packet[4] = 8; // Format unit is this many bits.
-        packet[5] = platSpec->clipboardTxDataNumChars; // Length in format units;
-        SendBuf(platSpec, packet, sizeof(packet));
-        SendBuf(platSpec, platSpec->clipboardTxData, platSpec->clipboardTxDataNumChars + amtPadding);
-    }
-}
-
-
-static void SendSendEventSelectionNotify(WindowPlatformSpecific *platSpec, uint32_t destWindow,
-                                         uint32_t target, uint32_t property, uint32_t time) {
-//    puts("Sending SendEventSelectionNotify");
-    uint32_t packet[11];
-    packet[0] = 25 | 11 << 16;
-    packet[1] = destWindow;
-    packet[2] = 0; // event mask
-    packet[3] = 31; // SelectionNotify
-    packet[4] = time;
-    packet[5] = destWindow; // requestor
-    packet[6] = platSpec->clipboardId;
-    packet[7] = target;
-    packet[8] = property;
-    packet[9] = 0;
-    packet[10] = 0;
-
-    SendBuf(platSpec, packet, sizeof(packet));
-}
-
-
-void X11InternalClipboardSetData(char const *data, int numChars) {
-    CreateFakeWindowIfNeeded();
-    WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
-
-    delete [] platSpec->clipboardTxData;
-    platSpec->clipboardTxData = new char[numChars + 3]; // +3 to allow for maximum amount of padding needed when buffer is sent to xServer.
-    platSpec->clipboardTxDataNumChars = numChars;
-    memcpy(platSpec->clipboardTxData, data, numChars);
-    memset(platSpec->clipboardTxData + numChars, 0, 3); // Prevent Valgrind complaining about uninitialized memory.
-
-//    puts("Sending SetSelectionOwner request");
-    uint32_t packet[4];
-    packet[0] = X11_OPCODE_SET_SELECTION_OWNER | 4 << 16;
+    int const len = 9;
+    uint32_t packet[len];
+    packet[0] = X11_OPCODE_CREATE_WINDOW | (len<<16);
     packet[1] = platSpec->windowId;
-    packet[2] = platSpec->clipboardId;
-    packet[3] = 0;
+    packet[2] = platSpec->screens[0].root_id;
+    packet[3] = 0; // x,y pos. System will position window. TODO - use x and y
+    packet[4] = width | (height<<16);
+    packet[5] = 0; // DEFAULT_BORDER and DEFAULT_GROUP.
+    packet[6] = 0; // Visual: Copy from parent.
+    packet[7] = 0x800; // value_mask = event-mask
+    packet[8] = X11_EVENT_KEYPRESS | X11_EVENT_KEYRELEASE | X11_EVENT_POINTERMOTION |
+                X11_EVENT_BUTTONPRESS | X11_EVENT_BUTTONRELEASE | X11_EVENT_STRUCTURE_NOTIFY |
+                X11_EVENT_FOCUSCHANGE;
+    SendBuf(platSpec, packet, sizeof(packet));
+
+    CreateGc(win);
+    MapWindow(win);
+    SetWindowTitle(win, winName);
+    EnableDeleteWindowEvent(win);
+
+    MakeSocketNonBlocking(platSpec);
+    InitInput(win);
+
+    return win;
+}
+
+
+void DestroyWin(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    uint32_t packet[2] = { 0 };
+    packet[0] = 4; // OPCODE_DESTROY_WINDOW
+    packet[0] |= 2 << 16; // Length
+    packet[1] = platSpec->windowId;
+    SendBuf(platSpec, packet, sizeof(packet));
+
+    BitmapDelete(win->bmp);
+    delete[] platSpec->connectionReplySuccessBody;
+    delete win->_private->platSpec;
+    delete win->_private;
+    delete win;
+}
+
+
+// TODO: Proper job
+int GetMonitorDpi(DfWindow *win) {
+    return 96;
+}
+
+
+// TODO: Proper job
+void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height) {
+    *x = 0;
+    *y = 0;
+    *width = 1920;
+    *height = 1080;
+}
+
+
+void SetWindowRect(DfWindow *win, int x, int y, int width, int height) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    uint32_t packet[7];
+    packet[0] = X11_OPCODE_CONFIGURE_WINDOW | (7 << 16);
+    packet[1] = platSpec->windowId;
+    packet[2] = 0xf;    // flags to say we want to set x, y, width and height
+    packet[3] = x;
+    packet[4] = y;
+    packet[5] = width;
+    packet[6] = height;
+
     SendBuf(platSpec, packet, sizeof(packet));
 }
