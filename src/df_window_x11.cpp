@@ -628,7 +628,7 @@ static void SendChangePropertyRequest(WindowPlatformSpecific *platSpec, uint32_t
         // clipboard data.
 //        puts("Sending ChangeProperty with clipboard contents");
 
-        const int amtPadding = 4 - (platSpec->clipboardTxDataNumChars & 3);
+        const int amtPadding = (4 - (platSpec->clipboardTxDataNumChars & 3)) & 3;
         const int numWords = 6 + (platSpec->clipboardTxDataNumChars + amtPadding) / 4;
 //        printf("amtPadding:%d numWords:%d numChars:%d\n", amtPadding, numWords, platSpec->clipboardTxDataNumChars);
         uint32_t packet[6];
