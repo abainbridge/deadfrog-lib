@@ -42,13 +42,14 @@ enum {
     X11_OPCODE_CONFIGURE_WINDOW = 12,
     X11_OPCODE_CHANGE_PROPERTY = 18,
     X11_OPCODE_SET_SELECTION_OWNER = 22,
+    X11_OPCODE_CONVERT_SELECTION = 24,
+    X11_OPCODE_SEND_EVENT = 25,
+    X11_OPCODE_CLIENT_MESSAGE = 33,
     X11_OPCODE_QUERY_KEYMAP = 44,
     X11_OPCODE_OPEN_FONT = 45,
     X11_OPCODE_CREATE_GC = 55,
     X11_OPCODE_PUT_IMAGE = 72,
     X11_OPCODE_CREATE_GLYPH_CURSOR = 94,
-
-    X11_EVENT_CODE_SELECTION_NOTIFY = 31,
 
     X11_CW_EVENT_MASK = 1<<11,
     X11_EVENT_MASK_KEY_PRESS = 1,
@@ -186,6 +187,17 @@ struct WindowPlatformSpecific {
     int cursorIbeamId;
     int cursorResizeWidthId;
     int cursorResizeHeightId;
+
+    int xdndPositionId;
+    int xdndStatusId;
+    int xdndDropId;
+    int xdndActionCopyId;
+    int xdndSelectionId;
+    int uriListId;
+    int xdndFilenameId;
+    int xdndFinishedId;
+
+    int dropSourceWinId;
 
     MouseCursorType currentCursor;
 
@@ -539,7 +551,7 @@ static void HandleEvent(DfWindow *win) {
         FATAL_ERROR("Got unexpected reply.");
     }
 
-    bool selectionNotifyReceived = false;
+    uint32_t selectionNotifyProperty = 0;
 
     platSpec->recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
 
@@ -655,17 +667,36 @@ static void HandleEvent(DfWindow *win) {
         }
         break;
 
-    case X11_EVENT_CODE_SELECTION_NOTIFY: // Selection Notify
-        // This event is only (I hope) received in response to a ConvertSelection
-        // request we sent to the server as the start of the just-gimme-the-damn-clipboard-data
-        // dance.
-//        printf("Got selection notify\n");
-        selectionNotifyReceived = true;
+    case 31: // Selection Notify
+        // This event is received either as part of a Drag and Drop sequence or
+        // in a get-data-from-clipboard sequence. It is a response to a
+        // ConvertSelection request we sent to the server. 
+        selectionNotifyProperty = GetU32FromRecvBuf(platSpec, 20);
+        printf("Got selection notify %x\n", selectionNotifyProperty);
         break;
 
     case 33: // Client message.
-        // We only ever get this when the Window Manager wants us to close.
-        win->windowClosed = true;
+        {
+            int type = GetU32FromRecvBuf(platSpec, 8);
+            if (type == platSpec->wmProtocolsId) {
+                printf("WM_PROTOCOLS\n");
+                win->windowClosed = true;
+            }
+//             else if (type == platSpec->xdndPositionId) {
+//                 int winToSendTo = GetU32FromRecvBuf(platSpec, 12);
+//                 printf("xdndPosition from win %x\n", winToSendTo);
+//                 SendXdndStatus(win, winToSendTo);
+//             }
+//             else if (type == platSpec->xdndDropId) {
+//                 uint32_t timestamp = GetU32FromRecvBuf(platSpec, 24);
+//                 platSpec->dropSourceWinId = GetU32FromRecvBuf(platSpec, 12);
+//                 printf("xdndDrop timestamp=%x srcWinId=%x\n", timestamp, platSpec->dropSourceWinId);
+//                 SendXConvertSelection(win, timestamp);
+//             }
+            else {
+                printf("Got ClientMessage. type=%x\n", type);
+            }
+        }
         break;
 
     default:
@@ -674,7 +705,7 @@ static void HandleEvent(DfWindow *win) {
 
     ConsumeMessage(platSpec, 32);
 
-    if (selectionNotifyReceived) {
+    if (selectionNotifyProperty) {
         ReceiveClipboardData(win);
     }
 }
@@ -714,7 +745,7 @@ static bool GetReply(DfWindow *win, int expectedLen) {
 // ****************************************************************************
 
 
-static uint32_t generateId(DfWindow *win) {
+static uint32_t GenerateId(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     return platSpec->nextResourceId++;
 }
@@ -744,7 +775,7 @@ static int CreateGlyphCursor(DfWindow *win, uint32_t fontId, uint16_t mainGlyphI
     unsigned len = 8;
     uint32_t buf[len];
     uint16_t maskGlyphIdx = mainGlyphIdx + 1;
-    int newCursorId = generateId(win);
+    int newCursorId = GenerateId(win);
 
     buf[0] = X11_OPCODE_CREATE_GLYPH_CURSOR | (len << 16);
     buf[1] = newCursorId;
@@ -767,6 +798,40 @@ static void MapWindow(DfWindow *win) {
     packet[0] = X11_OPCODE_MAP_WINDOW | (len<<16);
     packet[1] = platSpec->windowId;
     SendBuf(platSpec, packet, 8);
+}
+
+
+static void SendXdndStatus(DfWindow *win, int targetWinId) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int len = 11;
+    uint32_t buf[len];
+    buf[0] = X11_OPCODE_SEND_EVENT | (len << 16);
+    buf[1] = targetWinId;
+    buf[2] = 0;
+    buf[3] = X11_OPCODE_CLIENT_MESSAGE;
+    buf[3] |= (32 << 8); // format = 32-bit
+    buf[4] = targetWinId;
+    buf[5] = platSpec->xdndStatusId;
+    buf[6] = platSpec->windowId;
+    buf[7] = 1; // Accept drop messages flag.
+    buf[8] = 0; // Min x & y values for drop area.
+    buf[9] = 0; // Width and height of drop area.
+    buf[10] = platSpec->xdndActionCopyId;
+    SendBuf(platSpec, buf, sizeof(buf));
+}
+
+
+static void SendXConvertSelection(DfWindow *win, uint32_t timestamp) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int len = 6;
+    uint32_t buf[len];
+    buf[0] = X11_OPCODE_CONVERT_SELECTION | (len << 16);
+    buf[1] = platSpec->windowId; // Requestor window, ie us.
+    buf[2] = platSpec->xdndSelectionId; // We'd like the DND data please.
+    buf[3] = platSpec->uriListId; // Specifically the file name
+    buf[4] = platSpec->xdndFilenameId;
+    buf[5] = timestamp;
+    SendBuf(platSpec, buf, sizeof(buf));
 }
 
 
@@ -883,15 +948,19 @@ static void ConnectToXserver(DfWindow *win) {
     platSpec->targetsId = GetAtomId(win, "TARGETS");
     platSpec->wmDeleteWindowId = GetAtomId(win, "WM_DELETE_WINDOW");
     platSpec->wmProtocolsId = GetAtomId(win, "WM_PROTOCOLS");
-    printf("Atoms: clipboard=0x%x string=0x%x xsel=0x%x targets=0x%x wmDeleteWindow=0x%x "
-        "wmProtocols=0x%x\n",
-        platSpec->clipboardId, platSpec->stringId, platSpec->xselDataId, platSpec->targetsId,
-        platSpec->wmDeleteWindowId, platSpec->wmProtocolsId);
+    platSpec->xdndPositionId = GetAtomId(win, "XdndPosition");
+    platSpec->xdndStatusId = GetAtomId(win, "XdndStatus");
+    platSpec->xdndDropId = GetAtomId(win, "XdndDrop");
+    platSpec->xdndActionCopyId = GetAtomId(win, "XdndActionCopy");
+    platSpec->xdndSelectionId = GetAtomId(win, "XdndSelection");
+    platSpec->uriListId = GetAtomId(win, "text/uri-list");
+    platSpec->xdndFilenameId = GetAtomId(win, "XdndFilename");
+    platSpec->xdndFinishedId = GetAtomId(win, "XdndFinished");
 
-    platSpec->windowId = generateId(win);
+    platSpec->windowId = GenerateId(win);
 
     // Setup mouse cursors
-    uint32_t fontId = generateId(win);
+    uint32_t fontId = GenerateId(win);
     OpenFont(win, fontId, "cursor");
     platSpec->cursorIbeamId = CreateGlyphCursor(win, fontId, 152);
     platSpec->cursorResizeWidthId = CreateGlyphCursor(win, fontId, 108);
@@ -902,7 +971,7 @@ static void ConnectToXserver(DfWindow *win) {
 
 static void CreateGc(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    platSpec->graphicsContextId = generateId(win);
+    platSpec->graphicsContextId = GenerateId(win);
     int const len = 4;
     uint32_t packet[len];
     packet[0] = X11_OPCODE_CREATE_GC | (len<<16);
@@ -1222,13 +1291,13 @@ void SetWindowTitle(DfWindow *win, char const *title) {
 void SetWindowIcon(DfWindow *win) {}
 
 
-static void SendGetPropertyRequest(DfWindow *win) {
+static void SendGetPropertyRequest(DfWindow *win, uint32_t property) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
 //    puts("sending GetProperty request");
     uint32_t packet[6];
     packet[0] = 20 | 6 << 16;
     packet[1] = platSpec->windowId; // window
-    packet[2] = platSpec->xselDataId;   // property
+    packet[2] = property;
     packet[3] = 0; // Type = any
     packet[4] = 0; // offset = 0
     packet[5] = 0xfffffffful; // length
@@ -1236,14 +1305,32 @@ static void SendGetPropertyRequest(DfWindow *win) {
 }
 
 
+static void SendXdndFinished(DfWindow *win, uint32_t targetWinId) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int len = 11;
+    uint32_t buf[len] = { 0 };
+    buf[0] = X11_OPCODE_SEND_EVENT | (len << 16);
+    buf[1] = targetWinId;
+    buf[2] = 0;
+    buf[3] = X11_OPCODE_CLIENT_MESSAGE;
+    buf[3] |= (32 << 8); // format = 32-bit
+    buf[4] = targetWinId;
+    buf[5] = platSpec->xdndFinishedId;
+    buf[6] = platSpec->windowId;
+    buf[7] = 1; // Flags: bit 0 = success
+    buf[8] = platSpec->xdndActionCopyId;
+    SendBuf(platSpec, buf, sizeof(buf));
+}
+
+
 static void ReceiveClipboardData(DfWindow *win) {
-    SendGetPropertyRequest(win);
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    SendGetPropertyRequest(win, platSpec->xselDataId);
 //    printf("Getting GetProperty response\n");
 
     while (!GetReply(win, 32))
         ;
 
-    WindowPlatformSpecific *platSpec = win->_private->platSpec;
     uint8_t *buf = platSpec->recvBuf;
     uint32_t type = *((uint32_t *)(buf + 8));
     if (type == platSpec->stringId) {
