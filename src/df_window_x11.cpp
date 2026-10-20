@@ -305,9 +305,9 @@ static int x11KeycodeToDfKeycode(int i) {
 }
 
 
-static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
+static char DfKeycodeToAscii(unsigned char keycode, char modifiers) {
     int shift = modifiers & 1;
-    int caps_lock = modifiers & 2;
+    int capsLock = modifiers & 2;
     int ctrl = modifiers & 4;
     int alt = modifiers & 8;
     int numLock = modifiers & 0x10;
@@ -351,7 +351,7 @@ static char dfKeycodeToAscii(unsigned char keycode, char modifiers) {
     }
 
     if (keycode >= KEY_A && keycode <= KEY_Z) {
-        if (!shift && !caps_lock) {
+        if (!shift && !capsLock) {
             return keycode ^ 32;
         }
         return keycode;
@@ -645,9 +645,8 @@ static void SendChangePropertyRequest(WindowPlatformSpecific *platSpec, uint32_t
 }
 
 
-static void SendSendEventSelectionNotify(WindowPlatformSpecific *platSpec, uint32_t destWindow,
+static void SendEventSelectionNotify(WindowPlatformSpecific *platSpec, uint32_t destWindow,
                                          uint32_t target, uint32_t property, uint32_t time) {
-//    puts("Sending SendEventSelectionNotify");
     uint32_t packet[11];
     packet[0] = 25 | 11 << 16;
     packet[1] = destWindow;
@@ -770,13 +769,13 @@ static void ConnectToXserver(DfWindow *win) {
     if (!xauthFilename) {
         char const *homeDir = getenv("HOME");
         size_t homeDirLen = strlen(homeDir);
-        char const xauth_appender[] = "/.Xauthority";
-        size_t xauth_appender_len = sizeof(xauth_appender);
-        if (homeDirLen + xauth_appender_len >= sizeof(xauthFilenameBuf)) {
+        char const xauthAppender[] = "/.Xauthority";
+        size_t xauthAppenderLen = sizeof(xauthAppender);
+        if (homeDirLen + xauthAppenderLen >= sizeof(xauthFilenameBuf)) {
             FATAL_ERROR("HOME too long");
         }
         memcpy(xauthFilenameBuf, homeDir, homeDirLen);
-        strcpy(xauthFilenameBuf + homeDirLen, xauth_appender);
+        strcpy(xauthFilenameBuf + homeDirLen, xauthAppender);
         xauthFilename = xauthFilenameBuf;
     }
     FILE *xauthFile = fopen(xauthFilename, "rb");
@@ -902,26 +901,26 @@ static void BlitBitmapToWindow(DfWindow *win) {
     int W = win->bmp->width;
     int H = win->bmp->height;
     enum { MAX_BYTES_PER_REQUEST = 65535 }; // Len field is 16-bits
-    int num_rows_in_chunk = (MAX_BYTES_PER_REQUEST - 6) / W; // -6 because of packet header
+    int numRowsInChunk = (MAX_BYTES_PER_REQUEST - 6) / W; // -6 because of packet header
     DfColour *row = win->bmp->pixels;
-    for (int y = 0; y < H; y += num_rows_in_chunk) {
-        if (y + num_rows_in_chunk > H) {
-            num_rows_in_chunk = H - y;
+    for (int y = 0; y < H; y += numRowsInChunk) {
+        if (y + numRowsInChunk > H) {
+            numRowsInChunk = H - y;
         }
 
         uint32_t packet[6];
-        uint32_t bmp_format = 2 << 8;
-        uint32_t request_len = (uint32_t)(W * num_rows_in_chunk + 6) << 16;
-        packet[0] = X11_OPCODE_PUT_IMAGE | bmp_format | request_len;
+        uint32_t bmpFormat = 2 << 8;
+        uint32_t requestLen = (uint32_t)(W * numRowsInChunk + 6) << 16;
+        packet[0] = X11_OPCODE_PUT_IMAGE | bmpFormat | requestLen;
         packet[1] = platSpec->windowId;
         packet[2] = platSpec->graphicsContextId;
-        packet[3] = W | (num_rows_in_chunk << 16); // Width and height.
+        packet[3] = W | (numRowsInChunk << 16); // Width and height.
         packet[4] = 0 | (y << 16); // Dst X and Y.
         packet[5] = 24 << 8; // Bit depth.
 
         SendBuf(platSpec, packet, sizeof(packet));
-        SendBuf(platSpec, row, W * num_rows_in_chunk * 4);
-        row += W * num_rows_in_chunk;
+        SendBuf(platSpec, row, W * numRowsInChunk * 4);
+        row += W * numRowsInChunk;
     }
 }
 
@@ -944,13 +943,13 @@ static void HandleEvent(DfWindow *win) {
 
     case 2: // KeyPress event.
         {
-            unsigned char x11_keycode = platSpec->recvBuf[1];
-            unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
-            win->input.keyDowns[df_keycode] = 1;
-            win->input.keys[df_keycode] = 1;
+            unsigned char x11Keycode = platSpec->recvBuf[1];
+            unsigned char dfKeycode = x11KeycodeToDfKeycode(x11Keycode);
+            win->input.keyDowns[dfKeycode] = 1;
+            win->input.keys[dfKeycode] = 1;
             int modifiers = platSpec->recvBuf[28];
-            char ascii = dfKeycodeToAscii(df_keycode, modifiers);
-    //printf("Key down. x11_keycode:%i. df_keycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11_keycode, df_keycode, ascii, modifiers);
+            char ascii = DfKeycodeToAscii(dfKeycode, modifiers);
+    //printf("Key down. x11Keycode:%i. dfKeycode:%i. Ascii:%c. Modifiers: 0x%x\n", x11Keycode, dfKeycode, ascii, modifiers);
 
             if (ascii) {
                 win->input.keysTyped[win->input.numKeysTyped] = ascii;
@@ -961,11 +960,11 @@ static void HandleEvent(DfWindow *win) {
 
     case 3: // KeyRelease event.
         {
-            unsigned char x11_keycode = platSpec->recvBuf[1];
-            unsigned char df_keycode = x11KeycodeToDfKeycode(x11_keycode);
-            win->input.keyUps[df_keycode] = 1;
-            win->input.keys[df_keycode] = 0;
-    //printf("Key up. x11_keycode:%i. df_keycode:%i.\n", x11_keycode, df_keycode);
+            unsigned char x11Keycode = platSpec->recvBuf[1];
+            unsigned char dfKeycode = x11KeycodeToDfKeycode(x11Keycode);
+            win->input.keyUps[dfKeycode] = 1;
+            win->input.keys[dfKeycode] = 0;
+    //printf("Key up. x11Keycode:%i. dfKeycode:%i.\n", x11Keycode, dfKeycode);
             break;
         }
 
@@ -1052,7 +1051,7 @@ static void HandleEvent(DfWindow *win) {
                 time, requestor, target, property);
 
             SendChangePropertyRequest(platSpec, requestor, target, property);
-            SendSendEventSelectionNotify(platSpec, requestor, target, property, time);
+            SendEventSelectionNotify(platSpec, requestor, target, property, time);
         }
         break;
 
