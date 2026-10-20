@@ -933,6 +933,7 @@ static void HandleEvent(DfWindow *win) {
     }
 
     uint32_t selectionNotifyProperty = 0;
+    bool redrawNeeded = false;
 
     platSpec->recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
 
@@ -1027,15 +1028,17 @@ static void HandleEvent(DfWindow *win) {
 
     case 22: // Configure notify event.
         {
+            win->left = platSpec->recvBuf[16] + (platSpec->recvBuf[17] << 8);
+            win->top = platSpec->recvBuf[18] + (platSpec->recvBuf[19] << 8);
             int w = platSpec->recvBuf[20] + (platSpec->recvBuf[21] << 8);
             int h = platSpec->recvBuf[22] + (platSpec->recvBuf[23] << 8);
-            BitmapDelete(win->bmp);
-            win->bmp = BitmapCreate(w, h);
-//             if (win->redrawCallback) {
-//                 win->redrawCallback();
-//             }
-            break;
+            if (w != win->bmp->width || h != win->bmp->height) {
+                BitmapDelete(win->bmp);
+                win->bmp = BitmapCreate(w, h);
+                redrawNeeded = true;
+            }
         }
+        break;
 
     case 30: // Selection Request
         {
@@ -1091,11 +1094,13 @@ static void HandleEvent(DfWindow *win) {
 
     ConsumeMessage(platSpec, 32);
 
-    if (selectionNotifyProperty == platSpec->xselDataAtom) {
+    if (selectionNotifyProperty == platSpec->xselDataAtom)
         ReceiveClipboardData(win);
-    }
-    else if (selectionNotifyProperty == platSpec->xdndFilenameAtom) {
+    else if (selectionNotifyProperty == platSpec->xdndFilenameAtom)
         ReceiveDndData(win);
+
+    if (redrawNeeded && win->redrawCallback) {
+        win->redrawCallback();
     }
 }
 
