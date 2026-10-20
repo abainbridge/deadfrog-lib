@@ -189,6 +189,7 @@ struct WindowPlatformSpecific {
 
 static bool GetReply(DfWindow *win, int expectedLen);
 static void ReceiveClipboardData(DfWindow *win);
+static void ReceiveDndData(DfWindow *win);
 
 
 // Not a visible window. Just used to store a connection to the XServer. Used
@@ -936,6 +937,10 @@ static void HandleEvent(DfWindow *win) {
     platSpec->recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
 
     switch (platSpec->recvBuf[0]) {
+    case 0: // Error report.
+        printf("Received ERROR report, code %d\n", platSpec->recvBuf[1]);
+        break;
+
     case 2: // KeyPress event.
         {
             unsigned char x11_keycode = platSpec->recvBuf[1];
@@ -1017,6 +1022,7 @@ static void HandleEvent(DfWindow *win) {
 
     case 10: // Focus out event.
         HandleFocusOutEvent(win);
+        HandleFocusOutEvent(win);
         break;
 
     case 22: // Configure notify event.
@@ -1052,7 +1058,7 @@ static void HandleEvent(DfWindow *win) {
         // in a get-data-from-clipboard sequence. It is a response to a
         // ConvertSelection request we sent to the server. 
         selectionNotifyProperty = GetU32FromRecvBuf(platSpec, 20);
-        printf("Got selection notify %x\n", selectionNotifyProperty);
+        printf("Got selection notify 0x%x\n", selectionNotifyProperty);
         break;
 
     case 33: // Client message.
@@ -1062,19 +1068,19 @@ static void HandleEvent(DfWindow *win) {
                 printf("WM_PROTOCOLS\n");
                 win->windowClosed = true;
             }
-//             else if (type == platSpec->xdndPositionAtom) {
-//                 int winToSendTo = GetU32FromRecvBuf(platSpec, 12);
-//                 printf("xdndPosition from win %x\n", winToSendTo);
-//                 SendXdndStatus(win, winToSendTo);
-//             }
-//             else if (type == platSpec->xdndDropAtom) {
-//                 uint32_t timestamp = GetU32FromRecvBuf(platSpec, 24);
-//                 platSpec->dropSourceWinId = GetU32FromRecvBuf(platSpec, 12);
-//                 printf("xdndDrop timestamp=%x srcWinId=%x\n", timestamp, platSpec->dropSourceWinId);
-//                 SendXConvertSelection(win, timestamp);
-//             }
+            else if (type == platSpec->xdndPositionAtom) {
+                int winToSendTo = GetU32FromRecvBuf(platSpec, 12);
+                printf("xdndPosition from win %x\n", winToSendTo);
+                SendXdndStatus(win, winToSendTo);
+            }
+            else if (type == platSpec->xdndDropAtom) {
+                uint32_t timestamp = GetU32FromRecvBuf(platSpec, 24);
+                platSpec->dropSourceWinId = GetU32FromRecvBuf(platSpec, 12);
+                printf("xdndDrop timestamp=%x srcWinId=%x\n", timestamp, platSpec->dropSourceWinId);
+                SendXConvertSelection(win, timestamp);
+            }
             else {
-                printf("Got ClientMessage. type=%x\n", type);
+                printf("Got ClientMessage. type=0x%x\n", type);
             }
         }
         break;
@@ -1085,8 +1091,11 @@ static void HandleEvent(DfWindow *win) {
 
     ConsumeMessage(platSpec, 32);
 
-    if (selectionNotifyProperty) {
+    if (selectionNotifyProperty == platSpec->xselDataAtom) {
         ReceiveClipboardData(win);
+    }
+    else if (selectionNotifyProperty == platSpec->xdndFilenameAtom) {
+        ReceiveDndData(win);
     }
 }
 
@@ -1219,6 +1228,43 @@ static void ReceiveClipboardData(DfWindow *win) {
         uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
         ConsumeMessage(platSpec, amtPadding);
     }
+}
+
+
+static void ReceiveDndData(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    SendGetPropertyRequest(win, platSpec->xdndFilenameAtom);
+
+    while (!GetReply(win, 32))
+        ;
+
+    uint8_t *buf = platSpec->recvBuf;
+    uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
+    uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
+    ConsumeMessage(platSpec, 32);
+    char *dndData = new char[lenOfValueInFmtUnits + 1];
+    char *nextWritePoint = dndData;
+
+    uint32_t numBytesLeft = lenOfValueInFmtUnits;
+    while (numBytesLeft > 0) {
+        ReadFromXServer(platSpec);
+
+        ssize_t stringLen = IntMin(platSpec->recvBufNumBytesAvailable, numBytesLeft);
+        memcpy(nextWritePoint, (char const *)buf, stringLen);
+        nextWritePoint += stringLen;
+
+        ConsumeMessage(platSpec, stringLen);
+        numBytesLeft -= stringLen;
+    }
+    dndData[lenOfValueInFmtUnits] = '\0';
+
+    uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
+    ConsumeMessage(platSpec, amtPadding);
+
+    SendXdndFinished(win, platSpec->dropSourceWinId);
+    if (lenOfValueInFmtUnits > 7 && memcmp(dndData, "file://", 7) == 0)
+        win->fileDropCallback(dndData + 7);
+    delete[] dndData;
 }
 
 

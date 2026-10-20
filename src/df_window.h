@@ -26,7 +26,7 @@ extern "C"
 #define KEY_MAX 256
 
 typedef void (RedrawCallback)(void);
-typedef void (FileDropCallback)(char const *path);
+typedef void (FileDropCallback)(char const *path); // path will be freed by deadfrog lib as soon this callback returns.
 typedef struct _DfWindowPrivate DfWindowPrivate;
 
 
@@ -83,7 +83,7 @@ typedef struct _DfWindow {
     double              advanceTime; // Time between last two calls of UpdateWin(win).
     RedrawCallback      *redrawCallback;
 
-    // A callback that will be called when files are drag-and-dropped onto the window.
+    // This callback will be called when files are drag-and-dropped onto the window.
     FileDropCallback    *fileDropCallback;
 
     DfWindowPrivate     *_private; // Internal stuff not accessible from the API.
