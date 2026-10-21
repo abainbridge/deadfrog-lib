@@ -40,6 +40,7 @@ enum {
     X11_OPCODE_CHANGE_WINDOW_ATTRIBUTES = 2,
     X11_OPCODE_MAP_WINDOW = 8,
     X11_OPCODE_CONFIGURE_WINDOW = 12,
+    X11_OPCODE_INTERN_ATOM = 16,
     X11_OPCODE_CHANGE_PROPERTY = 18,
     X11_OPCODE_SET_SELECTION_OWNER = 22,
     X11_OPCODE_CONVERT_SELECTION = 24,
@@ -50,6 +51,7 @@ enum {
     X11_OPCODE_CREATE_GC = 55,
     X11_OPCODE_PUT_IMAGE = 72,
     X11_OPCODE_CREATE_GLYPH_CURSOR = 94,
+    X11_OPCODE_QUERY_EXTENSION = 98,
 
     X11_CW_EVENT_MASK = 1<<11,
     X11_EVENT_MASK_KEY_PRESS = 1,
@@ -158,6 +160,9 @@ struct WindowPlatformSpecific {
     uint32_t graphicsContextId;
     uint32_t windowId;
 
+    // Extensions
+    uint8_t randrMajorOpcode;
+
     // Atom values.
     int clipboardAtom;
     int stringAtom;
@@ -184,6 +189,8 @@ struct WindowPlatformSpecific {
     char *clipboardRxData;  // NULL except between calls of X11InternalClipboardRequestData() and ClipboardReleaseReceivedData()
     char *clipboardTxData;
     unsigned clipboardTxDataNumChars;
+
+    int monitorX, monitorY, monitorW, monitorH, monitorDpi;
 };
 
 
@@ -648,7 +655,7 @@ static void SendChangePropertyRequest(WindowPlatformSpecific *platSpec, uint32_t
 static void SendEventSelectionNotify(WindowPlatformSpecific *platSpec, uint32_t destWindow,
                                          uint32_t target, uint32_t property, uint32_t time) {
     uint32_t packet[11];
-    packet[0] = 25 | 11 << 16;
+    packet[0] = X11_OPCODE_SEND_EVENT | 11 << 16;
     packet[1] = destWindow;
     packet[2] = 0; // event mask
     packet[3] = 31; // SelectionNotify
@@ -660,6 +667,30 @@ static void SendEventSelectionNotify(WindowPlatformSpecific *platSpec, uint32_t 
     packet[9] = 0;
     packet[10] = 0;
 
+    SendBuf(platSpec, packet, sizeof(packet));
+}
+
+
+static void SendQueryExtension(WindowPlatformSpecific *platSpec, char const *extensionString) {
+    size_t stringLen = strlen(extensionString);
+    size_t stringLenWithPadding = (stringLen + 3) & -4;
+    size_t packetLen = 2 + stringLenWithPadding / 4;
+    if (packetLen > 8)
+        FATAL_ERROR("SendQueryExtension string too long");
+    uint32_t packet[8] = { 0 };
+    packet[0] = X11_OPCODE_QUERY_EXTENSION | (packetLen << 16);
+    packet[1] = stringLen;
+    memcpy(&packet[2], extensionString, stringLen);
+    SendBuf(platSpec, packet, packetLen * 4);
+}
+
+
+static void SendRrGetMonitors(WindowPlatformSpecific *platSpec) {
+    int len = 3;
+    uint32_t packet[len];
+    packet[0] = platSpec->randrMajorOpcode | (42 << 8) | (len << 16);
+    packet[1] = platSpec->windowId;
+    packet[2] = 1;
     SendBuf(platSpec, packet, sizeof(packet));
 }
 
@@ -721,7 +752,7 @@ static int GetAtomId(DfWindow *win, char const *atomName) {
     int requestLenWords = (11 + atomNameLen) / 4;
     int requestLenBytes = requestLenWords * 4;
     uint8_t packet[30] = { 0 };
-    packet[0] = 16; // opcode = InternAtom.
+    packet[0] = X11_OPCODE_INTERN_ATOM;
     packet[1] = 0; // only_if_exists = 0.
     packet[2] = requestLenWords;
     packet[4] = atomNameLen; // Atom name len in bytes.
@@ -738,6 +769,78 @@ static int GetAtomId(DfWindow *win, char const *atomName) {
     ConsumeMessage(platSpec, 32);
 
     return *id;
+}
+
+
+static int QueryExtension(DfWindow *win, char const *extensionString) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    SendQueryExtension(platSpec, extensionString);
+    while (!GetReply(win, 32))
+        ;
+    uint8_t majorOpcode = platSpec->recvBuf[9];
+    ConsumeMessage(platSpec, 32);
+    printf("randr %d\n", majorOpcode);
+    return majorOpcode;
+}
+
+
+
+static bool GetMonitorDetails(DfWindow *win, int *x, int *y, int *w, int *h, int *dpi) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    SendRrGetMonitors(platSpec);
+    while (!GetReply(win, 32))
+        ;
+
+    // Extract the length field (bytes 4-7) which specifies how many 4-byte units follow the 32-byte header
+    uint32_t length_units = GetU32FromRecvBuf(platSpec, 4);
+    size_t total_reply_bytes = 32 + (length_units * 4);
+
+    // 3. Ensure our non-blocking receive buffer has accumulated the *entire* reply payload
+    while (platSpec->recvBufNumBytesAvailable < total_reply_bytes)
+        ReadFromXServer(platSpec);
+
+    uint32_t numMonitors = *(uint32_t *)(platSpec->recvBuf + 12);
+    uint8_t *ptr = platSpec->recvBuf + 32;
+    printf("Detected %u monitor(s):\n", numMonitors);
+    bool found = false;
+    for (uint32_t i = 0; i < numMonitors; i++) {
+        // Skip 'name' (4 bytes) + 'primary' (1) + 'automatic' (1) = 6 bytes to get to noutput
+        uint16_t n_output = *(uint16_t *)(ptr + 6);
+
+        *x = *(int16_t *)(ptr + 8);
+        *y = *(int16_t *)(ptr + 10);
+        *w = *(uint16_t *)(ptr + 12);
+        *h = *(uint16_t *)(ptr + 14);
+        uint32_t mwidth = *(uint32_t *)(ptr + 16);
+
+        *dpi = 96;
+        if (mwidth > 0) {
+            *dpi = (*w * 25.4) / mwidth;
+            printf("  DPI  : %d\n", *dpi);
+        }
+
+        int right = *x + *w;
+        int bottom = *y + *h;
+        if (win->left >= *x && win->left < right && win->top >= *y && win->top < bottom) {
+            found = true;
+            break;
+        }
+
+        // Advance pointer past this monitor block:
+        // 24 fixed bytes + (n_output * 4 bytes for the output Atom/RROutput IDs)
+        size_t block_size = 24 + (n_output * sizeof(uint32_t));
+
+        // X11 protocol alignment requirement: pad each monitor block to a multiple of 4 bytes
+        size_t remainder = block_size % 4;
+        if (remainder != 0) {
+            block_size += (4 - remainder);
+        }
+
+        ptr += block_size;
+    }
+
+    ConsumeMessage(platSpec, total_reply_bytes);
+    return found;
 }
 
 
@@ -845,6 +948,9 @@ static void ConnectToXserver(DfWindow *win) {
     platSpec->cursorResizeWidthId = CreateGlyphCursor(win, fontId, 108);
     platSpec->cursorResizeHeightId = CreateGlyphCursor(win, fontId, 116);
     platSpec->currentCursor = MCT_ARROW;
+
+    // Query extensions
+    platSpec->randrMajorOpcode = QueryExtension(win, "RANDR");
 }
 
 
@@ -938,7 +1044,7 @@ static void HandleEvent(DfWindow *win) {
 
     switch (platSpec->recvBuf[0]) {
     case 0: // Error report.
-        printf("Received ERROR report, code %d\n", platSpec->recvBuf[1]);
+        FATAL_ERROR("Received ERROR report, code %d\n", platSpec->recvBuf[1]);
         break;
 
     case 2: // KeyPress event.
@@ -1468,7 +1574,10 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed,
     EnableDeleteWindowEvent(win);
 
     MakeSocketNonBlocking(platSpec);
+
     InitInput(win);
+    GetMonitorDetails(win, &platSpec->monitorX, &platSpec->monitorY,
+        &platSpec->monitorW, &platSpec->monitorH, &platSpec->monitorDpi);
 
     return win;
 }
@@ -1490,18 +1599,17 @@ void DestroyWin(DfWindow *win) {
 }
 
 
-// TODO: Proper job
 int GetMonitorDpi(DfWindow *win) {
-    return 96;
+    return win->_private->platSpec->monitorDpi;
 }
 
 
-// TODO: Proper job
-void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *width, int *height) {
-    *x = 0;
-    *y = 0;
-    *width = 1920;
-    *height = 1080;
+void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *w, int *h) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    *x = platSpec->monitorX;
+    *y = platSpec->monitorY;
+    *w = platSpec->monitorW;
+    *h = platSpec->monitorH;
 }
 
 

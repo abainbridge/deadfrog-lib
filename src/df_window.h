@@ -108,6 +108,7 @@ typedef enum {
 } MouseCursorType;
 
 
+// TODO: Rename to GetPrimaryMonitorRes()
 DLL_API bool GetDesktopRes(int *width, int *height);
 
 // Creates a Window (fullscreen is really just a big window) and a bitmap the size of the window
