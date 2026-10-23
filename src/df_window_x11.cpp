@@ -1,5 +1,8 @@
 // Platform includes
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <sys/socket.h>
+#include <sys/sysinfo.h>
 #include <sys/un.h>
 
 #include <errno.h>
@@ -58,6 +61,13 @@ enum {
     X11_EVENT_MASK_POINTER_MOTION = 1<<6,
 
     X11_ATOM_WM_NAME = 39
+};
+
+// MIT-SHM extension minor opcodes
+enum {
+    X11_SHM_ATTACH = 1,
+    X11_SHM_DETACH = 2,
+    X11_SHM_PUT_IMAGE = 3,
 };
 
 enum {
@@ -162,6 +172,13 @@ struct WindowPlatformSpecific {
 
     // Extensions
     uint8_t randrMajorOpcode;
+    uint8_t shmMajorOpcode; // 0 if SHM not available
+
+    // MIT-SHM resources
+    int shmId;
+    char *shmAddress;
+    size_t shmSize;
+    uint32_t shmSegId;
 
     // Atom values.
     int clipboardAtom;
@@ -844,6 +861,56 @@ static bool GetMonitorDetails(DfWindow *win, int *x, int *y, int *w, int *h, int
 }
 
 
+static void InitShmSegment(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    if (platSpec->shmMajorOpcode == 0) return;
+
+    size_t requiredSize = win->bmp->width * win->bmp->height * sizeof(DfColour);
+    if (requiredSize <= platSpec->shmSize) return;
+
+    // Clean up old segment if resizing.
+    if (platSpec->shmId != -1) {
+        // Send ShmDetach request to X server
+        uint32_t detachPacket[2];
+        detachPacket[0] = platSpec->shmMajorOpcode | (X11_SHM_DETACH << 8) | (2 << 16);
+        detachPacket[1] = platSpec->shmSegId;
+        SendBuf(platSpec, detachPacket, sizeof(detachPacket));
+
+        shmdt(platSpec->shmAddress);
+        shmctl(platSpec->shmId, IPC_RMID, NULL);
+        platSpec->shmId = -1;
+    }
+
+
+    // Allocate System V Shared Memory.
+    platSpec->shmSize = requiredSize * 1.3;
+    platSpec->shmId = shmget(IPC_PRIVATE, platSpec->shmSize, IPC_CREAT | 0600);
+    if (platSpec->shmId < 0) {
+        platSpec->shmMajorOpcode = 0;
+        return;
+    }
+
+    platSpec->shmAddress = (char *)shmat(platSpec->shmId, NULL, 0);
+    if (platSpec->shmAddress == (char *)-1) {
+        shmctl(platSpec->shmId, IPC_RMID, NULL);
+        platSpec->shmId = -1;
+        platSpec->shmMajorOpcode = 0;
+        return;
+    }
+
+    // Generate an X11 Resource ID for the shared memory segment
+    platSpec->shmSegId = GenerateId(win);
+
+    // Send ShmAttach request to X server
+    uint32_t attachPacket[4];
+    attachPacket[0] = platSpec->shmMajorOpcode | (X11_SHM_ATTACH << 8) | (4 << 16);
+    attachPacket[1] = platSpec->shmSegId;
+    attachPacket[2] = platSpec->shmId;
+    attachPacket[3] = 0; // Readonly = false (0)
+    SendBuf(platSpec, attachPacket, sizeof(attachPacket));
+}
+
+
 // Initialize the connection to the Xserver if we haven't already.
 static void ConnectToXserver(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
@@ -951,6 +1018,8 @@ static void ConnectToXserver(DfWindow *win) {
 
     // Query extensions
     platSpec->randrMajorOpcode = QueryExtension(win, "RANDR");
+    platSpec->shmMajorOpcode = QueryExtension(win, "MIT-SHM");
+    platSpec->shmId = -1;
 }
 
 
@@ -1002,32 +1071,53 @@ static void MakeSocketNonBlocking(WindowPlatformSpecific *platSpec) {
 
 static void BlitBitmapToWindow(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int w = win->bmp->width;
+    int h = win->bmp->height;
 
-    // *** Send back-buffer to Xserver.
-    int W = win->bmp->width;
-    int H = win->bmp->height;
-    enum { MAX_BYTES_PER_REQUEST = 65535 }; // Len field is 16-bits
-    int numRowsInChunk = (MAX_BYTES_PER_REQUEST - 6) / W; // -6 because of packet header
-    DfColour *row = win->bmp->pixels;
-    for (int y = 0; y < H; y += numRowsInChunk) {
-        if (y + numRowsInChunk > H) {
-            numRowsInChunk = H - y;
+    // Fall back to standard chunks if SHM failed to initialize.
+    if (platSpec->shmMajorOpcode == 0 || platSpec->shmId == -1) {
+        // *** Send back-buffer to Xserver via standard chunks (your old code) ***
+        enum { MAX_BYTES_PER_REQUEST = 65535 };
+        int numRowsInChunk = (MAX_BYTES_PER_REQUEST - 6) / w;
+        DfColour *row = win->bmp->pixels;
+        for (int y = 0; y < h; y += numRowsInChunk) {
+            if (y + numRowsInChunk > h) numRowsInChunk = h - y;
+
+            uint32_t packet[6];
+            uint32_t bmpFormat = 2 << 8;
+            uint32_t requestLen = (uint32_t)(w * numRowsInChunk + 6) << 16;
+            packet[0] = X11_OPCODE_PUT_IMAGE | bmpFormat | requestLen;
+            packet[1] = platSpec->windowId;
+            packet[2] = platSpec->graphicsContextId;
+            packet[3] = w | (numRowsInChunk << 16);
+            packet[4] = 0 | (y << 16);
+            packet[5] = 24 << 8;
+
+            SendBuf(platSpec, packet, sizeof(packet));
+            SendBuf(platSpec, row, w * numRowsInChunk * 4);
+            row += w * numRowsInChunk;
         }
-
-        uint32_t packet[6];
-        uint32_t bmpFormat = 2 << 8;
-        uint32_t requestLen = (uint32_t)(W * numRowsInChunk + 6) << 16;
-        packet[0] = X11_OPCODE_PUT_IMAGE | bmpFormat | requestLen;
-        packet[1] = platSpec->windowId;
-        packet[2] = platSpec->graphicsContextId;
-        packet[3] = W | (numRowsInChunk << 16); // Width and height.
-        packet[4] = 0 | (y << 16); // Dst X and Y.
-        packet[5] = 24 << 8; // Bit depth.
-
-        SendBuf(platSpec, packet, sizeof(packet));
-        SendBuf(platSpec, row, W * numRowsInChunk * 4);
-        row += W * numRowsInChunk;
+        return;
     }
+
+    // --- MIT-SHM Fast Path ---
+    // Copy your pixel back-buffer straight into shared memory.
+    memcpy(platSpec->shmAddress, win->bmp->pixels, w * h * sizeof(DfColour));
+
+    // Send a single lightweight ShmPutImage request over the socket.
+    uint32_t packet[10];
+    packet[0] = platSpec->shmMajorOpcode | (X11_SHM_PUT_IMAGE << 8) | (10 << 16);
+    packet[1] = platSpec->windowId;
+    packet[2] = platSpec->graphicsContextId;
+    packet[3] = w | (h << 16);                // total_width, total_height
+    packet[4] = 0;                            // src_x, src_y
+    packet[5] = w | (h << 16);
+    packet[6] = 0;                            // dst_x, dst_y
+    packet[7] = 24 | (2 << 8) | (0 << 16);    // depth (8), format ZPixmap=2 (8), send_event=0 (8), pad (8)
+    packet[8] = platSpec->shmSegId;
+    packet[9] = 0;                            // Offset in shared memory
+
+    SendBuf(platSpec, packet, sizeof(packet));
 }
 
 
@@ -1140,6 +1230,7 @@ static void HandleEvent(DfWindow *win) {
             if (w != win->bmp->width || h != win->bmp->height) {
                 BitmapDelete(win->bmp);
                 win->bmp = BitmapCreate(w, h);
+                InitShmSegment(win);
                 redrawNeeded = true;
             }
         }
@@ -1573,6 +1664,8 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed,
     SetWindowTitle(win, winName);
     EnableDeleteWindowEvent(win);
 
+    InitShmSegment(win);
+
     MakeSocketNonBlocking(platSpec);
 
     InitInput(win);
@@ -1590,6 +1683,11 @@ void DestroyWin(DfWindow *win) {
     packet[0] |= 2 << 16; // Length
     packet[1] = platSpec->windowId;
     SendBuf(platSpec, packet, sizeof(packet));
+
+    if (platSpec->shmId != -1) {
+        shmdt(platSpec->shmAddress);
+        shmctl(platSpec->shmId, IPC_RMID, NULL);
+    }
 
     BitmapDelete(win->bmp);
     delete[] platSpec->connectionReplySuccessBody;
