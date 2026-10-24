@@ -27,8 +27,7 @@
 //    In one terminal, run:
 //        xtrace -D:1 -d:0 -k -w
 //    Then, in another terminal:
-//        Set the DISPLAY env var to ":1"
-//        Run CodeTrowel
+//        DISPLAY=:1 ./CodeTrowel
 //
 // You will also see other X11 applications' traffic if they are launched with
 // the same DISPLAY string.
@@ -195,6 +194,7 @@ struct WindowPlatformSpecific {
     int uriListAtom;
     int xdndFilenameAtom;
     int xdndFinishedAtom;
+    int netMoveResizeWindowAtom;
 
     int cursorIbeamId;
     int cursorResizeWidthId;
@@ -764,11 +764,11 @@ static void OpenFont(DfWindow *win, uint32_t fontId, char const *fontName) {
 
 static int GetAtomId(DfWindow *win, char const *atomName) {
     int atomNameLen = strlen(atomName);
-    if (atomNameLen > 19) return 0;
+    if (atomNameLen > 28) return 0;
 
     int requestLenWords = (11 + atomNameLen) / 4;
     int requestLenBytes = requestLenWords * 4;
-    uint8_t packet[30] = { 0 };
+    uint8_t packet[20 + 32] = { 0 };
     packet[0] = X11_OPCODE_INTERN_ATOM;
     packet[1] = 0; // only_if_exists = 0.
     packet[2] = requestLenWords;
@@ -1257,14 +1257,13 @@ static void HandleEvent(DfWindow *win) {
         // in a get-data-from-clipboard sequence. It is a response to a
         // ConvertSelection request we sent to the server. 
         selectionNotifyProperty = GetU32FromRecvBuf(platSpec, 20);
-        printf("Got selection notify 0x%x\n", selectionNotifyProperty);
+//        printf("Got selection notify 0x%x\n", selectionNotifyProperty);
         break;
 
     case 33: // Client message.
         {
             int type = GetU32FromRecvBuf(platSpec, 8);
             if (type == platSpec->wmProtocolsAtom) {
-                printf("WM_PROTOCOLS\n");
                 win->windowClosed = true;
             }
             else if (type == platSpec->xdndPositionAtom) {
@@ -1712,15 +1711,21 @@ void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *w, int *h) {
 
 
 void SetWindowRect(DfWindow *win, int x, int y, int width, int height) {
+    printf("swr %d %d %d %d\n", x, y, width, height);
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    uint32_t packet[7];
-    packet[0] = X11_OPCODE_CONFIGURE_WINDOW | (7 << 16);
-    packet[1] = platSpec->windowId;
-    packet[2] = 0xf;    // flags to say we want to set x, y, width and height
-    packet[3] = x;
-    packet[4] = y;
-    packet[5] = width;
-    packet[6] = height;
+    int len = 11;
+    uint32_t buf[len];
+    buf[0] = X11_OPCODE_SEND_EVENT | (len << 16);
+    buf[1] = platSpec->screens[0].root_id;       // Destination: Root window
+    buf[2] = 0x80000 | 0x10000;                  // Event Mask: SubstructureRedirectMask | SubstructureNotifyMask
+    buf[3] = X11_OPCODE_CLIENT_MESSAGE | (32 << 8); // Format: 32-bit client message
+    buf[4] = platSpec->windowId;                 // Target window being moved/resized
+    buf[5] = platSpec->netMoveResizeWindowAtom;  // Atom: _NET_MOVERESIZE_WINDOW
+    buf[6] = 0x1f00;                             // Flags: x, y, width, and height value flags are set
+    buf[7] = x;
+    buf[8] = y;
+    buf[9] = width;
+    buf[10] = height;
 
-    SendBuf(platSpec, packet, sizeof(packet));
+    SendBuf(platSpec, buf, sizeof(buf));
 }
