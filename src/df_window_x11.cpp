@@ -1005,6 +1005,7 @@ static void ConnectToXserver(DfWindow *win) {
     platSpec->uriListAtom = GetAtomId(win, "text/uri-list");
     platSpec->xdndFilenameAtom = GetAtomId(win, "XdndFilename");
     platSpec->xdndFinishedAtom = GetAtomId(win, "XdndFinished");
+    platSpec->netMoveResizeWindowAtom = GetAtomId(win, "_NET_MOVERESIZE_WINDOW");
 
     platSpec->windowId = GenerateId(win);
 
