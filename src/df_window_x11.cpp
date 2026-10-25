@@ -141,15 +141,6 @@ typedef struct __attribute__((packed)) {
 } connectionReplyHeader_t;
 
 
-typedef struct __attribute__((packed)) {
-    uint8_t group;
-    uint8_t bits;
-    uint16_t colormap_entries;
-    uint32_t mask_red, mask_green, mask_blue;
-    uint32_t pad;
-} visual_t;
-
-
 // End of X11 protocol definitions
 //
 
@@ -460,9 +451,8 @@ static int ReadFromXServer(WindowPlatformSpecific *platSpec) {
     }
 
     if (numBytesRecvd < 0) {
-        if (errno == EAGAIN) {
+        if (errno == EAGAIN)
             return 0;
-        }
 
         perror("");
         printf("Couldn't read from socket. Len = %i.\n", (int)numBytesRecvd);
@@ -493,9 +483,8 @@ static void SendBuf(WindowPlatformSpecific *platSpec, const void *_buf, int len)
             FATAL_ERROR("Poll gave an error %i", pollResult);
 
         int sizeSent = write(platSpec->socketFd, buf, len);
-        if (sizeSent < 0) {
+        if (sizeSent < 0)
             FATAL_ERROR("Couldn't send buf");
-        }
 
         len -= sizeSent;
 
@@ -512,19 +501,6 @@ static void FatalRead(WindowPlatformSpecific *platSpec, void *buf, size_t count)
         FATAL_ERROR("Failed to read.");
     }
 }
-
-
-// static void HandleErrorMessage(WindowPlatformSpecific *platSpec) {
-//     // See https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#Encoding::Errors
-//     printf("Error message from X11 server - ");
-//     switch (platSpec->recvBuf[1]) {
-//         case 2: printf("Bad value. %x %x", platSpec->recvBuf[2], platSpec->recvBuf[3]); break;
-//         case 9: printf("Bad drawable\n"); break;
-//         case 16: printf("Bad length\n"); break;
-//         default: printf("Unknown error code %i\n", platSpec->recvBuf[1]);
-//     }
-//     exit(-1);
-// }
 
 
 static bool IsEventPending(WindowPlatformSpecific *platSpec) {
@@ -796,7 +772,6 @@ static int QueryExtension(DfWindow *win, char const *extensionString) {
         ;
     uint8_t majorOpcode = platSpec->recvBuf[9];
     ConsumeMessage(platSpec, 32);
-    printf("randr %d\n", majorOpcode);
     return majorOpcode;
 }
 
@@ -849,9 +824,8 @@ static bool GetMonitorDetails(DfWindow *win, int *x, int *y, int *w, int *h, int
 
         // X11 protocol alignment requirement: pad each monitor block to a multiple of 4 bytes
         size_t remainder = block_size % 4;
-        if (remainder != 0) {
+        if (remainder != 0)
             block_size += (4 - remainder);
-        }
 
         ptr += block_size;
     }
@@ -923,15 +897,13 @@ static void ConnectToXserver(DfWindow *win) {
 
     // Open socket and connect.
     platSpec->socketFd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (platSpec->socketFd < 0) {
+    if (platSpec->socketFd < 0)
         FATAL_ERROR("Create socket failed");
-    }
     struct sockaddr_un servAddr = { 0 };
     servAddr.sun_family = AF_UNIX;
     strcpy(servAddr.sun_path, socketName);
-    if (connect(platSpec->socketFd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
+    if (connect(platSpec->socketFd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0)
         FATAL_ERROR("Couldn't connect");
-    }
 
     // Read Xauthority.
     char xauthFilenameBuf[2048];
@@ -949,14 +921,12 @@ static void ConnectToXserver(DfWindow *win) {
         xauthFilename = xauthFilenameBuf;
     }
     FILE *xauthFile = fopen(xauthFilename, "rb");
-    if (!xauthFile) {
+    if (!xauthFile)
         FATAL_ERROR("Couldn't open '%s'.", xauthFilename);
-    }
     char xauthCookie[4096];
     size_t xauthLen = fread(xauthCookie, 1, sizeof(xauthCookie), xauthFile);
-    if (xauthLen < 0) {
+    if (xauthLen < 0)
         FATAL_ERROR("Couldn't read from .Xauthority.");
-    }
     fclose(xauthFile);
 
     // Send connection request.
@@ -972,9 +942,8 @@ static void ConnectToXserver(DfWindow *win) {
 
     // Read connection reply header.
     FatalRead(platSpec, &platSpec->connectionReplyHeader, sizeof(connectionReplyHeader_t));
-    if (platSpec->connectionReplyHeader.success == 0) {
+    if (platSpec->connectionReplyHeader.success == 0)
         FATAL_ERROR("Connection reply indicated failure.");
-    }
 
     // Read rest of connection reply.
     platSpec->connectionReplySuccessBody = (connectionReplySuccessBody_t*)new char[platSpec->connectionReplyHeader.len * 4];
@@ -1060,9 +1029,8 @@ static void EnableDeleteWindowEvent(DfWindow *win) {
 static void MakeSocketNonBlocking(WindowPlatformSpecific *platSpec) {
     // Make socket non-blocking.
     int flags = fcntl(platSpec->socketFd, F_GETFL, 0);
-    if (flags == -1) {
+    if (flags == -1)
         FATAL_ERROR("Couldn't get flags of socket");
-    }
     flags |= O_NONBLOCK;
     if (fcntl(platSpec->socketFd, F_SETFL, flags) != 0) {
         FATAL_ERROR("Couldn't set socket as non-blocking");
@@ -1124,9 +1092,8 @@ static void BlitBitmapToWindow(DfWindow *win) {
 
 static void HandleEvent(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    if (platSpec->recvBuf[0] == 1) {
+    if (platSpec->recvBuf[0] == 1)
         FATAL_ERROR("Got unexpected reply.");
-    }
 
     uint32_t selectionNotifyProperty = 0;
     bool redrawNeeded = false;
@@ -1245,8 +1212,8 @@ static void HandleEvent(DfWindow *win) {
             ReleaseAssert(selection == platSpec->clipboardAtom, "selection was %x", selection);
             uint32_t target = GetU32FromRecvBuf(platSpec, 20);
             uint32_t property = GetU32FromRecvBuf(platSpec, 24);
-            printf("Recv'd Selection request. Time=%x Requestor=%x target=%x property=%x\n",
-                time, requestor, target, property);
+//             printf("Recv'd Selection request. Time=%x Requestor=%x target=%x property=%x\n",
+//                 time, requestor, target, property);
 
             SendChangePropertyRequest(platSpec, requestor, target, property);
             SendEventSelectionNotify(platSpec, requestor, target, property, time);
