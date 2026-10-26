@@ -885,6 +885,25 @@ static void InitShmSegment(DfWindow *win) {
 }
 
 
+static void TranslateCoordinates(DfWindow *win, int *x, int *y) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    int len = 4;
+    uint32_t packet[len];
+    packet[0] = 40 /* X_TranslateCoordinates */ | (len << 16);
+    packet[1] = platSpec->windowId;
+    packet[2] = platSpec->screens[0].root_id;
+    packet[3] = *x | (*y << 16);
+    SendBuf(platSpec, packet, sizeof(packet));
+
+    while (!GetReply(win, 32))
+        ;
+
+    *x = *(int16_t *)(platSpec->recvBuf + 12);
+    *y = *(int16_t *)(platSpec->recvBuf + 14);
+    ConsumeMessage(platSpec, 32);
+}
+
+
 // Initialize the connection to the Xserver if we haven't already.
 static void ConnectToXserver(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
@@ -1096,11 +1115,10 @@ static void HandleEvent(DfWindow *win) {
         FATAL_ERROR("Got unexpected reply.");
 
     uint32_t selectionNotifyProperty = 0;
+    bool winPosTranslateNeeded = false;
     bool redrawNeeded = false;
 
-    platSpec->recvBuf[0] &= 0x7f; // Clear the seemingly useless "Generated" flag.
-
-    switch (platSpec->recvBuf[0]) {
+    switch (platSpec->recvBuf[0] & 0x7f) {
     case 0: // Error report.
         FATAL_ERROR("Received ERROR report, code %d\n", platSpec->recvBuf[1]);
         break;
@@ -1193,6 +1211,9 @@ static void HandleEvent(DfWindow *win) {
         {
             win->left = platSpec->recvBuf[16] + (platSpec->recvBuf[17] << 8);
             win->top = platSpec->recvBuf[18] + (platSpec->recvBuf[19] << 8);
+
+            if (!(platSpec->recvBuf[0] & 0x80))
+                winPosTranslateNeeded = true;
             int w = platSpec->recvBuf[20] + (platSpec->recvBuf[21] << 8);
             int h = platSpec->recvBuf[22] + (platSpec->recvBuf[23] << 8);
             if (w != win->bmp->width || h != win->bmp->height) {
@@ -1252,10 +1273,13 @@ static void HandleEvent(DfWindow *win) {
         break;
 
     default:
-        printf("Got an unknown message type (%d).\n", platSpec->recvBuf[0]);
+        printf("Got an unknown message type (%d).\n", platSpec->recvBuf[0] & 0x7f);
     }
 
     ConsumeMessage(platSpec, 32);
+
+    if (winPosTranslateNeeded)
+        TranslateCoordinates(win, &win->left, &win->top);
 
     if (selectionNotifyProperty == platSpec->xselDataAtom)
         ReceiveClipboardData(win);
