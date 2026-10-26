@@ -186,6 +186,8 @@ struct WindowPlatformSpecific {
     int xdndFilenameAtom;
     int xdndFinishedAtom;
     int netMoveResizeWindowAtom;
+    int netWmIconAtom;
+    int cardinalAtom;
 
     int cursorIbeamId;
     int cursorResizeWidthId;
@@ -972,6 +974,8 @@ static void ConnectToXserver(DfWindow *win) {
     platSpec->xdndFilenameAtom = GetAtomId(win, "XdndFilename");
     platSpec->xdndFinishedAtom = GetAtomId(win, "XdndFinished");
     platSpec->netMoveResizeWindowAtom = GetAtomId(win, "_NET_MOVERESIZE_WINDOW");
+    platSpec->netWmIconAtom = GetAtomId(win, "_NET_WM_ICON");
+    platSpec->cardinalAtom = GetAtomId(win, "CARDINAL");
 
     platSpec->windowId = GenerateId(win);
 
@@ -1221,7 +1225,7 @@ static void HandleEvent(DfWindow *win) {
     case 31: // Selection Notify
         // This event is received either as part of a Drag and Drop sequence or
         // in a get-data-from-clipboard sequence. It is a response to a
-        // ConvertSelection request we sent to the server. 
+        // ConvertSelection request we sent to the server.
         selectionNotifyProperty = GetU32FromRecvBuf(platSpec, 20);
 //        printf("Got selection notify 0x%x\n", selectionNotifyProperty);
         break;
@@ -1558,6 +1562,28 @@ void SetMouseCursor(DfWindow *win, MouseCursorType t) {
 }
 
 
+void SetWindowIcon(DfWindow *win, int width, int height, DfColour *pixels) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+
+    uint32_t numPixels = width * height;
+    // Total request length in 32-bit words: Header (6) + Dims (2) + Pixels (numPixels)
+    uint32_t totalWords = 6 + 2 + numPixels;
+
+    uint32_t buf[8];
+    buf[0] = X11_OPCODE_CHANGE_PROPERTY | (totalWords << 16);
+    buf[1] = platSpec->windowId;
+    buf[2] = platSpec->netWmIconAtom;
+    buf[3] = platSpec->cardinalAtom;
+    buf[4] = 32;            // Format: 32 bits per item
+    buf[5] = 2 + numPixels; // Data length in 32-bit format units (width + height + pixels)
+    buf[6] = width;
+    buf[7] = height;
+    SendBuf(platSpec, buf, sizeof(buf));
+
+    SendBuf(platSpec, pixels, numPixels * sizeof(uint32_t));
+}
+
+
 bool IsWindowMaximized(DfWindow *win) {
     return false;
 }
@@ -1592,9 +1618,6 @@ void SetWindowTitle(DfWindow *win, char const *title) {
 
     SendBuf(platSpec, packet, len * 4);
 }
-
-
-void SetWindowIcon(DfWindow *win) {}
 
 
 DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed, char const *winName) {

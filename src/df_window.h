@@ -143,9 +143,14 @@ DLL_API void HideMouse(DfWindow *win);
 
 DLL_API void SetMouseCursor(DfWindow *win, MouseCursorType t);
 
-// Currently Windows only. Assumes that you have a 16x16 and optionally a 32x32 icon
+// On Windows, this function assumes that you have a 16x16 and optionally a 32x32 icon
 // resource in your executable and that the id is 101.
+#ifdef _MSC_VER
 DLL_API void SetWindowIcon(DfWindow *win);
+#else
+DLL_API void SetWindowIcon(DfWindow *win, int w, int h, DfColour *pixels);
+#endif
+
 
 DLL_API bool IsWindowMaximized(DfWindow *win);
 DLL_API void SetMaximizedState(DfWindow *win, bool maximize);
