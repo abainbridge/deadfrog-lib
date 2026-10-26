@@ -199,6 +199,7 @@ struct WindowPlatformSpecific {
     unsigned clipboardTxDataNumChars;
 
     int monitorX, monitorY, monitorW, monitorH, monitorDpi;
+    bool monitorDetailsValid;
 };
 
 
@@ -776,8 +777,7 @@ static int QueryExtension(DfWindow *win, char const *extensionString) {
 }
 
 
-
-static bool GetMonitorDetails(DfWindow *win, int *x, int *y, int *w, int *h, int *dpi) {
+static void UpdateMonitorDetails(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     SendRrGetMonitors(platSpec);
     while (!GetReply(win, 32))
@@ -793,28 +793,24 @@ static bool GetMonitorDetails(DfWindow *win, int *x, int *y, int *w, int *h, int
 
     uint32_t numMonitors = *(uint32_t *)(platSpec->recvBuf + 12);
     uint8_t *ptr = platSpec->recvBuf + 32;
-    printf("Detected %u monitor(s):\n", numMonitors);
-    bool found = false;
     for (uint32_t i = 0; i < numMonitors; i++) {
         // Skip 'name' (4 bytes) + 'primary' (1) + 'automatic' (1) = 6 bytes to get to noutput
         uint16_t n_output = *(uint16_t *)(ptr + 6);
 
-        *x = *(int16_t *)(ptr + 8);
-        *y = *(int16_t *)(ptr + 10);
-        *w = *(uint16_t *)(ptr + 12);
-        *h = *(uint16_t *)(ptr + 14);
+        platSpec->monitorX = *(int16_t *)(ptr + 8);
+        platSpec->monitorY = *(int16_t *)(ptr + 10);
+        platSpec->monitorW = *(uint16_t *)(ptr + 12);
+        platSpec->monitorH = *(uint16_t *)(ptr + 14);
         uint32_t mwidth = *(uint32_t *)(ptr + 16);
+        platSpec->monitorDpi = 96;
+        if (mwidth > 0)
+            platSpec->monitorDpi = (platSpec->monitorW * 25.4) / mwidth;
 
-        *dpi = 96;
-        if (mwidth > 0) {
-            *dpi = (*w * 25.4) / mwidth;
-            printf("  DPI  : %d\n", *dpi);
-        }
-
-        int right = *x + *w;
-        int bottom = *y + *h;
-        if (win->left >= *x && win->left < right && win->top >= *y && win->top < bottom) {
-            found = true;
+        int right = platSpec->monitorX + platSpec->monitorW;
+        int bottom = platSpec->monitorY + platSpec->monitorH;
+        if (win->left >= platSpec->monitorX && win->left < right &&
+                win->top >= platSpec->monitorY && win->top < bottom) {
+            platSpec->monitorDetailsValid = true;
             break;
         }
 
@@ -831,7 +827,6 @@ static bool GetMonitorDetails(DfWindow *win, int *x, int *y, int *w, int *h, int
     }
 
     ConsumeMessage(platSpec, total_reply_bytes);
-    return found;
 }
 
 
@@ -1211,6 +1206,7 @@ static void HandleEvent(DfWindow *win) {
         {
             win->left = platSpec->recvBuf[16] + (platSpec->recvBuf[17] << 8);
             win->top = platSpec->recvBuf[18] + (platSpec->recvBuf[19] << 8);
+            platSpec->monitorDetailsValid = false;
 
             if (!(platSpec->recvBuf[0] & 0x80))
                 winPosTranslateNeeded = true;
@@ -1660,8 +1656,6 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed,
     MakeSocketNonBlocking(platSpec);
 
     InitInput(win);
-    GetMonitorDetails(win, &platSpec->monitorX, &platSpec->monitorY,
-        &platSpec->monitorW, &platSpec->monitorH, &platSpec->monitorDpi);
 
     return win;
 }
@@ -1689,12 +1683,17 @@ void DestroyWin(DfWindow *win) {
 
 
 int GetMonitorDpi(DfWindow *win) {
-    return win->_private->platSpec->monitorDpi;
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    if (!platSpec->monitorDetailsValid)
+        UpdateMonitorDetails(win);
+    return platSpec->monitorDpi;
 }
 
 
 void GetMonitorWorkArea(DfWindow *win, int *x, int *y, int *w, int *h) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
+    if (!platSpec->monitorDetailsValid)
+        UpdateMonitorDetails(win);
     *x = platSpec->monitorX;
     *y = platSpec->monitorY;
     *w = platSpec->monitorW;
