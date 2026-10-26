@@ -504,25 +504,8 @@ static void FatalRead(WindowPlatformSpecific *platSpec, void *buf, size_t count)
 }
 
 
-static bool IsEventPending(WindowPlatformSpecific *platSpec) {
-    if (platSpec->recvBufNumBytesAvailable >= 2 && platSpec->recvBuf[0] == 0)
-        return true; // Error message event is pending.
-
-    if (platSpec->recvBuf[0] == 1)
-        return false;   // Reply is pending.
-
-    if (platSpec->recvBufNumBytesAvailable >= 32)
-        return true;
-
-    return false;
-}
-
-
 static uint32_t GetU32FromRecvBuf(WindowPlatformSpecific *platSpec, int offset) {
-    return platSpec->recvBuf[offset] +
-        (platSpec->recvBuf[offset + 1] << 8) +
-        (platSpec->recvBuf[offset + 2] << 16) +
-        (platSpec->recvBuf[offset + 3] << 24);
+    return *((uint32_t*)(platSpec->recvBuf + offset));
 }
 
 
@@ -1106,8 +1089,6 @@ static void BlitBitmapToWindow(DfWindow *win) {
 
 static void HandleEvent(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    if (platSpec->recvBuf[0] == 1)
-        FATAL_ERROR("Got unexpected reply.");
 
     uint32_t selectionNotifyProperty = 0;
     bool winPosTranslateNeeded = false;
@@ -1293,7 +1274,7 @@ static bool HandleEvents(DfWindow *win) {
     ReadFromXServer(platSpec);
 
     bool rv = false;
-    while (IsEventPending(platSpec)) {
+    while (platSpec->recvBufNumBytesAvailable >= 32 && platSpec->recvBuf[0] != 1) {
         HandleEvent(win);
         rv = true;
     }
