@@ -200,12 +200,13 @@ struct WindowPlatformSpecific {
     char *clipboardTxData;
     unsigned clipboardTxDataNumChars;
 
+    bool winMapped;
     int monitorX, monitorY, monitorW, monitorH, monitorDpi;
     bool monitorDetailsValid;
 };
 
 
-static bool GetReply(DfWindow *win, int expectedLen);
+static uint8_t *WaitReply(DfWindow *win);
 static void ReceiveClipboardData(DfWindow *win);
 static void ReceiveDndData(DfWindow *win);
 
@@ -468,8 +469,12 @@ static int ReadFromXServer(WindowPlatformSpecific *platSpec) {
 }
 
 
-static void ConsumeMessage(WindowPlatformSpecific *platSpec, int len) {
-    memmove(platSpec->recvBuf, platSpec->recvBuf + len, platSpec->recvBufNumBytesAvailable - len);
+static void ConsumeMessage(WindowPlatformSpecific *platSpec, uint8_t *start, int len) {
+    unsigned offset = start - platSpec->recvBuf;
+    if (offset >= sizeof(platSpec->recvBuf))
+        FATAL_ERROR("wrong start");
+    unsigned amtToMove = platSpec->recvBufNumBytesAvailable - len - offset;
+    memmove(start, start + len, amtToMove);
     platSpec->recvBufNumBytesAvailable -= len;
     if (platSpec->recvBufNumBytesAvailable > sizeof(platSpec->recvBuf)) {
         FATAL_ERROR("bad num bytes");
@@ -506,8 +511,8 @@ static void FatalRead(WindowPlatformSpecific *platSpec, void *buf, size_t count)
 }
 
 
-static uint32_t GetU32FromRecvBuf(WindowPlatformSpecific *platSpec, int offset) {
-    return *((uint32_t*)(platSpec->recvBuf + offset));
+static uint32_t GetU32FromBuf(uint8_t *buf, int offset) {
+    return *((uint32_t*)(buf + offset));
 }
 
 
@@ -740,12 +745,9 @@ static int GetAtomId(DfWindow *win, char const *atomName) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     SendBuf(platSpec, packet, requestLenBytes);
 
-    while (!GetReply(win, 32))
-        ;
-
-    uint16_t *id = (uint16_t *)(platSpec->recvBuf + 8);
-
-    ConsumeMessage(platSpec, 32);
+    uint8_t *reply = WaitReply(win);
+    uint16_t *id = (uint16_t *)(reply + 8);
+    ConsumeMessage(platSpec, reply, 32);
 
     return *id;
 }
@@ -754,10 +756,9 @@ static int GetAtomId(DfWindow *win, char const *atomName) {
 static int QueryExtension(DfWindow *win, char const *extensionString) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     SendQueryExtension(platSpec, extensionString);
-    while (!GetReply(win, 32))
-        ;
-    uint8_t majorOpcode = platSpec->recvBuf[9];
-    ConsumeMessage(platSpec, 32);
+    uint8_t *reply = WaitReply(win);
+    uint8_t majorOpcode = reply[9];
+    ConsumeMessage(platSpec, reply, 32);
     return majorOpcode;
 }
 
@@ -765,19 +766,14 @@ static int QueryExtension(DfWindow *win, char const *extensionString) {
 static void UpdateMonitorDetails(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     SendRrGetMonitors(platSpec);
-    while (!GetReply(win, 32))
-        ;
+    uint8_t *reply = WaitReply(win);
 
     // Extract the length field (bytes 4-7) which specifies how many 4-byte units follow the 32-byte header
-    uint32_t length_units = GetU32FromRecvBuf(platSpec, 4);
-    size_t total_reply_bytes = 32 + (length_units * 4);
+    uint32_t numWords = GetU32FromBuf(reply, 4);
+    size_t totalReplyBytes = 32 + (numWords * 4);
 
-    // 3. Ensure our non-blocking receive buffer has accumulated the *entire* reply payload
-    while (platSpec->recvBufNumBytesAvailable < total_reply_bytes)
-        ReadFromXServer(platSpec);
-
-    uint32_t numMonitors = *(uint32_t *)(platSpec->recvBuf + 12);
-    uint8_t *ptr = platSpec->recvBuf + 32;
+    uint32_t numMonitors = GetU32FromBuf(reply, 12);
+    uint8_t *ptr = reply + 32;
     for (uint32_t i = 0; i < numMonitors; i++) {
         // Skip 'name' (4 bytes) + 'primary' (1) + 'automatic' (1) = 6 bytes to get to noutput
         uint16_t n_output = *(uint16_t *)(ptr + 6);
@@ -811,7 +807,7 @@ static void UpdateMonitorDetails(DfWindow *win) {
         ptr += block_size;
     }
 
-    ConsumeMessage(platSpec, total_reply_bytes);
+    ConsumeMessage(platSpec, reply, totalReplyBytes);
 }
 
 
@@ -875,12 +871,10 @@ static void TranslateCoordinates(DfWindow *win, int *x, int *y) {
     packet[3] = *x | (*y << 16);
     SendBuf(platSpec, packet, sizeof(packet));
 
-    while (!GetReply(win, 32))
-        ;
-
-    *x = *(int16_t *)(platSpec->recvBuf + 12);
-    *y = *(int16_t *)(platSpec->recvBuf + 14);
-    ConsumeMessage(platSpec, 32);
+    uint8_t *reply = WaitReply(win);
+    *x = *(int16_t *)(reply + 12);
+    *y = *(int16_t *)(reply + 14);
+    ConsumeMessage(platSpec, reply, 32);
 }
 
 
@@ -1187,6 +1181,10 @@ static void HandleEvent(DfWindow *win) {
         HandleFocusOutEvent(win);
         break;
 
+    case 19:
+        platSpec->winMapped = true;
+        break;
+
     case 22: // Configure notify event.
         {
             win->left = platSpec->recvBuf[16] + (platSpec->recvBuf[17] << 8);
@@ -1208,12 +1206,12 @@ static void HandleEvent(DfWindow *win) {
 
     case 30: // Selection Request
         {
-            uint32_t time = GetU32FromRecvBuf(platSpec, 4);
-            uint32_t requestor = GetU32FromRecvBuf(platSpec, 12);
-            uint32_t selection = GetU32FromRecvBuf(platSpec, 16);
+            uint32_t time = GetU32FromBuf(platSpec->recvBuf, 4);
+            uint32_t requestor = GetU32FromBuf(platSpec->recvBuf, 12);
+            uint32_t selection = GetU32FromBuf(platSpec->recvBuf, 16);
             ReleaseAssert(selection == platSpec->clipboardAtom, "selection was %x", selection);
-            uint32_t target = GetU32FromRecvBuf(platSpec, 20);
-            uint32_t property = GetU32FromRecvBuf(platSpec, 24);
+            uint32_t target = GetU32FromBuf(platSpec->recvBuf, 20);
+            uint32_t property = GetU32FromBuf(platSpec->recvBuf, 24);
 //             printf("Recv'd Selection request. Time=%x Requestor=%x target=%x property=%x\n",
 //                 time, requestor, target, property);
 
@@ -1226,24 +1224,24 @@ static void HandleEvent(DfWindow *win) {
         // This event is received either as part of a Drag and Drop sequence or
         // in a get-data-from-clipboard sequence. It is a response to a
         // ConvertSelection request we sent to the server.
-        selectionNotifyProperty = GetU32FromRecvBuf(platSpec, 20);
+        selectionNotifyProperty = GetU32FromBuf(platSpec->recvBuf, 20);
 //        printf("Got selection notify 0x%x\n", selectionNotifyProperty);
         break;
 
     case 33: // Client message.
         {
-            int type = GetU32FromRecvBuf(platSpec, 8);
+            int type = GetU32FromBuf(platSpec->recvBuf, 8);
             if (type == platSpec->wmProtocolsAtom) {
                 win->windowClosed = true;
             }
             else if (type == platSpec->xdndPositionAtom) {
-                int winToSendTo = GetU32FromRecvBuf(platSpec, 12);
+                int winToSendTo = GetU32FromBuf(platSpec->recvBuf, 12);
                 printf("xdndPosition from win %x\n", winToSendTo);
                 SendXdndStatus(win, winToSendTo);
             }
             else if (type == platSpec->xdndDropAtom) {
-                uint32_t timestamp = GetU32FromRecvBuf(platSpec, 24);
-                platSpec->dropSourceWinId = GetU32FromRecvBuf(platSpec, 12);
+                uint32_t timestamp = GetU32FromBuf(platSpec->recvBuf, 24);
+                platSpec->dropSourceWinId = GetU32FromBuf(platSpec->recvBuf, 12);
                 printf("xdndDrop timestamp=%x srcWinId=%x\n", timestamp, platSpec->dropSourceWinId);
                 SendXConvertSelection(win, timestamp);
             }
@@ -1257,7 +1255,7 @@ static void HandleEvent(DfWindow *win) {
         printf("Got an unknown message type (%d).\n", platSpec->recvBuf[0] & 0x7f);
     }
 
-    ConsumeMessage(platSpec, 32);
+    ConsumeMessage(platSpec, platSpec->recvBuf, 32);
 
     if (winPosTranslateNeeded)
         TranslateCoordinates(win, &win->left, &win->top);
@@ -1288,17 +1286,30 @@ static bool HandleEvents(DfWindow *win) {
 
 
 // Because the X11 protocol is asynchronous, we might receive events here when
-// we are waiting for a response.
-//
-// Returns true if an event was found and false otherwise.
-static bool GetReply(DfWindow *win, int expectedLen) {
-    HandleEvents(win);
-
+// we are waiting for a reply.
+static uint8_t *WaitReply(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
-    if (platSpec->recvBuf[0] == 1 && platSpec->recvBufNumBytesAvailable >= expectedLen)
-        return true;
 
-    return false;
+    int offset = 0;
+    while (1) {
+        ReadFromXServer(platSpec);
+        if (offset >= platSpec->recvBufNumBytesAvailable) continue;
+
+        if (platSpec->recvBuf[offset] == 1) {
+            // It's a reply.
+            uint32_t bodyNumWords = GetU32FromBuf(platSpec->recvBuf, offset + 4);
+            size_t totalNumBytes = 32 + (bodyNumWords * 4);
+
+            // Check if the *entire* reply has arrived in the buffer yet.
+            if (offset + totalNumBytes <= (size_t)platSpec->recvBufNumBytesAvailable) {
+                return platSpec->recvBuf + offset; // Found a complete reply!
+            }
+        }
+        else {
+            // It's an event or error packet. Skip it.
+            offset += 32;
+        }
+    }
 }
 
 
@@ -1369,18 +1380,15 @@ static void ReceiveClipboardData(DfWindow *win) {
     SendGetPropertyRequest(win, platSpec->xselDataAtom);
 //    printf("Getting GetProperty response\n");
 
-    while (!GetReply(win, 32))
-        ;
-
-    uint8_t *buf = platSpec->recvBuf;
-    uint32_t type = *((uint32_t *)(buf + 8));
+    uint8_t *reply = WaitReply(win);
+    uint32_t type = *((uint32_t *)(reply + 8));
     if (type == platSpec->stringAtom) {
-        uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
+        uint32_t replyLen = *((uint32_t *)(reply + 4)) * 4;
 
-        uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
+        uint32_t lenOfValueInFmtUnits = *((uint32_t *)(reply + 16));
 //        printf("len of value in fmt units: %i\n", lenOfValueInFmtUnits);
 
-        ConsumeMessage(platSpec, 32);
+        ConsumeMessage(platSpec, reply, 32);
 
         platSpec->clipboardRxData = new char[lenOfValueInFmtUnits + 1];
         char *nextWritePoint = platSpec->clipboardRxData;
@@ -1390,16 +1398,16 @@ static void ReceiveClipboardData(DfWindow *win) {
             ReadFromXServer(platSpec);
 
             ssize_t stringLen = IntMin(platSpec->recvBufNumBytesAvailable, numBytesLeft);
-            memcpy(nextWritePoint, (char const *)buf, stringLen);
+            memcpy(nextWritePoint, (char const *)reply, stringLen);
             nextWritePoint += stringLen;
 
-            ConsumeMessage(platSpec, stringLen);
+            ConsumeMessage(platSpec, reply, stringLen);
             numBytesLeft -= stringLen;
         }
         platSpec->clipboardRxData[lenOfValueInFmtUnits] = '\0';
 
         uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
-        ConsumeMessage(platSpec, amtPadding);
+        ConsumeMessage(platSpec, reply, amtPadding);
     }
 }
 
@@ -1408,13 +1416,10 @@ static void ReceiveDndData(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     SendGetPropertyRequest(win, platSpec->xdndFilenameAtom);
 
-    while (!GetReply(win, 32))
-        ;
-
-    uint8_t *buf = platSpec->recvBuf;
-    uint32_t replyLen = *((uint32_t *)(buf + 4)) * 4;
-    uint32_t lenOfValueInFmtUnits = *((uint32_t *)(buf + 16));
-    ConsumeMessage(platSpec, 32);
+    uint8_t *reply = WaitReply(win);
+    uint32_t replyLen = GetU32FromBuf(reply, 4);
+    uint32_t lenOfValueInFmtUnits = GetU32FromBuf(reply, 16);
+    ConsumeMessage(platSpec, reply, 32);
     char *dndData = new char[lenOfValueInFmtUnits + 1];
     char *nextWritePoint = dndData;
 
@@ -1423,16 +1428,16 @@ static void ReceiveDndData(DfWindow *win) {
         ReadFromXServer(platSpec);
 
         ssize_t stringLen = IntMin(platSpec->recvBufNumBytesAvailable, numBytesLeft);
-        memcpy(nextWritePoint, (char const *)buf, stringLen);
+        memcpy(nextWritePoint, (char const *)reply, stringLen);
         nextWritePoint += stringLen;
 
-        ConsumeMessage(platSpec, stringLen);
+        ConsumeMessage(platSpec, reply, stringLen);
         numBytesLeft -= stringLen;
     }
     dndData[lenOfValueInFmtUnits] = '\0';
 
     uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
-    ConsumeMessage(platSpec, amtPadding);
+    ConsumeMessage(platSpec, reply, amtPadding);
 
     SendXdndFinished(win, platSpec->dropSourceWinId);
     if (lenOfValueInFmtUnits > 7 && memcmp(dndData, "file://", 7) == 0)
@@ -1660,6 +1665,10 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed,
     MakeSocketNonBlocking(platSpec);
 
     InitInput(win);
+    while (!platSpec->winMapped) {
+        SleepMillisec(1);
+        HandleEvents(win);
+    }
 
     return win;
 }
