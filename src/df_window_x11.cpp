@@ -177,6 +177,7 @@ struct WindowPlatformSpecific {
     int targetsAtom;
     int wmDeleteWindowAtom;
     int wmProtocolsAtom;
+    int xdndAwareAtom;
     int xdndPositionAtom;
     int xdndStatusAtom;
     int xdndDropAtom;
@@ -959,6 +960,7 @@ static void ConnectToXserver(DfWindow *win) {
     platSpec->targetsAtom = GetAtomId(win, "TARGETS");
     platSpec->wmDeleteWindowAtom = GetAtomId(win, "WM_DELETE_WINDOW");
     platSpec->wmProtocolsAtom = GetAtomId(win, "WM_PROTOCOLS");
+    platSpec->xdndAwareAtom = GetAtomId(win, "XdndAware");
     platSpec->xdndPositionAtom = GetAtomId(win, "XdndPosition");
     platSpec->xdndStatusAtom = GetAtomId(win, "XdndStatus");
     platSpec->xdndDropAtom = GetAtomId(win, "XdndDrop");
@@ -1016,6 +1018,23 @@ static void EnableDeleteWindowEvent(DfWindow *win) {
     packet[4] = 32; // Format = 32 bits per item.
     packet[5] = 1; // Length = 1 item.
     packet[6] = platSpec->wmDeleteWindowAtom; // Item data.
+
+    SendBuf(platSpec, packet, sizeof(packet));
+}
+
+
+static void EnableDragAndDrop(DfWindow *win) {
+    WindowPlatformSpecific *platSpec = win->_private->platSpec;
+
+    int requestLen = 7;
+    uint32_t packet[requestLen];
+    packet[0] = X11_OPCODE_CHANGE_PROPERTY | (requestLen << 16);
+    packet[1] = platSpec->windowId;
+    packet[2] = platSpec->xdndAwareAtom; // Property.
+    packet[3] = 4; // Type = ATOM.
+    packet[4] = 32; // Format = 32 bits per item.
+    packet[5] = 1; // Length = 1 item.
+    packet[6] = 5; // Item data = Xdnd protocol version we support.
 
     SendBuf(platSpec, packet, sizeof(packet));
 }
@@ -1240,7 +1259,7 @@ static void HandleEvent(DfWindow *win) {
                 SendXdndStatus(win, winToSendTo);
             }
             else if (type == platSpec->xdndDropAtom) {
-                uint32_t timestamp = GetU32FromBuf(platSpec->recvBuf, 24);
+                uint32_t timestamp = GetU32FromBuf(platSpec->recvBuf, 20);
                 platSpec->dropSourceWinId = GetU32FromBuf(platSpec->recvBuf, 12);
                 printf("xdndDrop timestamp=%x srcWinId=%x\n", timestamp, platSpec->dropSourceWinId);
                 SendXConvertSelection(win, timestamp);
@@ -1249,6 +1268,9 @@ static void HandleEvent(DfWindow *win) {
                 printf("Got ClientMessage. type=0x%x\n", type);
             }
         }
+        break;
+
+    case 34: // Mapping notify
         break;
 
     default:
@@ -1412,36 +1434,78 @@ static void ReceiveClipboardData(DfWindow *win) {
 }
 
 
+static int HexDigitToInt(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+
+// Takes the contents of a text/uri-list, ie one URI per line, with lines
+// terminated by CRLF. Calls the window's fileDropCallback once for each
+// file:// URI, passing the percent-decoded local path. Modifies the buffer.
+static void HandleDroppedUriList(DfWindow *win, char *uriList) {
+    char *line = uriList;
+    while (*line) {
+        char *lineEnd = line + strcspn(line, "\r\n");
+        char *nextLine = lineEnd + strspn(lineEnd, "\r\n");
+        *lineEnd = '\0';
+
+        // Lines starting with '#' are comments.
+        if (strncmp(line, "file://", 7) == 0) {
+            // Skip the optional hostname. The path starts at the next '/'.
+            char *path = strchr(line + 7, '/');
+            if (path) {
+                // Decode %XX escapes in place.
+                char *out = path;
+                for (char *in = path; *in; in++) {
+                    if (in[0] == '%' && HexDigitToInt(in[1]) >= 0 && HexDigitToInt(in[2]) >= 0) {
+                        *out++ = (char)(HexDigitToInt(in[1]) * 16 + HexDigitToInt(in[2]));
+                        in += 2;
+                    }
+                    else {
+                        *out++ = *in;
+                    }
+                }
+                *out = '\0';
+
+                if (win->fileDropCallback)
+                    win->fileDropCallback(path);
+            }
+        }
+
+        line = nextLine;
+    }
+}
+
+
 static void ReceiveDndData(DfWindow *win) {
     WindowPlatformSpecific *platSpec = win->_private->platSpec;
     SendGetPropertyRequest(win, platSpec->xdndFilenameAtom);
 
     uint8_t *reply = WaitReply(win);
-    uint32_t replyLen = GetU32FromBuf(reply, 4);
+    uint32_t replyLen = GetU32FromBuf(reply, 4) * 4; // Convert words to bytes.
     uint32_t lenOfValueInFmtUnits = GetU32FromBuf(reply, 16);
+    int format = reply[1];
     ConsumeMessage(platSpec, reply, 32);
-    char *dndData = new char[lenOfValueInFmtUnits + 1];
-    char *nextWritePoint = dndData;
 
-    uint32_t numBytesLeft = lenOfValueInFmtUnits;
-    while (numBytesLeft > 0) {
-        ReadFromXServer(platSpec);
+    // We need to make a copy of the DND data we received, and do a
+    // ConsumeMessage() before we parse it and call the fileDropCallback.
+    // Otherwise, application code instigated by the fileDropCallback might
+    // call a deadfrog lib function that talks to the XServer, and then we'd
+    // get out-of-sync.
 
-        ssize_t stringLen = IntMin(platSpec->recvBufNumBytesAvailable, numBytesLeft);
-        memcpy(nextWritePoint, (char const *)reply, stringLen);
-        nextWritePoint += stringLen;
-
-        ConsumeMessage(platSpec, reply, stringLen);
-        numBytesLeft -= stringLen;
-    }
-    dndData[lenOfValueInFmtUnits] = '\0';
-
-    uint32_t amtPadding = replyLen - lenOfValueInFmtUnits;
-    ConsumeMessage(platSpec, reply, amtPadding);
+    // We only understand 8-bit data. Anything else we discard.
+    uint32_t dataLen = (format == 8) ? lenOfValueInFmtUnits : 0;
+    char *dndData = new char[dataLen + 1];
+    // WaitReply() guarantees the whole reply is already in the receive buffer.
+    memcpy(dndData, reply, dataLen);
+    dndData[dataLen] = '\0';
+    ConsumeMessage(platSpec, reply, replyLen);
 
     SendXdndFinished(win, platSpec->dropSourceWinId);
-    if (lenOfValueInFmtUnits > 7 && memcmp(dndData, "file://", 7) == 0)
-        win->fileDropCallback(dndData + 7);
+    HandleDroppedUriList(win, dndData);
     delete[] dndData;
 }
 
@@ -1659,6 +1723,7 @@ DfWindow *CreateWinPos(int x, int y, int width, int height, WindowType windowed,
     MapWindow(win);
     SetWindowTitle(win, winName);
     EnableDeleteWindowEvent(win);
+    EnableDragAndDrop(win);
 
     InitShmSegment(win);
 
