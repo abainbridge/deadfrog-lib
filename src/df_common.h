@@ -12,10 +12,16 @@ extern "C"
 #endif
 
 
+#ifdef __cplusplus
+ #define DLL_EXTERN extern "C"
+#else
+ #define DLL_EXTERN extern
+#endif
+
 #ifdef DLL_EXPORTS
- #define DLL_API extern "C" __declspec(dllexport)
+ #define DLL_API DLL_EXTERN __declspec(dllexport)
 #elif DLL_IMPORTS
- #define DLL_API extern "C" __declspec(dllimport)
+ #define DLL_API DLL_EXTERN __declspec(dllimport)
 #else
  #define DLL_API extern
 #endif
@@ -46,8 +52,8 @@ void ReleaseWarn(bool condition, char const *fmt, ...);
 #endif
 
 
-static inline int IntMin(int a, int b) { return (a < b) ? a : b; };
-static inline int IntMax(int a, int b) { return (a > b) ? a : b; };
+static inline int IntMin(int a, int b) { return (a < b) ? a : b; }
+static inline int IntMax(int a, int b) { return (a > b) ? a : b; }
 static inline int RoundToInt(double r) {
     int tmp = (int)(r);
     tmp += (r-tmp>=.5) - (r-tmp<=-.5);

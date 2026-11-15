@@ -41,7 +41,7 @@ DLL_API void        ClearClipRect   (DfBitmap *bmp); // Sets bitmap's full size 
 
 DLL_API void        BitmapClear     (DfBitmap *bmp, DfColour c);
 
-DLL_API void        PutPixUnclipped (DfBitmap *bmp, int x, int y, DfColour c);
+static inline void PutPixUnclipped(DfBitmap *bmp, int x, int y, DfColour c);
 DLL_API void        PutPix          (DfBitmap *bmp, int x, int y, DfColour c);
 
 DLL_API DfColour    GetPixUnclipped (DfBitmap *bmp, int x, int y);
@@ -94,7 +94,7 @@ DLL_API void        ScaleUpBlit     (DfBitmap *destBmp, int x, int y, int scale,
 DLL_API void        StretchBlit     (DfBitmap *dst_bmp, int dstX, int dstY, int dstWidth, int dstHeight, DfBitmap *src_bmp);
 
 
-inline void PutPixUnclipped(DfBitmap *bmp, int x, int y, DfColour c)
+static inline void PutPixUnclipped(DfBitmap *bmp, int x, int y, DfColour c)
 {
     DfColour *pixel = (bmp->pixels + y * bmp->width) + x;
     if (c.a == 255)

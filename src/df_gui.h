@@ -4,6 +4,12 @@
 #include "df_bitmap.h"
 #include "df_window.h"
 
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 extern DfColour g_backgroundColour;
 extern DfColour g_frameColour;
 extern DfColour g_buttonColour;
@@ -173,3 +179,8 @@ void DfMenuBarAddAction(DfMenuBar *mb, char const *menuName, char const *menuIte
 
 // If menu item was selected, or its keyboard shortcut was activated, then that menu item is returned.
 DfGuiAction DfMenuBarDo(DfWindow *win, DfMenuBar *menu);
+
+
+#ifdef __cplusplus
+}
+#endif
