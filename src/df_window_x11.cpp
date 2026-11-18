@@ -197,6 +197,7 @@ struct WindowPlatformSpecific {
 
     MouseCursorType currentCursor;
 
+    volatile int pendingClipboardRequest;
     char *clipboardRxData;  // NULL except between calls of X11InternalClipboardRequestData() and ClipboardReleaseReceivedData()
     char *clipboardTxData;
     unsigned clipboardTxDataNumChars;
@@ -1347,8 +1348,22 @@ static void *FakeWindowMessageLoop(void *ignored) {
     // quickly enough so that paste in the other application doesn't feel laggy.
     // As a result, the sleep behaviour in this loop is more complex than you'd
     // think it needs to be.
+    WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
     int numItersUntilSlow = 0;
     while (1) {
+        // Atomically check if pendingClipboardRequest is 1 and swap it back to 0.
+        if (__atomic_exchange_n(&platSpec->pendingClipboardRequest, 0, __ATOMIC_SEQ_CST)) {
+            // puts("Sending ConvertSelection request");
+            uint32_t packet[6];
+            packet[0] = 24 | 6 << 16;
+            packet[1] = platSpec->windowId; // requestor
+            packet[2] = platSpec->clipboardAtom; // selection
+            packet[3] = platSpec->stringAtom; // target
+            packet[4] = platSpec->xselDataAtom; // property
+            packet[5] = 0; // time
+            SendBuf(platSpec, packet, sizeof(packet));
+        }
+
         if (HandleEvents(&g_fakeWindow))
             numItersUntilSlow = 100;
 
@@ -1513,24 +1528,14 @@ static void ReceiveDndData(DfWindow *win) {
 char *X11InternalClipboardRequestData() {
     CreateFakeWindowIfNeeded();
     WindowPlatformSpecific *platSpec = g_fakeWindow._private->platSpec;
-
     if (platSpec->clipboardRxData) return NULL;
 
-//    puts("Sending ConvertSelection request");
-    uint32_t packet[6];
-    packet[0] = 24 | 6 << 16;
-    packet[1] = platSpec->windowId; // requestor
-    packet[2] = platSpec->clipboardAtom; // selection
-    packet[3] = platSpec->stringAtom; // target
-    packet[4] = platSpec->xselDataAtom; // property
-    packet[5] = 0; // time
-    SendBuf(platSpec, packet, sizeof(packet));
+    __atomic_store_n(&platSpec->pendingClipboardRequest, 1, __ATOMIC_SEQ_CST);
 
-    double endTime = GetRealTime() + 0.1;
+    double endTime = GetRealTime() + 0.5;
     do {
-        InputPoll(&g_fakeWindow);
-
         if (platSpec->clipboardRxData) {
+            puts("Timeout waiting for clipboard data");
             break;
         }
     } while (GetRealTime() < endTime);
